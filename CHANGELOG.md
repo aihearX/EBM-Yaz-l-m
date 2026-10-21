@@ -62,4 +62,4 @@ Biçim: Keep a Changelog. Sürümleme: anlamsal (major.minor.patch).
 - Rol bazlı erişim denetimi (10 rol), hesap kilitleme, parola politikası.
 
 ## [1.0.0] - 2025-09-22
-- İlk üretim sürümü: çalışma, merkez, gönüllü yönetimi; denetim izi; REST API v1.
+- İlk bütünleşik sürüm: çalışma, merkez, gönüllü yönetimi; denetim izi; REST API v1.

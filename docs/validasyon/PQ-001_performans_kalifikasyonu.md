@@ -63,23 +63,11 @@ akışlarına odaklanır.
 
 PQ raporu (PQ-001-R) ölçüt tablosunu, uyumsuz vaka analizini, kullanıcı anketi
 sonuçlarını, açık sapmaları ve üretim kullanımı önerisini içerir. Sonuçlar ayrıca
-TÜSEB projesi İP5 ilerleme raporuna girdi oluşturur.
+Ar-Ge programı Faz 5 ilerleme raporuna girdi oluşturur.
 
-## 7. Ara sonuçlar (bilgi amaçlı – rapor kesinleşmemiştir)
+## 7. Durum
 
-Pilot 1 ve 2'de ilk üç ay (2026-07 – 2026-09) için ön veriler:
-
-| Ölçüt | Ön değer | Not |
-|---|---|---|
-| PQ-M1 duyarlılık | %91,4 (n=197 manuel uygun) | Onkoloji çalışmasında %88,9; eksik patoloji raporları başlıca neden |
-| PQ-M3 PPV | %63,2 | |
-| PQ-M4 süre azalması | %54 (Pilot 2), %47 (Pilot 1) | Pilot 1'de ölçüm devam ediyor |
-| PQ-M5 halüsinasyon | 1/200 (%0,5) | Tek vaka: kısaltma açılımı eklenmiş; "belirsiz"e düşürülmüştü |
-| PQ-M6 belirsiz oranı | %21 | |
-| PQ-M9 uyarı kesinliği | %66 | |
-| PQ-M10 kaçak | 0/300 | |
-
-Pilot 3 ve kazanım/gecikme ölçütleri (PQ-M7, M8) için veri toplama sürmektedir.
+PQ henüz yürütülmemiştir; pilot merkezlerle protokol imzalandığında ve etik kurul onayı alındığında başlatılacaktır. Bu bölüm, PQ tamamlandığında ölçüt tablosundaki gerçekleşen değerlerle doldurulacaktır.
 
 ## 8. Onaylar
 

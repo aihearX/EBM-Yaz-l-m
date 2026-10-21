@@ -1,6 +1,6 @@
 """Ar-Ge gostergeleri: yapay zeka bilesenlerinin olculebilir performansi.
 
-TUSEB proje basari olcutleri (duyarlilik >= %90, MAPE <= %25, AUC >= 0,80, on tarama suresinde >= %50
+Ar-Ge programi basari olcutleri (duyarlilik >= %90, MAPE <= %25, AUC >= 0,80, on tarama suresinde >= %50
 azalma) ile mevcut durumu yan yana koyar. Olcumler gercek hesaplamadir: altin standart set uzerinde
 calistirilan degerlendirme, golge mod karsilastirmasi, aktif merkezlerde tahmin-gozlem farki.
 Sentetik/laboratuvar verisi ile elde edilen degerler arayuzde ayrica etiketlenir.

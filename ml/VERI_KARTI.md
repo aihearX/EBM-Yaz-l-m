@@ -16,7 +16,7 @@ henüz toplanmamıştır.
 | Sentetik epikriz ve rapor örnekleri | şablon ve klinisyen yazımı | ~300 metin / 2.000 | yok (gerçek kişi verisi değil) | mevcut |
 | Kamuya açık klinik kılavuzlar | dernek ve bakanlık yayınları | derleme sürüyor | kamuya açık | kısmen |
 | EBM protokol ve çalışma belgeleri | kurum içi | 40 çalışma | sözleşme, sponsor izni gerekir | izin süreci |
-| Pilot hastane serbest metin raporları | 3 pilot hastane HBYS | 0 / 50.000 belge | etik kurul onayı, KVKK md. 6 ve 28 değerlendirmesi, veri işleme sözleşmesi | başvuru hazırlığı (İP1) |
+| Pilot hastane serbest metin raporları | 3 pilot hastane HBYS | 0 / 50.000 belge | etik kurul onayı, KVKK md. 6 ve 28 değerlendirmesi, veri işleme sözleşmesi | başvuru hazırlığı (Faz 1) |
 | Altın standart etiketler | klinisyen etiketleme | 28 / 2.000 çift | etiketleme sözleşmesi | sentetik kısım mevcut |
 
 ## Kimliksizleştirme

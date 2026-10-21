@@ -7,69 +7,67 @@
   @page { size: A4; margin: 0; }
   * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   html, body { margin: 0; padding: 0; }
-  body { font-family: "Carlito", "Calibri", "Liberation Sans", Arial, sans-serif; color: #1f2430; font-size: 8.9pt; line-height: 1.3; width: 210mm; height: 297mm; background: #fff; overflow: hidden; }
+  body { font-family: "Carlito", "Calibri", "Liberation Sans", Arial, sans-serif; color: #1f2430; font-size: 9pt; line-height: 1.32; width: 210mm; height: 297mm; background: #fff; overflow: hidden; }
   .sayfa { width: 210mm; height: 297mm; display: flex; flex-direction: column; }
 
-  /* baslik bandi */
-  .bant { background: linear-gradient(110deg, #0f2342 0%, #16325c 55%, #1f4a7a 100%); color: #fff; padding: 9mm 12mm 8.5mm; position: relative; overflow: hidden; }
-  .bant::after { content: ""; position: absolute; right: -30mm; top: -30mm; width: 90mm; height: 90mm; border-radius: 50%; background: radial-gradient(circle, rgba(14,138,138,.45) 0%, rgba(14,138,138,0) 70%); }
+  .bant { background: linear-gradient(110deg, #0f2342 0%, #16325c 55%, #1f4a7a 100%); color: #fff; padding: 7.5mm 12mm 6.5mm; position: relative; overflow: hidden; flex-shrink: 0; }
+  .bant::after { content: ""; position: absolute; right: -30mm; top: -30mm; width: 95mm; height: 95mm; border-radius: 50%; background: radial-gradient(circle, rgba(14,138,138,.45) 0%, rgba(14,138,138,0) 70%); }
   .bant .marka { font-size: 8.4pt; letter-spacing: 1.6px; text-transform: uppercase; color: #9fd3d3; margin-bottom: 1.5mm; }
-  .bant h1 { margin: 0; font-size: 25pt; font-weight: 700; letter-spacing: .2px; line-height: 1.05; }
-  .bant .alt { font-size: 11pt; color: #cfe6e6; margin-top: 1.4mm; }
-  .bant .slogan { margin-top: 3.6mm; font-size: 10.8pt; font-weight: 600; max-width: 178mm; line-height: 1.3; }
-  .bant .cip { position: absolute; right: 12mm; top: 9mm; text-align: right; font-size: 7.8pt; color: #cfe6e6; line-height: 1.45; }
+  .bant h1 { margin: 0; font-size: 25pt; font-weight: 700; line-height: 1.05; }
+  .bant .alt { font-size: 10.5pt; color: #cfe6e6; margin-top: 1.2mm; }
+  .bant .slogan { margin-top: 3.5mm; font-size: 16pt; font-weight: 700; line-height: 1.15; letter-spacing: .1px; }
+  .bant .slogan span { color: #9fd3d3; }
+  .bant .cip { position: absolute; right: 12mm; top: 10mm; text-align: right; font-size: 7.8pt; color: #cfe6e6; line-height: 1.45; }
   .bant .cip b { display: inline-block; background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.35); border-radius: 10px; padding: .6mm 2.4mm; color: #fff; font-size: 8pt; margin-bottom: 1mm; }
 
-  .govde { padding: 5mm 12mm 0; flex: 1; display: flex; flex-direction: column; }
+  .govde { padding: 4mm 12mm 0; flex: 1; display: flex; flex-direction: column; min-height: 0; }
 
-  /* deger kartlari */
-  .kartlar { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3mm; margin-top: -1mm; }
-  .kart { background: #fff; border: 1px solid #d9dde4; border-top: 3px solid #0e8a8a; border-radius: 3px; padding: 2.6mm 3mm 2.4mm; box-shadow: 0 1px 2px rgba(20,30,50,.06); }
-  .kart .ust { display: flex; align-items: center; gap: 2mm; margin-bottom: 1.2mm; }
-  .kart .ikon { width: 7mm; height: 7mm; border-radius: 2px; background: #e3f3f3; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-  .kart .ikon svg { width: 4.4mm; height: 4.4mm; stroke: #0e8a8a; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-  .kart b { color: #16325c; font-size: 10pt; }
-  .kart p { margin: 0; font-size: 8.5pt; color: #3d4350; }
+  .hikaye { background: #f5f6f8; border-left: 4px solid #0e8a8a; border-radius: 3px; padding: 2.4mm 3.4mm; font-size: 9.3pt; line-height: 1.36; color: #1f2430; }
+  .hikaye b { color: #16325c; }
 
-  .izgara { display: grid; grid-template-columns: 1.04fr 0.96fr; gap: 4.5mm; margin-top: 4mm; flex: 1; }
-  h2 { margin: 0 0 1.6mm; font-size: 9.4pt; color: #16325c; text-transform: uppercase; letter-spacing: .7px; display: flex; align-items: center; gap: 2mm; }
+  .kartlar { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3mm; margin-top: 3.2mm; }
+  .kart { background: #fff; border: 1px solid #d9dde4; border-top: 3px solid #0e8a8a; border-radius: 3px; padding: 2.4mm 3mm 2.4mm; box-shadow: 0 1px 2px rgba(20,30,50,.06); }
+  .kart .ust { display: flex; align-items: center; gap: 2.2mm; margin-bottom: 1.4mm; }
+  .kart .ikon { width: 8mm; height: 8mm; border-radius: 50%; background: #e3f3f3; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .kart .ikon svg { width: 4.8mm; height: 4.8mm; stroke: #0e8a8a; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .kart b.baslik { color: #16325c; font-size: 11pt; line-height: 1.1; }
+  .kart p { margin: 0; font-size: 8.6pt; color: #3d4350; }
+  .kart .sonuc { margin-top: 1.6mm; font-size: 8.6pt; color: #0e8a8a; font-weight: 700; }
+
+  .izgara { display: grid; grid-template-columns: 1fr 1fr; gap: 5mm; margin-top: 3.6mm; flex: 1; align-content: start; }
+  h2 { margin: 0 0 1.8mm; font-size: 9.6pt; color: #16325c; text-transform: uppercase; letter-spacing: .7px; display: flex; align-items: center; gap: 2mm; }
   h2::after { content: ""; flex: 1; height: 1px; background: #d9dde4; }
-  .blok { margin-bottom: 3.6mm; }
-  ul { margin: 0; padding-left: 3.6mm; }
-  li { margin-bottom: .9mm; }
-  p { margin: 0 0 1.2mm; }
-  .tik li { list-style: none; position: relative; padding-left: 4mm; }
-  .tik li::before { content: ""; position: absolute; left: 0; top: 1.4mm; width: 2.4mm; height: 2.4mm; border-radius: 50%; background: #0e8a8a; }
+  .blok { margin-bottom: 2.8mm; }
+  p { margin: 0 0 1.4mm; }
+  ul { margin: 0; padding-left: 0; list-style: none; }
+  .tik li { position: relative; padding-left: 5mm; margin-bottom: 1.1mm; }
+  .tik li::before { content: "✓"; position: absolute; left: 0; top: 0; color: #0e8a8a; font-weight: 700; }
 
-  /* akis */
-  .akis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.6mm; }
-  .adim { background: #eef2f8; border-radius: 3px; padding: 1.8mm 2mm 1.6mm; font-size: 8pt; color: #3d4350; position: relative; }
-  .adim .no { display: inline-block; width: 4.6mm; height: 4.6mm; border-radius: 50%; background: #16325c; color: #fff; font-weight: 700; font-size: 7.6pt; text-align: center; line-height: 4.6mm; margin-bottom: 1mm; }
-  .adim b { display: block; color: #16325c; font-size: 8.4pt; margin-bottom: .5mm; }
-  .adim:not(:last-child)::after { content: "›"; position: absolute; right: -1.7mm; top: 40%; color: #9aa3b2; font-size: 12pt; }
+  .akis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2mm; }
+  .adim { background: #eef2f8; border-radius: 3px; padding: 2mm 2mm 1.8mm; font-size: 8pt; line-height: 1.28; color: #3d4350; position: relative; }
+  .adim .no { display: inline-block; width: 5mm; height: 5mm; border-radius: 50%; background: #16325c; color: #fff; font-weight: 700; font-size: 8pt; text-align: center; line-height: 5mm; margin-bottom: 1.2mm; }
+  .adim b { display: block; color: #16325c; font-size: 9pt; margin-bottom: .6mm; }
+  .adim:not(:last-child)::after { content: "›"; position: absolute; right: -2mm; top: 38%; color: #9aa3b2; font-size: 13pt; }
 
-  /* sag kolon */
-  .ekran-kutu { border: 1px solid #cfd3da; border-radius: 3px; overflow: hidden; height: 54mm; background: #fff; box-shadow: 0 1px 3px rgba(20,30,50,.08); }
+  .soru { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2mm; }
+  .soru div { background: #16325c; color: #fff; border-radius: 3px; padding: 2.4mm 2.4mm 2.2mm; }
+  .soru b { display: block; color: #9fd3d3; font-size: 11pt; margin-bottom: .8mm; }
+  .soru span { font-size: 8.6pt; color: #e7eef9; }
+
+  .ekran-kutu { border: 1px solid #cfd3da; border-radius: 3px; overflow: hidden; height: 40mm; background: #fff; box-shadow: 0 1px 3px rgba(20,30,50,.08); }
   .ekran-kutu img { width: 100%; display: block; }
-  .altyazi { font-size: 7.4pt; color: #595959; margin-top: 1mm; }
-  .rakamlar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.8mm; }
-  .rakam { background: #16325c; color: #fff; border-radius: 3px; padding: 1.8mm 1mm 1.5mm; text-align: center; }
-  .rakam .deger { font-size: 14pt; font-weight: 700; line-height: 1.05; color: #9fd3d3; }
-  .rakam .ad { font-size: 7.2pt; color: #cfe6e6; margin-top: .7mm; line-height: 1.15; }
-  table { width: 100%; border-collapse: collapse; font-size: 8pt; }
-  th, td { text-align: left; padding: 1mm 1.4mm; border-bottom: 1px solid #e6e8ec; vertical-align: middle; }
-  th { color: #16325c; font-size: 7.6pt; text-transform: uppercase; letter-spacing: .4px; border-bottom: 1.5px solid #cfd3da; }
-  td.s { text-align: right; white-space: nowrap; color: #16325c; font-weight: 600; }
-  .rozet { display: inline-block; font-size: 7.2pt; padding: .2mm 1.6mm; border-radius: 8px; background: #e4f3ea; color: #2e7d4f; font-weight: 600; white-space: nowrap; }
-  .rozet.sari { background: #fdf3e0; color: #b7791f; }
-  .rozet.mavi { background: #e7eef9; color: #16325c; }
+  .altyazi { font-size: 7.6pt; color: #595959; margin-top: 1mm; }
 
-  .cta { background: #0e8a8a; color: #fff; border-radius: 3px; padding: 2.6mm 3mm; margin-top: 1mm; }
-  .cta h3 { margin: 0 0 1mm; font-size: 10pt; }
-  .cta p { margin: 0; font-size: 8.3pt; color: #e3f3f3; }
+  .guven { display: grid; grid-template-columns: repeat(2, 1fr); gap: 2mm; }
+  .guven div { border: 1px solid #d9dde4; border-radius: 3px; padding: 1.8mm 2.2mm; font-size: 8.2pt; }
+  .guven b { display: block; color: #16325c; font-size: 9.2pt; margin-bottom: .4mm; }
+
+  .cta { background: #0e8a8a; color: #fff; border-radius: 3px; padding: 2.6mm 3.2mm; }
+  .cta h3 { margin: 0 0 1.2mm; font-size: 11.5pt; }
+  .cta p { margin: 0; font-size: 8.6pt; color: #e3f3f3; }
   .cta b { color: #fff; }
 
-  .dip { margin-top: auto; background: #f5f6f8; border-top: 1px solid #d9dde4; padding: 2.4mm 12mm; display: flex; justify-content: space-between; align-items: center; font-size: 7.4pt; color: #595959; }
+  .dip { margin-top: auto; flex-shrink: 0; background: #f5f6f8; border-top: 1px solid #d9dde4; padding: 2.4mm 12mm; display: flex; justify-content: space-between; align-items: center; font-size: 7.4pt; color: #595959; }
   .dip b { color: #16325c; font-size: 8pt; }
 </style>
 </head>
@@ -78,110 +76,99 @@
   <div class="bant">
     <div class="marka">EBM Klinik Araştırma Hizmetleri</div>
     <h1>EBM SmartClinical</h1>
-    <div class="alt">Klinik Araştırma Yönetimi ve Türkçe Klinik Karar Destek Platformu</div>
-    <div class="slogan">Protokolden hastaya, merkezden riske: Türkçe klinik metni anlayan, hastane içinde çalışan tek platform.</div>
-    <div class="cip"><b>Sürüm 1.5 · Ekim 2026</b><br>TÜSEB – Ulusal Klinik Türkçe BDM ve<br>Karar Destek Altyapısı proje alanı</div>
+    <div class="alt">Klinik araştırmaları hızlandıran, Türkçe anlayan yapay zekâ platformu</div>
+    <div class="slogan">Doğru hasta. Doğru hastane. <span>Doğru zamanda uyarı.</span></div>
+    <div class="cip"><b>Sürüm 1.5 · Ekim 2026</b><br>Yatırımcı ve iş ortağı sunumu</div>
   </div>
 
   <div class="govde">
+    <div class="hikaye">
+      <b>Yeni bir ilaç, aşı ya da tıbbi cihaz hastaya ulaşmadan önce klinik araştırmadan geçer.</b> Bu araştırmaların çoğu planlanandan geç biter: uygun hastalar bulunamaz, yanlış hastaneler seçilir, sorunlar aylar sonra fark edilir. Her gecikme, hastaların tedaviye geç ulaşması ve milyonlarca liralık ek maliyet demektir. <b>SmartClinical bu üç sorunu, hastanenin kendi bilgisayarında çalışan ve Türkçe hasta kayıtlarını okuyabilen bir yapay zekâ ile çözer.</b>
+    </div>
+
     <div class="kartlar">
       <div class="kart">
-        <div class="ust"><div class="ikon"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3M8 11h6M11 8v6"/></svg></div><b>Hasta ön tarama</b></div>
-        <p>Dahil/hariç kriterleri hesaplanabilir sorguya çevrilir; kimliksizleştirilmiş HBYS kayıtları taranır; her öneri kaynak cümlesiyle araştırmacıya sunulur.</p>
+        <div class="ust"><div class="ikon"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3M8 11h6M11 8v6"/></svg></div><b class="baslik">Doğru hastayı bulur</b></div>
+        <p>Hastane kayıtlarındaki Türkçe raporları okur, araştırmaya uygun hastaları listeler ve her öneri için <i>"neden uygun?"</i> sorusunun cevabını raporun kendi cümlesiyle gösterir.</p>
+        <div class="sonuc">Günlerce dosya taramak yerine dakikalar.</div>
       </div>
       <div class="kart">
-        <div class="ust"><div class="ikon"><svg viewBox="0 0 24 24"><path d="M3 20h18M5 16l4-5 4 3 6-8"/><circle cx="19" cy="6" r="1.5"/></svg></div><b>Merkez zekâsı</b></div>
-        <p>Hiyerarşik Bayes kazanım tahmini, Weibull aktivasyon gecikme riski, Monte Carlo projeksiyon, açıklanabilir merkez sıralaması ve performans endeksi.</p>
+        <div class="ust"><div class="ikon"><svg viewBox="0 0 24 24"><path d="M3 20h18M5 16l4-5 4 3 6-8"/><circle cx="19" cy="6" r="1.5"/></svg></div><b class="baslik">Doğru hastaneyi seçer</b></div>
+        <p>Geçmiş verilere bakarak hangi hastanenin kaç hasta kazandıracağını ve ne kadar sürede başlayabileceğini tahmin eder; gerekçesini yazar.</p>
+        <div class="sonuc">Tahmine değil, veriye dayalı seçim.</div>
       </div>
       <div class="kart">
-        <div class="ust"><div class="ikon"><svg viewBox="0 0 24 24"><path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z"/><path d="M12 8v5M12 16h.01"/></svg></div><b>Risk bazlı izlem</b></div>
-        <p>ICH E6(R3) uyumlu 15 KRI, kalite tolerans limitleri, merkezler arası anomali tespiti; "neden tetiklendi" açıklamalı erken uyarı ve izlem önerisi.</p>
+        <div class="ust"><div class="ikon"><svg viewBox="0 0 24 24"><path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z"/><path d="M12 8v5M12 16h.01"/></svg></div><b class="baslik">Sorunu büyümeden gösterir</b></div>
+        <p>Her hastaneyi sürekli izler: geciken bildirimler, eksik veriler, kurallara uymayan işlemler bir uyarıyla ve açıklamasıyla ekibin önüne düşer.</p>
+        <div class="sonuc">Aylar sonra değil, aynı hafta.</div>
       </div>
     </div>
 
     <div class="izgara">
       <div>
         <div class="blok">
-          <h2>Sorun</h2>
-          <ul>
-            <li><b>Uygun hastalar görünmez.</b> Kriterleri karşılayan hastalar Türkçe serbest metin raporlarda; koordinatörler dosyaları elle tarıyor.</li>
-            <li><b>Merkez seçimi deneyime dayalı.</b> Fizibilite beyanı ile gerçekleşen kazanım arasındaki fark takvimi kaydırıyor.</li>
-            <li><b>Riskler geç görülüyor.</b> Veri kalitesi ve güvenlik bildirim sorunları olaydan haftalar sonra fark ediliyor.</li>
-          </ul>
-          <p style="margin-top:1.2mm;color:#3d4350">Yurt dışı çözümler İngilizce ve bulut tabanlı: Türkçe metni işleyemez, KVKK gereği hastane verisine erişemez.</p>
-        </div>
-
-        <div class="blok">
-          <h2>Nasıl çalışır</h2>
+          <h2>Dört adımda nasıl çalışır</h2>
           <div class="akis">
-            <div class="adim"><span class="no">1</span><b>HBYS → kimliksizleştir</b>FHIR R4 veya CSV; TCKN, ad, tarih, kurum maskelenir; ikinci geçiş doğrulaması</div>
-            <div class="adim"><span class="no">2</span><b>Kriter → sorgu</b>Türkçe Klinik BDM veya kural motoru; düşük güvenlide araştırmacı onayı</div>
-            <div class="adim"><span class="no">3</span><b>Eşleştir, kanıtla</b>Yapısal veri + RAG; halüsinasyon koruması; uygun / olası / belirsiz</div>
-            <div class="adim"><span class="no">4</span><b>Karar ve izlem</b>Araştırmacı onayı, gönüllü kaydı, KRI uyarıları, denetim izi</div>
+            <div class="adim"><span class="no">1</span><b>Kayıtlar gizlenir</b>İsim, kimlik, telefon gibi bilgiler otomatik silinir; veri hastaneden çıkmaz.</div>
+            <div class="adim"><span class="no">2</span><b>Kriterler okunur</b>"Kimler katılabilir?" listesini yapay zekâ anlar.</div>
+            <div class="adim"><span class="no">3</span><b>Hastalar eşleşir</b>Uygun adaylar kanıt cümlesiyle listelenir; emin değilse "belirsiz" der.</div>
+            <div class="adim"><span class="no">4</span><b>Doktor karar verir</b>Son söz araştırmacının; her karar kayıt altında.</div>
           </div>
         </div>
 
         <div class="blok">
-          <h2>Uçtan uca platform</h2>
-          <p>9 aşamalı yaşam döngüsü (tasarım → arşiv), etik kurul / TİTCK / KVKK başvuru takibi, CDASH uyumlu eCRF ve sorgu yönetimi, AE/SAE/SUSAR ve 7/15 gün bildirim sayacı, DIA modeline göre TMF, hash zincirli denetim izi ve e-imza, sponsor portalı, CDISC ODM / OMOP dışa aktarım. İlaç, biyobenzer, tıbbi cihaz, IVD, gözlemsel, kayıt ve araştırmacı başlatımlı çalışmalar aynı veri modelinde.</p>
+          <h2>Üç soruya tek cevap</h2>
+          <div class="soru">
+            <div><b>Kim?</b><span>Bu araştırmaya hangi hastalar uygun?</span></div>
+            <div><b>Nerede?</b><span>Hangi hastane daha hızlı ve güvenilir?</span></div>
+            <div><b>Ne zaman?</b><span>Hangi sorun şimdi müdahale istiyor?</span></div>
+          </div>
         </div>
 
         <div class="blok">
-          <h2>Neden farklı</h2>
+          <h2>Neden güvenilir</h2>
           <ul class="tik">
-            <li><b>Türkçe Klinik BDM</b> hastane GPU'sunda nicemlenmiş çalışır; sunucu yoksa kural tabanlı mod devreye girer, sistem durmaz.</li>
-            <li><b>Veri kurum dışına çıkmaz.</b> Hastane içi kurulum; model iyileştirme federe LoRA ile, yalnızca ağırlıklar paylaşılır.</li>
-            <li><b>İnsan kararı merkezde.</b> Hiçbir model çıktısı tek başına işlem yapmaz; her karar gerekçesiyle denetim izinde.</li>
-            <li><b>Uyum paketi ürünle gelir.</b> 21 CFR Part 11 / Annex 11, KVKK etki değerlendirmesi, GAMP 5 validasyon dosyası.</li>
-            <li><b>Ağ etkisi.</b> Merkez performans endeksi her yeni çalışmayla kuvvetlenir; sponsor görünümü anonimdir.</li>
+            <li><b>Hasta verisi hastaneden çıkmaz.</b> Sistem ve yapay zekâ hastanenin kendi sunucusunda çalışır; kişisel verilerin korunması kanununa uygundur.</li>
+            <li><b>Uydurmaz.</b> Yapay zekâ bir şey söylediğinde kaynağını göstermek zorundadır; kaynak yoksa "belirsiz" der.</li>
+            <li><b>Karar insanındır.</b> Yapay zekâ önerir, doktor ve araştırma ekibi karar verir.</li>
+            <li><b>Her adım izlenebilir.</b> Kim, ne zaman, neyi değiştirdi silinemez şekilde kaydedilir; uluslararası denetim kurallarına uygundur.</li>
+            <li><b>İnternet gerektirmez.</b> Yapay zekâ sunucusu olmasa bile sistem çalışmaya devam eder.</li>
           </ul>
         </div>
       </div>
 
       <div>
         <div class="blok">
-          <div class="ekran-kutu"><img src="../ekran/09_eslestirme_detay.png" alt="Aday hasta detayı"></div>
-          <div class="altyazi">Aday hasta ekranı: kriter bazında sonuç, kaynak cümle, güven ve yöntem; araştırmacı kararı gerekçesiyle kaydedilir (demo, sentetik veri).</div>
+          <div class="ekran-kutu"><img src="../ekran/09_eslestirme_detay.png" alt="Aday hasta ekranı"></div>
+          <div class="altyazi">Aday hasta ekranı: her kriter için sonuç ve rapordan alınan kanıt cümlesi; doktor kararını yazar. (Demo, gerçek hasta verisi değildir.)</div>
         </div>
 
         <div class="blok">
-          <div class="rakamlar">
-            <div class="rakam"><div class="deger">9</div><div class="ad">yaşam döngüsü aşaması</div></div>
-            <div class="rakam"><div class="deger">7</div><div class="ad">çalışma türü</div></div>
-            <div class="rakam"><div class="deger">15</div><div class="ad">varsayılan KRI</div></div>
-            <div class="rakam"><div class="deger">%0</div><div class="ad">halüsinasyon (koruma katmanı)</div></div>
+          <h2>Sadece yapay zekâ değil, tüm süreç</h2>
+          <p>Araştırmanın tasarımından arşivine her adım aynı yerde: etik kurul ve TİTCK başvuruları, hasta formları, yan etki bildirimleri, belge arşivi, denetim kayıtları ve sponsorun takip ekranı. İlaç, aşı, tıbbi cihaz, tanı kiti ve akademik araştırmalar için.</p>
+        </div>
+
+        <div class="blok">
+          <h2>Bugün nerede</h2>
+          <div class="guven">
+            <div><b>Hazır</b>Araştırma yönetimi, hasta formları, yan etki takibi, belge arşivi ve denetim kayıtları geliştirildi, test edildi; pilot kullanıma hazır.</div>
+            <div><b>Pilot aşamasında</b>Hastane seçimi ve risk uyarı modelleri sentetik veride hedeflere yakın; gerçek hastane verisinde doğrulama sırada.</div>
+            <div><b>Geliştiriliyor</b>Türkçe hasta raporlarını okuyan özel yapay zekâ modeli; hedef, uygun hastaların en az %90'ını yakalamak.</div>
+            <div><b>Açık bileşenler</b>Türkçe tıbbi yapay zekâ için açık test seti, model kartları ve hastaneler arası ortak öğrenme protokolü; benimsemeyi hızlandıran ekosistem.</div>
           </div>
         </div>
 
-        <div class="blok">
-          <h2>Olgunluk ve hedefler</h2>
-          <table>
-            <tr><th>Bileşen</th><th>Durum</th><th style="text-align:right">Hedef</th></tr>
-            <tr><td>Çalışma yönetimi, eCRF, güvenlik, TMF, denetim izi, sponsor portalı</td><td><span class="rozet">Üretim</span></td><td class="s">THS 7–8</td></tr>
-            <tr><td>Kimliksizleştirme (recall %91, F1 0,95)</td><td><span class="rozet sari">Pilot</span></td><td class="s">recall ≥ %98</td></tr>
-            <tr><td>Merkez zekâsı (MAPE %34, AUC 0,79)</td><td><span class="rozet sari">Pilot</span></td><td class="s">≤ %25 · ≥ 0,80</td></tr>
-            <tr><td>Eşleştirme, kural tabanlı taban (duyarlılık %77)</td><td><span class="rozet sari">Pilot</span></td><td class="s">≥ %90</td></tr>
-            <tr><td>Türkçe Klinik BDM, federe güncelleme</td><td><span class="rozet mavi">Ar-Ge</span></td><td class="s">THS 4 → 7</td></tr>
-          </table>
-          <div class="altyazi">Ölçümler sentetik demo verisi ve değerlendirme setleri üzerinde sistemin kendi hesaplamalarıdır; prospektif doğrulama üç pilot hastanede gölge modla yapılır.</div>
-        </div>
-
-        <div class="blok">
-          <h2>Ulusal altyapı katkısı</h2>
-          <p>TR-KlinikBench açık değerlendirme seti (6 görev), federe model güncelleme protokolü, model ve veri kartları, kimliksizleştirme aracı, FHIR R4 / OMOP eşlemeleri ve klinik NLP servis API'si diğer kurumların kullanımına açılır; ticari platform bu altyapının sürdürülmesini finanse eder.</p>
-        </div>
-
         <div class="cta">
-          <h3>Gölge mod pilot programı</h3>
-          <p><b>6 ay, lisans ücreti yok.</b> Kurulum ve eğitim EBM tarafından; FHIR veya CSV ile hasta havuzu; eşleştirme, merkez zekâsı ve RBM gölge modda. Hastane kendi merkezlerinin performans endeksini ve pilot raporunu alır. Lisans sınıfları: kurumsal · çalışma bazlı · SaaS · akademik · bileşen/OEM.</p>
+          <h3>Sırada ne var</h3>
+          <p>18 aylık Ar-Ge programı: Türkçe klinik yapay zekâ modelinin eğitimi, üç hastanede gölge mod doğrulaması ve ilk ticari kurulumlar. <b>Yatırımcılar ve pilot iş birliği için iletişime geçin.</b></p>
         </div>
       </div>
     </div>
   </div>
 
   <div class="dip">
-    <div><b>EBM Klinik Araştırma Hizmetleri</b> · Yazılım ve Veri Bilimi Ekibi · yazilim@ebm-cro.com · www.ebm-cro.com</div>
-    <div>Gizli – değerlendirme amaçlıdır. Demo ekranlarındaki veriler sentetiktir; merkez adları kurgusaldır.</div>
+    <div><b>EBM Klinik Araştırma Hizmetleri</b> · yazilim@ebm-cro.com · www.ebm-cro.com</div>
+    <div>Demo ekranlarındaki veriler sentetiktir; hastane adları kurgusaldır.</div>
   </div>
 </div>
 </body>

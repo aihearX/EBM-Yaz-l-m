@@ -39,7 +39,7 @@ Kullanıcılar klinik araştırma uzmanları, araştırmacılar ve çalışma ko
 
 | Kaynak | Tür | Durum |
 |---|---|---|
-| Pilot hastane epikriz, patoloji ve radyoloji raporları | kimliksizleştirilmiş serbest metin | etik/KVKK onayı bekleniyor (İP1) |
+| Pilot hastane epikriz, patoloji ve radyoloji raporları | kimliksizleştirilmiş serbest metin | etik/KVKK onayı bekleniyor (Faz 1) |
 | Türkçe klinik kılavuzlar, tanı-tedavi rehberleri | kamuya açık metin | derleme sürüyor |
 | EBM protokol ve çalışma belgeleri | kurum içi metin | kimliksizleştirme sonrası |
 | Sentetik talimat seti | şablon ve altın standart türevi | mevcut (ml/veri_hazirlama) |
@@ -49,7 +49,7 @@ Ayrıntılar `ml/VERI_KARTI.md` dosyasındadır.
 
 ## Değerlendirme
 
-TR-KlinikBench 0.3 (sentetik) üzerinde kural tabanlı taban çizgisi ve İP2 sonu hedefleri:
+TR-KlinikBench 0.3 (sentetik) üzerinde kural tabanlı taban çizgisi ve Ar-Ge programı Faz 2 sonu hedefleri:
 
 | Görev | Metrik | Taban çizgisi (kural) | Hedef (ebm-klinik-tr) |
 |---|---|---|---|
@@ -101,4 +101,4 @@ kuraldır.
 |---|---|---|
 | 0.1 | 2026-05 | Sentetik talimat setiyle ilk LoRA denemesi; yalnızca iç değerlendirme |
 | 0.2 | 2026-10 | TR-KlinikBench 0.3 ile taban çizgisi; koruma katmanı ve kalıp tabanlı metin değerlendirmesi üretimde |
-| 1.0 (plan) | İP2 sonu | Gerçek derlemle sürekli ön eğitim, nicemlenmiş hastane içi sürüm, gerçek set değerlendirmesi |
+| 1.0 (plan) | Faz 2 sonu | Gerçek derlemle sürekli ön eğitim, nicemlenmiş hastane içi sürüm, gerçek set değerlendirmesi |

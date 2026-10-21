@@ -9,7 +9,7 @@ sonuçlar, gerçek rapor seti sonuçlarıyla aynı tabloda gösterilmez.
 | Sistem | Sağlayıcı | G1 duyarlılık | G1 özgüllük | G1 belirsiz | G2 halüsinasyon | G2 span örtüşme | G3 tam eşleşme | G4 F1 | G5 F1 | G6 kapsama | Süre / örnek |
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | SmartClinical kural tabanlı taban çizgisi v1.4.2 | kural, CPU | 0,750 | 0,875 | 0,278 | 0,000 | 0,270 | 0,938 | 0,962 | 0,971 | 0,575 | ~10 ms |
-| ebm-klinik-tr (hedef, İP2 sonu) | BDM, GPU | ≥ 0,90 | ≥ 0,90 | ≤ 0,10 | ≤ 0,02 | ≥ 0,70 | ≥ 0,85 | ≥ 0,98 | ≥ 0,95 | ≥ 0,85 | ≤ 2 s |
+| ebm-klinik-tr (hedef, Faz 2 sonu) | BDM, GPU | ≥ 0,90 | ≥ 0,90 | ≤ 0,10 | ≤ 0,02 | ≥ 0,70 | ≥ 0,85 | ≥ 0,98 | ≥ 0,95 | ≥ 0,85 | ≤ 2 s |
 
 Okuma notları:
 

@@ -3,7 +3,7 @@
 Türkçe Klinik BDM'nin birden fazla hastanenin verisiyle, veri kurum dışına çıkmadan
 iyileştirilmesi için tasarlanmış federe öğrenme düzeni. Mevcut durumda tasarım ve
 çalışan iskelet (toplayıcı, istemci, yapılandırma) vardır; gerçek hastane turu henüz
-yapılmamıştır. İlk çok merkezli tur, proje İP2–İP5 kapsamında pilot hastanelerle
+yapılmamıştır. İlk çok merkezli tur, Ar-Ge programının 2–5. fazlarında pilot hastanelerle
 planlanmaktadır.
 
 ## Neden federe

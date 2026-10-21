@@ -4,7 +4,7 @@ cikti_dizini: ml/ciktilar
 saglayici: kural            # kural | ollama | vllm | llamacpp  (SC_BDM_SAGLAYICI'yı ezer)
 model: ebm-klinik-tr-7b-q4
 
-# Proje başarı ölçütleri (TÜSEB başvurusu İP2)
+# Ar-Ge programı başarı ölçütleri (Faz 2)
 hedefler:
   duyarlilik_min: 0.90
   halusinasyon_orani_maks: 0.02
