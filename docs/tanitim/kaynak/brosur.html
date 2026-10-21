@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>EBM SmartClinical – Tanıtım</title>
+<style>
+  @page { size: A4 landscape; margin: 0; }
+  * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: "Carlito", "Calibri", "Liberation Sans", Arial, sans-serif; color: #1f2430; background: #fff; }
+  .page { width: 297mm; height: 210mm; position: relative; overflow: hidden; page-break-after: always; background: #fff; }
+  .page:last-child { page-break-after: auto; }
+
+  /* ortak */
+  .ust { position: absolute; top: 10mm; left: 14mm; right: 14mm; display: flex; justify-content: space-between; align-items: baseline; }
+  .ust .bolum { font-size: 8.5pt; letter-spacing: 1.8px; text-transform: uppercase; color: #0e8a8a; font-weight: 700; }
+  .ust .marka { font-size: 8pt; color: #9aa3b2; letter-spacing: .4px; }
+  .alt { position: absolute; bottom: 8mm; left: 14mm; right: 14mm; display: flex; justify-content: space-between; font-size: 7.6pt; color: #9aa3b2; }
+  h1.b { position: absolute; top: 19mm; left: 14mm; font-size: 23pt; color: #16325c; margin: 0; line-height: 1.12; font-weight: 700; max-width: 80mm; }
+  h1.b span { color: #0e8a8a; }
+  .metin { position: absolute; top: 56mm; left: 14mm; width: 78mm; font-size: 10.5pt; line-height: 1.45; color: #3d4350; }
+  .metin p { margin: 0 0 3mm; } .metin.dar { width: 70mm; }
+  .cipler { display: flex; flex-direction: column; gap: 2.4mm; margin-top: 5mm; }
+  .cip { background: #f5f6f8; border-left: 3px solid #0e8a8a; border-radius: 2px; padding: 2.4mm 3mm; font-size: 9.6pt; line-height: 1.35; }
+  .cip b { color: #16325c; display: block; font-size: 10.2pt; margin-bottom: .4mm; }
+  .cip.no { position: relative; padding-left: 10mm; }
+  .cip.no i { position: absolute; left: 3mm; top: 2.6mm; width: 5.2mm; height: 5.2mm; border-radius: 50%; background: #16325c; color: #fff; font-style: normal; font-weight: 700; font-size: 8.5pt; text-align: center; line-height: 5.2mm; }
+
+  /* ekran cerceveleri */
+  .ekran { position: absolute; border-radius: 3mm; overflow: hidden; background: #fff; box-shadow: 0 10px 30px rgba(15,35,66,.22), 0 2px 6px rgba(15,35,66,.12); }
+  .ekran .bar { height: 6mm; background: #e9edf3; display: flex; align-items: center; padding-left: 3mm; gap: 1.6mm; }
+  .ekran .bar i { width: 2.2mm; height: 2.2mm; border-radius: 50%; background: #c5ccd8; display: block; }
+  .ekran .bar i:nth-child(1) { background: #e0867a; } .ekran .bar i:nth-child(2) { background: #e8c468; } .ekran .bar i:nth-child(3) { background: #8fcf9a; }
+  .ekran img { display: block; width: 100%; height: calc(100% - 6mm); object-fit: cover; object-position: top left; }
+  .rozet { position: absolute; background: #16325c; color: #fff; font-size: 8.4pt; font-weight: 700; padding: 1.4mm 3mm; border-radius: 10mm; box-shadow: 0 3px 8px rgba(15,35,66,.3); }
+  .rozet.t { background: #0e8a8a; }
+
+  /* kapak */
+  .kapak { background: linear-gradient(115deg, #0f2342 0%, #16325c 50%, #1f4a7a 100%); color: #fff; }
+  .kapak::before { content: ""; position: absolute; right: -60mm; top: -70mm; width: 200mm; height: 200mm; border-radius: 50%; background: radial-gradient(circle, rgba(14,138,138,.5) 0%, rgba(14,138,138,0) 65%); }
+  .kapak .marka { position: absolute; top: 16mm; left: 16mm; font-size: 9.5pt; letter-spacing: 2px; text-transform: uppercase; color: #9fd3d3; }
+  .kapak h1 { position: absolute; top: 44mm; left: 16mm; font-size: 46pt; margin: 0; line-height: 1; font-weight: 700; }
+  .kapak .alt-baslik { position: absolute; top: 66mm; left: 16mm; font-size: 14pt; color: #cfe6e6; max-width: 120mm; line-height: 1.3; }
+  .kapak .slogan { position: absolute; top: 92mm; left: 16mm; font-size: 22pt; font-weight: 700; line-height: 1.2; width: 120mm; }
+  .kapak .slogan span { color: #9fd3d3; }
+  .kapak .hazirlayan { position: absolute; bottom: 16mm; left: 16mm; font-size: 9.5pt; color: #cfe6e6; line-height: 1.6; }
+  .kapak .hazirlayan b { color: #fff; font-size: 11pt; display: block; letter-spacing: .3px; }
+  .kapak .ekran { right: -26mm; top: 52mm; width: 160mm; height: 140mm; transform: rotate(-4deg); box-shadow: 0 25px 60px rgba(0,0,0,.45); }
+  .kapak .not { position: absolute; bottom: 10mm; right: 16mm; font-size: 7.6pt; color: #9fb0cc; }
+
+  /* neden sayfasi */
+  .uclu { position: absolute; top: 54mm; left: 14mm; width: 118mm; display: grid; gap: 4mm; }
+  .sorun { background: #fff; border: 1px solid #e3e6ec; border-radius: 3mm; padding: 4mm 5mm; display: flex; gap: 4mm; align-items: flex-start; box-shadow: 0 2px 6px rgba(15,35,66,.06); }
+  .sorun .n { font-size: 26pt; font-weight: 700; color: #0e8a8a; line-height: 1; width: 14mm; flex-shrink: 0; }
+  .sorun b { display: block; color: #16325c; font-size: 12pt; margin-bottom: 1mm; }
+  .sorun span { font-size: 9.6pt; color: #3d4350; line-height: 1.4; }
+  .sonuc-bant { position: absolute; left: 14mm; bottom: 20mm; width: 118mm; background: #16325c; color: #fff; border-radius: 3mm; padding: 4mm 5mm; font-size: 11pt; line-height: 1.4; }
+  .sonuc-bant b { color: #9fd3d3; }
+
+  /* ilkeler */
+  .ilkeler { position: absolute; left: 14mm; top: 56mm; width: 84mm; display: grid; gap: 3mm; }
+  .ilke { border: 1px solid #e3e6ec; border-radius: 3mm; padding: 3mm 4mm; display: flex; gap: 3mm; align-items: flex-start; }
+  .ilke .ik { width: 8mm; height: 8mm; border-radius: 50%; background: #e3f3f3; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+  .ilke .ik svg { width: 4.6mm; height: 4.6mm; stroke: #0e8a8a; fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+  .ilke b { display: block; color: #16325c; font-size: 10.5pt; }
+  .ilke span { font-size: 9pt; color: #3d4350; line-height: 1.35; }
+
+  /* kapanis */
+  .kapanis { background: linear-gradient(115deg, #0f2342 0%, #16325c 50%, #0e8a8a 130%); color: #fff; }
+  .kapanis .orta { position: absolute; left: 16mm; top: 40mm; width: 200mm; }
+  .kapanis h2 { font-size: 34pt; margin: 0 0 8mm; line-height: 1.15; font-weight: 700; }
+  .kapanis h2 span { color: #9fd3d3; }
+  .kapanis p { font-size: 13pt; color: #cfe6e6; margin: 0 0 3mm; line-height: 1.45; }
+  .kapanis .firmalar { position: absolute; left: 16mm; bottom: 18mm; display: flex; gap: 20mm; }
+  .kapanis .firma b { display: block; font-size: 14pt; letter-spacing: .3px; }
+  .kapanis .firma span { font-size: 9.5pt; color: #cfe6e6; }
+  .kapanis .not { position: absolute; bottom: 8mm; left: 16mm; right: 16mm; font-size: 7.6pt; color: #9fb0cc; display: flex; justify-content: space-between; }
+</style>
+</head>
+<body>
+
+<!-- 1 KAPAK -->
+<section class="page kapak">
+  <div class="marka">EBM Klinik Araştırma Hizmetleri · AIHEAR Teknoloji A.Ş.</div>
+  <h1>EBM SmartClinical</h1>
+  <div class="alt-baslik">Klinik araştırmaları hızlandıran, Türkçe anlayan yapay zekâ platformu</div>
+  <div class="slogan">Doğru hasta.<br>Doğru hastane.<br><span>Doğru zamanda uyarı.</span></div>
+  <div class="ekran"><div class="bar"><i></i><i></i><i></i></div><img src="../brosur/ekran/pano.png" alt=""></div>
+  <div class="hazirlayan"><b>EBM Klinik Araştırma Hizmetleri</b><b>AIHEAR Teknoloji A.Ş.</b>Tanıtım belgesi</div>
+  <div class="not">Ekranlardaki veriler sentetiktir; hastane adları kurgusaldır.</div>
+</section>
+
+<!-- 2 NEDEN -->
+<section class="page">
+  <div class="ust"><div class="bolum">Neden</div><div class="marka">EBM SmartClinical</div></div>
+  <h1 class="b">Klinik araştırmalar <span>neden gecikir?</span></h1>
+  <div class="uclu">
+    <div class="sorun"><div class="n">1</div><div><b>Uygun hastalar görünmez</b><span>Araştırmaya uygun hastalar hastane kayıtlarında vardır ama bu bilgi Türkçe raporların içinde saklıdır. Koordinatörler dosyaları tek tek okur.</span></div></div>
+    <div class="sorun"><div class="n">2</div><div><b>Hastane seçimi tahmine dayalıdır</b><span>Hangi hastanenin kaç hasta kazandıracağı öz beyanla belirlenir; gerçekleşen çoğu zaman beklentinin altında kalır.</span></div></div>
+    <div class="sorun"><div class="n">3</div><div><b>Sorunlar geç fark edilir</b><span>Eksik veri, geciken bildirim ve kural ihlalleri ancak yerinde ziyarette, yani haftalar sonra görülür.</span></div></div>
+  </div>
+  <div class="sonuc-bant">Her ay gecikme, <b>hastaların tedaviye geç ulaşması</b> ve <b>milyonlarca liralık ek maliyet</b> demektir. SmartClinical bu üç sorunu tek platformda çözer.</div>
+  <div class="ekran" style="left:142mm; top:30mm; width:150mm; height:150mm"><div class="bar"><i></i><i></i><i></i></div><img src="../brosur/ekran/calisma.png" alt=""></div>
+  <div class="rozet" style="left:134mm; top:62mm">Tasarımdan arşive 9 aşama</div>
+  <div class="rozet t" style="left:134mm; top:120mm">Plan ve gerçekleşen tek ekranda</div>
+  <div class="alt"><span>EBM SmartClinical</span><span>2</span></div>
+</section>
+
+<!-- 3 DOGRU HASTA -->
+<section class="page">
+  <div class="ust"><div class="bolum">Doğru hasta</div><div class="marka">EBM SmartClinical</div></div>
+  <h1 class="b">Uygun hastayı <span>dakikalar içinde</span> bulur</h1>
+  <div class="metin">
+    <p>Araştırmanın "kimler katılabilir" listesini okur, hastanenin kimliksizleştirilmiş kayıtlarını tarar ve adayları listeler.</p>
+    <div class="cipler">
+      <div class="cip no"><i>1</i><b>Kanıtıyla önerir</b>Her kriter için raporun kendi cümlesini gösterir: "neden uygun?" sorusunun cevabı her zaman ekrandadır.</div>
+      <div class="cip no"><i>2</i><b>Uydurmaz</b>Kaynak bulamazsa "belirsiz" der; emin olmadığı hiçbir şeyi uygun saymaz.</div>
+      <div class="cip no"><i>3</i><b>Doktor karar verir</b>Son söz araştırmacınındır; her karar gerekçesiyle kayıt altına alınır.</div>
+    </div>
+  </div>
+  <div class="ekran" style="left:100mm; top:28mm; width:120mm; height:95mm"><div class="bar"><i></i><i></i><i></i></div><img src="../brosur/ekran/eslestirme.png" alt=""></div>
+  <div class="ekran" style="left:150mm; top:70mm; width:135mm; height:124mm"><div class="bar"><i></i><i></i><i></i></div><img src="../brosur/ekran/eslestirme_detay.png" alt=""></div>
+  <div class="rozet" style="left:94mm; top:24mm">Aday listesi</div>
+  <div class="rozet t" style="left:144mm; top:66mm">Kriter kriter kanıt</div>
+  <div class="alt"><span>EBM SmartClinical</span><span>3</span></div>
+</section>
+
+<!-- 4 DOGRU HASTANE -->
+<section class="page">
+  <div class="ust"><div class="bolum">Doğru hastane</div><div class="marka">EBM SmartClinical</div></div>
+  <h1 class="b">Hangi hastane, <span>ne kadar sürede,</span> kaç hasta?</h1>
+  <div class="metin">
+    <p>Geçmiş araştırmalardan öğrenir; her hastane için kazanım hızını, başlama süresini ve gecikme riskini tahmin eder, gerekçesini yazar.</p>
+    <div class="cipler">
+      <div class="cip"><b>Hedefe ulaşma tarihi</b>Binlerce senaryo simüle edilir; zamanında bitirme olasılığı tek rakamla görünür.</div>
+      <div class="cip"><b>Açıklanabilir sıralama</b>Her hastane için puan ve iki cümlelik gerekçe.</div>
+      <div class="cip"><b>Sponsor raporu tek tıkla</b>Fizibilite ve kazanım raporu yazdırmaya hazır.</div>
+    </div>
+  </div>
+  <div class="ekran" style="left:100mm; top:28mm; width:150mm; height:150mm"><div class="bar"><i></i><i></i><i></i></div><img src="../brosur/ekran/merkez_zekasi.png" alt=""></div>
+  <div class="ekran" style="left:222mm; top:92mm; width:64mm; height:92mm"><div class="bar"><i></i><i></i><i></i></div><img src="../brosur/ekran/fizibilite.png" alt=""></div>
+  <div class="rozet t" style="left:216mm; top:88mm">Sponsor raporu</div>
+  <div class="alt"><span>EBM SmartClinical</span><span>4</span></div>
+</section>
+
+<!-- 5 RISK -->
+<section class="page">
+  <div class="ust"><div class="bolum">Doğru zamanda uyarı</div><div class="marka">EBM SmartClinical</div></div>
+  <h1 class="b">Sorunu <span>büyümeden</span> gösterir</h1>
+  <div class="metin">
+    <p>Her hastane 15 göstergeyle sürekli izlenir. Eşiği aşan ya da diğer hastanelerden belirgin sapan değerler uyarıya dönüşür.</p>
+    <div class="cipler">
+      <div class="cip"><b>Isı haritası</b>Hangi hastanede, hangi konuda sorun var: tek bakışta.</div>
+      <div class="cip"><b>"Neden tetiklendi?"</b>Her uyarının açıklaması ve önerilen adım yanında.</div>
+      <div class="cip"><b>Ziyaretler riske göre</b>Düşük riskli merkeze uzaktan, yüksek riskliye yerinde izlem.</div>
+    </div>
+  </div>
+  <div class="ekran" style="left:100mm; top:28mm; width:185mm; height:160mm"><div class="bar"><i></i><i></i><i></i></div><img src="../brosur/ekran/rbm.png" alt=""></div>
+  <div class="rozet" style="left:94mm; top:24mm">Merkez × gösterge ısı haritası</div>
+  <div class="alt"><span>EBM SmartClinical</span><span>5</span></div>
+</section>
+
+<!-- 6 HASTA VE VERI -->
+<section class="page">
+  <div class="ust"><div class="bolum">Hasta ve veri</div><div class="marka">EBM SmartClinical</div></div>
+  <h1 class="b">Hastanın yolculuğu <span>tek ekranda</span></h1>
+  <div class="metin">
+    <p>Onamdan son vizite kadar her adım, her form ve her yan etki kaydı bir arada.</p>
+    <div class="cipler">
+      <div class="cip"><b>Vizit takvimi</b>Planlanan ve gerçekleşen tarihler; pencere dışı vizit uyarısı.</div>
+      <div class="cip"><b>Akıllı formlar</b>Uluslararası standarda uygun alanlar; hatalı değerde otomatik sorgu.</div>
+      <div class="cip"><b>Kilit ve imza</b>Doğrulanan veri elektronik imza ile kilitlenir, sonradan değişmez.</div>
+    </div>
+  </div>
+  <div class="ekran" style="left:100mm; top:28mm; width:150mm; height:112mm"><div class="bar"><i></i><i></i><i></i></div><img src="../brosur/ekran/gonullu.png" alt=""></div>
+  <div class="ekran" style="left:180mm; top:96mm; width:105mm; height:94mm"><div class="bar"><i></i><i></i><i></i></div><img src="../brosur/ekran/form.png" alt=""></div>
+  <div class="rozet t" style="left:174mm; top:92mm">Veri giriş formu</div>
+  <div class="alt"><span>EBM SmartClinical</span><span>6</span></div>
+</section>
+
+<!-- 7 GUVENLIK, BELGE, DENETIM -->
+<section class="page">
+  <div class="ust"><div class="bolum">Güvenlik, belge, denetim</div><div class="marka">EBM SmartClinical</div></div>
+  <h1 class="b">Kurallara uyum, <span>kendiliğinden</span></h1>
+  <div class="metin dar" style="top:46mm">
+    <div class="cipler" style="margin-top:0">
+      <div class="cip"><b>Yan etki bildirimi</b>Ciddi olaylarda bildirim süresi geri sayar; geciken bildirim uyarıya dönüşür.</div>
+      <div class="cip"><b>Belge arşivi</b>Uluslararası arşiv düzeni, her belgenin parmak izi, e-imza ile onay.</div>
+      <div class="cip"><b>Silinemez kayıt</b>Kim, ne zaman, neyi değiştirdi: zincir halinde, değiştirilemez.</div>
+    </div>
+  </div>
+  <div class="ekran" style="left:92mm; top:28mm; width:98mm; height:76mm"><div class="bar"><i></i><i></i><i></i></div><img src="../brosur/ekran/guvenlik.png" alt=""></div>
+  <div class="ekran" style="left:194mm; top:28mm; width:92mm; height:76mm"><div class="bar"><i></i><i></i><i></i></div><img src="../brosur/ekran/tmf.png" alt=""></div>
+  <div class="ekran" style="left:92mm; top:110mm; width:194mm; height:82mm"><div class="bar"><i></i><i></i><i></i></div><img src="../brosur/ekran/denetim.png" alt=""></div>
+  <div class="rozet" style="left:86mm; top:24mm">Yan etkiler</div>
+  <div class="rozet" style="left:188mm; top:24mm">Belge arşivi</div>
+  <div class="rozet t" style="left:86mm; top:106mm">Denetim izi</div>
+  <div class="alt"><span>EBM SmartClinical</span><span>7</span></div>
+</section>
+
+<!-- 8 SPONSOR VE ENDEKS -->
+<section class="page">
+  <div class="ust"><div class="bolum">Sponsor görünümü</div><div class="marka">EBM SmartClinical</div></div>
+  <h1 class="b">Sponsor için <span>tek ekran:</span> takvim, risk, karar</h1>
+  <div class="metin">
+    <p>Araştırmayı finanse eden kurum, kendi çalışmalarını hasta kimliği görmeden izler.</p>
+    <div class="cipler">
+      <div class="cip"><b>Takvim riski haftalar önce</b>Mevcut hızla hedefe kalan süre plana göre renklenir.</div>
+      <div class="cip"><b>Hastane performans endeksi</b>Hastaneler, geçmiş çalışmalara göre anonim olarak kıyaslanır. Her yeni çalışma endeksi güçlendirir.</div>
+    </div>
+  </div>
+  <div class="ekran" style="left:100mm; top:28mm; width:150mm; height:96mm"><div class="bar"><i></i><i></i><i></i></div><img src="../brosur/ekran/sponsor.png" alt=""></div>
+  <div class="ekran" style="left:140mm; top:100mm; width:146mm; height:92mm"><div class="bar"><i></i><i></i><i></i></div><img src="../brosur/ekran/endeks.png" alt=""></div>
+  <div class="rozet" style="left:94mm; top:24mm">Sponsor portalı</div>
+  <div class="rozet t" style="left:134mm; top:96mm">Performans endeksi</div>
+  <div class="alt"><span>EBM SmartClinical</span><span>8</span></div>
+</section>
+
+<!-- 9 YAPAY ZEKA VE GUVEN -->
+<section class="page">
+  <div class="ust"><div class="bolum">Yapay zekâ ve güven</div><div class="marka">EBM SmartClinical</div></div>
+  <h1 class="b">Türkçe anlayan, <span>hastaneden çıkmayan</span> yapay zekâ</h1>
+  <div class="ilkeler">
+    <div class="ilke"><div class="ik"><svg viewBox="0 0 24 24"><path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z"/></svg></div><div><b>Veri hastanede kalır</b><span>Yazılım ve model hastanenin kendi sunucusunda çalışır; kişisel veri kanununa uygundur.</span></div></div>
+    <div class="ilke"><div class="ik"><svg viewBox="0 0 24 24"><path d="M4 12l5 5L20 6"/></svg></div><div><b>Kaynak göstermek zorunda</b><span>Her cevap raporun kendi cümlesiyle gelir; kaynak yoksa "belirsiz".</span></div></div>
+    <div class="ilke"><div class="ik"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-7 8-7s8 3 8 7"/></svg></div><div><b>Karar insanın</b><span>Yapay zekâ önerir; doktor ve araştırma ekibi karar verir.</span></div></div>
+    <div class="ilke"><div class="ik"><svg viewBox="0 0 24 24"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg></div><div><b>Hiç durmaz</b><span>Model sunucusu kapalıysa sistem daha basit yöntemle devam eder ve bunu kaydeder.</span></div></div>
+  </div>
+  <div class="ekran" style="left:106mm; top:28mm; width:130mm; height:84mm"><div class="bar"><i></i><i></i><i></i></div><img src="../brosur/ekran/deid.png" alt=""></div>
+  <div class="ekran" style="left:156mm; top:100mm; width:130mm; height:92mm"><div class="bar"><i></i><i></i><i></i></div><img src="../brosur/ekran/bdm.png" alt=""></div>
+  <div class="rozet" style="left:100mm; top:24mm">Kimlik bilgileri otomatik gizlenir</div>
+  <div class="rozet t" style="left:150mm; top:96mm">Yapay zekâ konsolu</div>
+  <div class="alt"><span>EBM SmartClinical</span><span>9</span></div>
+</section>
+
+<!-- 10 OLCULEBILIR -->
+<section class="page">
+  <div class="ust"><div class="bolum">Ölçülebilir ilerleme</div><div class="marka">EBM SmartClinical</div></div>
+  <h1 class="b">Başarıyı <span>kendi ölçer,</span> hedefle karşılaştırır</h1>
+  <div class="metin">
+    <p>Sistem, yapay zekâsının ne kadar isabetli olduğunu sürekli ölçer ve hedeflerin yanında gösterir.</p>
+    <div class="cipler">
+      <div class="cip"><b>Hazır</b>Araştırma yönetimi, hasta formları, yan etki takibi, belge arşivi ve denetim kayıtları.</div>
+      <div class="cip"><b>Doğrulama aşamasında</b>Hastane seçimi ve risk uyarı modelleri; gerçek hastane verisinde ölçüm sırada.</div>
+      <div class="cip"><b>Geliştiriliyor</b>Türkçe raporları okuyan özel model; hedef, uygun hastaların en az %90'ını yakalamak.</div>
+    </div>
+  </div>
+  <div class="ekran" style="left:100mm; top:28mm; width:185mm; height:160mm"><div class="bar"><i></i><i></i><i></i></div><img src="../brosur/ekran/arge.png" alt=""></div>
+  <div class="rozet" style="left:94mm; top:24mm">Hedef · mevcut · durum</div>
+  <div class="alt"><span>EBM SmartClinical</span><span>10</span></div>
+</section>
+
+<!-- 11 KAPANIS -->
+<section class="page kapanis">
+  <div class="orta">
+    <h2>Doğru hasta. Doğru hastane.<br><span>Doğru zamanda uyarı.</span></h2>
+    <p>Klinik araştırmaları hızlandıran, Türkçe anlayan ve hastaneden dışarı veri çıkarmayan yerli platform.</p>
+    <p>Yatırım ve iş birliği görüşmeleri için bizimle iletişime geçin.</p>
+  </div>
+  <div class="firmalar">
+    <div class="firma"><b>EBM Klinik Araştırma Hizmetleri</b><span>Klinik operasyon ve ürün sahibi</span></div>
+    <div class="firma"><b>AIHEAR Teknoloji A.Ş.</b><span>Yapay zekâ ve yazılım geliştirme</span></div>
+  </div>
+  <div class="not"><span>Bu belgedeki ekran görüntüleri demo kurulumundan alınmıştır; veriler sentetiktir, hastane adları kurgusaldır.</span><span>Gizli – değerlendirme amaçlıdır</span></div>
+</section>
+
+</body>
+</html>
