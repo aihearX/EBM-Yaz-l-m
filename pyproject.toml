@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "smartclinical"
+version = "1.4.2"
+description = "EBM SmartClinical - Klinik arastirma yonetimi ve Turkce klinik karar destek platformu"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "Proprietary"}
+authors = [{name = "EBM Klinik Arastirma Yazilim Ekibi", email = "yazilim@ebm-cro.com"}]
+dependencies = [
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.27",
+    "sqlalchemy>=2.0",
+    "jinja2>=3.1",
+    "python-multipart>=0.0.9",
+    "itsdangerous>=2.1",
+    "pydantic>=2.5",
+    "numpy>=1.26",
+    "scipy>=1.11",
+    "httpx>=0.26",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "pytest-cov", "ruff", "playwright"]
+ml = ["torch>=2.1", "transformers>=4.38", "peft>=0.9", "datasets>=2.16", "accelerate>=0.27", "bitsandbytes>=0.42", "sentence-transformers>=2.5", "rank-bm25>=0.2"]
+pg = ["psycopg[binary]>=3.1"]
+
+[tool.setuptools.packages.find]
+include = ["smartclinical*", "ml*"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py311"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+filterwarnings = ["ignore::DeprecationWarning"]

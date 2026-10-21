@@ -1,0 +1,10 @@
+EBM SmartClinical
+Telif Hakkı (c) 2024-2026 EBM Klinik Araştırma Hizmetleri. Tüm hakları saklıdır.
+
+Bu yazılım ve beraberindeki belgeler EBM Klinik Araştırma Hizmetleri'nin tescilli
+ürünüdür. Yazılımın tamamı veya bir kısmı, yazılı izin olmaksızın kopyalanamaz,
+dağıtılamaz, değiştirilemez, tersine mühendisliğe tabi tutulamaz veya üçüncü
+taraflara verilemez. Kullanım hakları lisans sözleşmesi ile belirlenir.
+
+Üçüncü taraf bileşenler kendi lisanslarına tabidir (FastAPI, SQLAlchemy, NumPy,
+SciPy: MIT/BSD).
