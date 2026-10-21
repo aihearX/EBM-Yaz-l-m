@@ -1,0 +1,11 @@
+<table class="sikisik">
+  <tr><th>#</th><th>Zaman (UTC)</th><th>Kullanıcı</th><th>İşlem</th><th>Varlık</th><th>Değişiklik</th><th>Gerekçe</th><th>IP</th><th>Özet</th></tr>
+  {% for d in kayitlar %}
+  <tr>
+    <td>{{ d.id }}</td><td>{{ d.zaman|tarih }}</td><td>{{ d.kullanici_adi or '—' }}</td><td><span class="rozet">{{ d.islem }}</span></td>
+    <td>{{ d.varlik }}{% if d.varlik_id %} #{{ d.varlik_id }}{% endif %}</td>
+    <td>{% if d.eski or d.yeni %}<details><summary class="kucuk">göster</summary>{% if d.eski %}<pre style="margin:2px 0">eski: {{ d.eski|tojson }}</pre>{% endif %}{% if d.yeni %}<pre style="margin:2px 0">yeni: {{ d.yeni|tojson }}</pre>{% endif %}</details>{% endif %}</td>
+    <td>{{ d.gerekce or '' }}</td><td><small>{{ d.ip or '' }}</small></td><td><code title="{{ d.hash }}">{{ d.hash[:10] if d.hash }}</code></td>
+  </tr>
+  {% else %}<tr><td colspan="9" class="kucuk">Kayıt yok.</td></tr>{% endfor %}
+</table>

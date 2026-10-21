@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block baslik %}Merkezler{% endblock %}
+{% block yol %}Merkezler ve Araştırmacılar{% endblock %}
+{% block icerik %}
+<div class="baslik-satiri">
+  <div><h1>Merkez kayıt defteri</h1><small>{{ satirlar|length }} merkez · geçmiş performans verileri Merkez Zekâsı modelini besler</small></div>
+  <form class="satir" method="get"><input type="text" name="q" value="{{ q }}" placeholder="Merkez veya şehir" style="width:220px"><button class="btn">Ara</button></form>
+</div>
+<div class="izgara k21">
+  <div class="kart">
+    <table>
+      <tr><th>Kod</th><th>Merkez</th><th>Şehir</th><th>Tür</th><th>HBYS</th><th class="sag">Çalışma</th><th class="sag">Toplam kayıt</th><th class="sag">Hasta/ay</th><th class="sag">Ort. aktivasyon (gün)</th><th>Veri bağlantısı</th></tr>
+      {% for s in satirlar %}
+      <tr>
+        <td>{{ s.m.kod }}</td><td><a href="/merkezler/{{ s.m.id }}"><b>{{ s.m.ad }}</b></a></td><td>{{ s.m.sehir }}</td><td>{{ s.m.kurum_tipi|replace('_', ' ') }}</td><td>{{ s.m.hbys or '—' }}</td>
+        <td class="sayi">{{ s.p.calisma }}</td><td class="sayi">{{ s.p.kayit }}</td><td class="sayi">{{ s.p.hasta_ay|sayi(2) }}</td><td class="sayi">{{ s.p.aktivasyon_gun|sayi(0) }}</td>
+        <td>{% if s.hasta %}<span class="rozet yesil">FHIR senkron</span>{% else %}<span class="rozet">yok</span>{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </table>
+  </div>
+  <div>
+    {% if izinli(kullanici, 'merkez.yonet') %}
+    <div class="kart">
+      <h2>Merkez ekle</h2>
+      <form method="post" action="/merkezler">
+        <div class="ikili"><div class="alan"><label>Kod</label><input type="text" name="kod" required placeholder="IST-04"></div><div class="alan"><label>Şehir</label><input type="text" name="sehir" required></div></div>
+        <div class="alan"><label>Kurum adı</label><input type="text" name="ad" required></div>
+        <div class="ikili"><div class="alan"><label>Kurum türü</label><select name="kurum_tipi"><option value="universite">Üniversite</option><option value="egitim_arastirma">Eğitim ve Araştırma</option><option value="sehir">Şehir Hastanesi</option><option value="ozel">Özel</option></select></div>
+          <div class="alan"><label>Yatak</label><input type="number" name="yatak_sayisi"></div></div>
+        <div class="alan"><label>HBYS</label><input type="text" name="hbys" placeholder="ör. Nucleus, Probel, Sisoft"></div>
+        <div class="alan"><label>Terapötik alanlar (virgülle)</label><input type="text" name="terapotik_alanlar" placeholder="Onkoloji, Kardiyoloji"></div>
+        <button class="btn birincil">Ekle</button>
+      </form>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

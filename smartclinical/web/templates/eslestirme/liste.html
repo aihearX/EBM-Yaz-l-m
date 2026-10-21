@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block baslik %}{{ c.kod }} · Hasta eşleştirme{% endblock %}
+{% block yol %}<a href="/calismalar">Çalışmalar</a> › <a href="/calismalar/{{ c.id }}">{{ c.kod }}</a> › Hasta Eşleştirme{% endblock %}
+{% block icerik %}
+{% include "calismalar/_baslik.html" %}
+<div class="izgara k4" style="margin-bottom:16px">
+  <div class="olcum"><div class="etiket">Taranan hasta havuzu</div><div class="deger">{{ hasta_havuzu }}</div><div class="alt">aktif merkezlerin HBYS kayıtları</div></div>
+  <div class="olcum"><div class="etiket">Uygun</div><div class="deger iyi">{{ ozet.uygun }}</div><div class="alt">tüm kriterler kanıtlı</div></div>
+  <div class="olcum"><div class="etiket">Olası</div><div class="deger uyari">{{ ozet.olasi }}</div><div class="alt">bazı kriterler belirsiz</div></div>
+  <div class="olcum"><div class="etiket">Son tarama</div><div class="deger" style="font-size:15px;padding-top:5px">{{ son_tarama|tarih if son_tarama else 'henüz yok' }}</div><div class="alt">model: {{ bdm_model }}{% if bdm == 'kural' %} (kural modu){% endif %}</div></div>
+</div>
+{% if onaysiz_kriter %}<div class="mesaj uyari">{{ onaysiz_kriter }} kriter henüz araştırmacı onayından geçmedi. Sonuçlar ön tarama niteliğindedir.</div>{% endif %}
+<div class="kart">
+  <div class="baslik-satiri" style="margin-bottom:8px">
+    <h2>Aday hastalar</h2>
+    <div class="sag">
+      <form method="get" class="satir">
+        <select name="karar" onchange="this.form.submit()"><option value="">Tüm kararlar</option>{% for k in ['uygun','olasi','belirsiz','uygun_degil'] %}<option value="{{ k }}" {{ 'selected' if karar == k }}>{{ k }}</option>{% endfor %}</select>
+        <select name="merkez" onchange="this.form.submit()"><option value="">Tüm merkezler</option>{% for cm in c.merkezler %}<option value="{{ cm.merkez_id }}" {{ 'selected' if merkez == cm.merkez_id }}>{{ cm.merkez.sehir }}</option>{% endfor %}</select>
+      </form>
+      {% if izinli(kullanici, 'eslestirme.calistir') %}
+      <form method="post" action="/calismalar/{{ c.id }}/eslestirme/calistir" class="satir">
+        <select name="merkez_id"><option value="">Tüm aktif merkezler</option>{% for cm in c.merkezler %}<option value="{{ cm.merkez_id }}">{{ cm.merkez.sehir }}</option>{% endfor %}</select>
+        <label style="display:flex;align-items:center;gap:4px;margin:0"><input type="checkbox" name="golge_mod" value="1"> gölge mod</label>
+        <button class="btn birincil">Ön taramayı çalıştır</button>
+      </form>
+      {% endif %}
+      <a class="btn" href="/calismalar/{{ c.id }}/eslestirme-golge">Gölge mod raporu</a>
+    </div>
+  </div>
+  <table>
+    <tr><th>Hasta</th><th>Merkez</th><th>Yaş/Cins.</th><th class="sag">Skor</th><th>Model kararı</th><th>Kriter sonuçları</th><th>Araştırmacı kararı</th><th>Tarama</th></tr>
+    {% for s in sonuclar %}
+    {% set sag = s.kriter_sonuclari|selectattr('sonuc','equalto','saglandi')|list|length %}
+    {% set belirsiz = s.belirsiz_sayisi %}
+    {% set ihlal = s.kriter_sonuclari|selectattr('tip','equalto','haric')|selectattr('sonuc','equalto','saglandi')|list|length %}
+    <tr>
+      <td><a href="/calismalar/{{ c.id }}/eslestirme/{{ s.id }}"><b>{{ s.hasta.kayit_no }}</b></a></td>
+      <td>{{ s.hasta.merkez.sehir }}</td>
+      <td>{{ s.hasta.yas }} / {{ s.hasta.cinsiyet }}</td>
+      <td class="sayi"><b>{{ (s.skor*100)|round|int }}</b></td>
+      <td><span class="rozet {{ 'yesil' if s.karar == 'uygun' else ('sari' if s.karar == 'olasi' else ('kirmizi' if s.karar == 'uygun_degil' else '')) }}">{{ s.karar }}</span></td>
+      <td><small>{{ sag }} sağlandı · {{ belirsiz }} belirsiz{% if ihlal %} · <span style="color:var(--kirmizi)">{{ ihlal }} hariç kriteri ihlali</span>{% endif %}</small></td>
+      <td>{% if s.inceleme_karari %}<span class="rozet {{ 'yesil' if s.inceleme_karari == 'onay' else ('kirmizi' if s.inceleme_karari == 'red' else 'mavi') }}">{{ s.inceleme_karari }}</span> <small>{{ s.inceleyen.kullanici_adi if s.inceleyen }}</small>{% else %}<span class="rozet sari">bekliyor</span>{% endif %}</td>
+      <td><small>{{ s.olusturma|tarih }}{% if s.golge_mod %} · gölge{% endif %}</small></td>
+    </tr>
+    {% else %}<tr><td colspan="8" class="kucuk">Henüz tarama yapılmadı. "Ön taramayı çalıştır" ile aktif merkezlerin kimliksizleştirilmiş HBYS kayıtları protokol kriterleriyle eşleştirilir.</td></tr>{% endfor %}
+  </table>
+</div>
+<div class="not">Eşleştirme motoru hastane içindeki Türkçe Klinik BDM ile çalışır; hasta verisi kurum dışına çıkmaz. Her öneri, kaynak cümlesi ile birlikte sunulur. Araştırmacı onayı olmadan hiçbir hasta çalışmaya alınmaz; model önerisi ile araştırmacı kararı arasındaki uyum gölge mod raporunda izlenir.</div>
+{% endblock %}

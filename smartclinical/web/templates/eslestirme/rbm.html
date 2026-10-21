@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block baslik %}{{ c.kod }} · Risk bazlı izlem{% endblock %}
+{% block yol %}<a href="/calismalar">Çalışmalar</a> › <a href="/calismalar/{{ c.id }}">{{ c.kod }}</a> › Risk Bazlı İzlem{% endblock %}
+{% block icerik %}
+{% include "calismalar/_baslik.html" %}
+<div class="baslik-satiri">
+  <div><h2 style="margin:0">Anahtar risk göstergeleri (KRI) ve erken uyarı</h2><small>ICH E6(R3) risk temelli kalite yönetimi · son hesaplama {{ son|tarih if son else '—' }}</small></div>
+  {% if izinli(kullanici, 'rbm.yonet') %}<form method="post" action="/calismalar/{{ c.id }}/rbm/calistir"><button class="btn birincil">Göstergeleri hesapla</button></form>{% endif %}
+</div>
+<div class="kart">
+  <h2>Merkez × KRI ısı haritası</h2>
+  <div style="overflow-x:auto">
+  <table class="sikisik">
+    <tr><th>Merkez</th><th class="sag">Risk puanı</th>{% for kr in kriler %}<th title="{{ kr.ad }}: {{ kr.aciklama or '' }} (uyarı {{ kr.esik_uyari }}, aksiyon {{ kr.esik_aksiyon }})" class="sag">{{ kr.kod }}</th>{% endfor %}<th>Önerilen izlem</th></tr>
+    {% for cm in merkezler %}
+    {% set d = degerler.get(cm.id, {}) %}
+    <tr>
+      <td><b>{{ cm.merkez_no }}</b> {{ cm.merkez.sehir }}<br><small>{{ cm.durum_etiket }}</small></td>
+      <td class="sayi">{% if cm.risk_puani is not none %}<span class="isi {{ 'aksiyon' if cm.risk_puani >= 60 else ('uyari' if cm.risk_puani >= 35 else 'normal') }}">{{ cm.risk_puani|round|int }}</span>{% else %}<span class="isi yok">—</span>{% endif %}</td>
+      {% for kr in kriler %}{% set v = d.get(kr.kod) %}
+      <td class="sayi">{% if v is none %}<span class="isi yok">—</span>{% else %}<span class="isi {{ seviye(kr, v) }}">{{ v|sayi(1) }}</span>{% endif %}</td>{% endfor %}
+      <td><small>{{ oneriler[cm.id] }}</small></td>
+    </tr>
+    {% else %}<tr><td colspan="{{ kriler|length + 3 }}" class="kucuk">Aktif merkez yok.</td></tr>{% endfor %}
+  </table>
+  </div>
+  <div class="grafik-aciklama" style="margin-top:6px"><span><i style="background:#e4f3ea"></i>normal</span><span><i style="background:#fdf3e0"></i>uyarı eşiği</span><span><i style="background:#f9e5e5"></i>aksiyon eşiği</span></div>
+</div>
+<div class="izgara k21">
+  <div class="kart">
+    <h2>Uyarılar</h2>
+    <table>
+      <tr><th>Seviye</th><th>Gösterge</th><th>Merkez</th><th>Mesaj ve açıklama</th><th class="sag">Değer / eşik</th><th>Tarih</th><th>Durum</th><th></th></tr>
+      {% for u in uyarilar %}
+      <tr>
+        <td><span class="rozet {{ 'kirmizi' if u.seviye == 'aksiyon' else ('sari' if u.seviye == 'uyari' else '') }}">{{ u.seviye }}</span></td>
+        <td><code>{{ u.kri_kod }}</code></td>
+        <td>{{ u.calisma_merkez.merkez.sehir if u.calisma_merkez else 'Çalışma' }}</td>
+        <td>{{ u.mesaj }}{% if u.aciklama %}<details><summary class="kucuk">neden tetiklendi?</summary><small>{{ u.aciklama }}</small></details>{% endif %}{% if u.kapanis_notu %}<br><small>Not: {{ u.kapanis_notu }}</small>{% endif %}</td>
+        <td class="sayi">{{ u.deger|sayi(1) }} / {{ u.esik|sayi(1) }}</td>
+        <td><small>{{ u.olusturma|tarih }}</small></td>
+        <td><span class="rozet {{ 'sari' if u.durum == 'acik' else ('mavi' if u.durum == 'inceleniyor' else '') }}">{{ u.durum }}</span></td>
+        <td>{% if u.durum in ('acik','inceleniyor') and izinli(kullanici, 'rbm.yonet') %}
+          <form method="post" action="/calismalar/{{ c.id }}/rbm/uyari/{{ u.id }}" class="satir"><select name="durum" style="width:120px"><option value="inceleniyor">İnceleniyor</option><option value="kapandi">Kapat</option><option value="yanlis_alarm">Yanlış alarm</option></select><input type="text" name="kapanis_notu" placeholder="not" style="width:130px"><button class="btn kucuk">Kaydet</button></form>{% endif %}</td>
+      </tr>
+      {% else %}<tr><td colspan="8" class="kucuk">Uyarı yok.</td></tr>{% endfor %}
+    </table>
+  </div>
+  <div>
+    <div class="kart">
+      <h2>Kalite tolerans limitleri (QTL)</h2>
+      <table class="sikisik"><tr><th>Parametre</th><th class="sag">Mevcut</th><th class="sag">Limit</th><th></th></tr>
+        {% for q in qtller %}<tr><td>{{ q.parametre }}<br><small>{{ q.gerekce }}</small></td><td class="sayi">{{ q.mevcut_deger|sayi(1) }}{{ q.birim or '' }}</td><td class="sayi">{{ q.limit|sayi(1) }}{{ q.birim or '' }}</td><td>{% if q.mevcut_deger is none %}—{% elif q.asildi %}<span class="rozet kirmizi">aşıldı</span>{% elif q.ikincil_limit and q.mevcut_deger > q.ikincil_limit %}<span class="rozet sari">yaklaşıyor</span>{% else %}<span class="rozet yesil">uygun</span>{% endif %}</td></tr>{% else %}<tr><td colspan="4" class="kucuk">QTL tanımı yok.</td></tr>{% endfor %}
+      </table>
+    </div>
+    <div class="kart">
+      <h2>Gösterge tanımları</h2>
+      <table class="sikisik"><tr><th>Kod</th><th>Ad</th><th class="sag">Uyarı</th><th class="sag">Aksiyon</th></tr>
+        {% for kr in kriler %}<tr><td><code>{{ kr.kod }}</code></td><td>{{ kr.ad }}<br><small>{{ kr.aciklama }}</small></td><td class="sayi">{{ kr.esik_uyari|sayi(1) }}{{ kr.birim or '' }}</td><td class="sayi">{{ kr.esik_aksiyon|sayi(1) }}{{ kr.birim or '' }}</td></tr>{% endfor %}
+      </table>
+    </div>
+    <div class="not">Uyarılar hem sabit eşiklerden hem de merkezler arası istatistiksel sapmadan (medyan/MAD tabanlı dayanıklı z-skoru) üretilir. Her uyarının "neden tetiklendi" açıklaması, CRA'nın kararı için gerekli bağlamı içerir; uyarılar otomatik aksiyon almaz.</div>
+  </div>
+</div>
+{% endblock %}

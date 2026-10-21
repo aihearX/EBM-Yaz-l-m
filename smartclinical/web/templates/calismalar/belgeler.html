@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block baslik %}{{ c.kod }} · TMF{% endblock %}
+{% block yol %}<a href="/calismalar">Çalışmalar</a> › <a href="/calismalar/{{ c.id }}">{{ c.kod }}</a> › TMF{% endblock %}
+{% block icerik %}
+{% include "calismalar/_baslik.html" %}
+<div class="izgara k21">
+  <div>
+    {% for kod, ad in TMF_BOLGELER.items() %}
+    <div class="kart sikisik">
+      <h3>{{ kod }} · {{ ad }} {% if tamlik[kod] %}<span class="rozet yesil">tamam</span>{% else %}<span class="rozet sari">eksik</span>{% endif %}</h3>
+      {% if bolgeler.get(kod) %}
+      <table class="sikisik"><tr><th>Belge</th><th>Merkez</th><th>Sürüm</th><th>Durum</th><th>Yükleyen</th><th>Tarih</th><th>SHA-256</th><th></th></tr>
+        {% for b in bolgeler[kod] %}<tr><td>{{ b.ad }}{% if b.dosya_adi %}<br><small>{{ b.dosya_adi }}</small>{% endif %}</td><td>{{ b.merkez.sehir if b.merkez else 'Merkezi' }}</td><td>{{ b.versiyon }}</td>
+          <td><span class="rozet {{ 'yesil' if b.durum == 'onayli' else ('sari' if b.durum == 'taslak' else '') }}">{{ b.durum }}</span></td><td>{{ b.yukleyen.kullanici_adi if b.yukleyen else '—' }}</td><td>{{ b.yukleme|tarih }}</td><td><code>{{ b.sha256[:12] if b.sha256 else '—' }}</code></td>
+          <td>{% if b.durum == 'taslak' and izinli(kullanici, 'belge.yukle') %}<details><summary class="kucuk">e-imza ile onayla</summary><form method="post" action="/calismalar/{{ c.id }}/belgeler/{{ b.id }}/onayla" class="satir" style="margin-top:4px"><input type="password" name="parola" placeholder="parolanızı girin" required style="width:150px"><button class="btn kucuk">İmzala</button></form></details>{% endif %}</td></tr>{% endfor %}
+      </table>
+      {% else %}<small>Belge yok.</small>{% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  <div>
+    {% if izinli(kullanici, 'belge.yukle') %}
+    <div class="kart">
+      <h2>Belge yükle</h2>
+      <form method="post" action="/calismalar/{{ c.id }}/belgeler" enctype="multipart/form-data">
+        <div class="alan"><label>TMF bölgesi</label><select name="tmf_bolge">{% for kod, ad in TMF_BOLGELER.items() %}<option value="{{ kod }}">{{ kod }} – {{ ad }}</option>{% endfor %}</select></div>
+        <div class="alan"><label>Belge adı</label><input type="text" name="ad" required placeholder="Etik kurul onay yazısı"></div>
+        <div class="ikili"><div class="alan"><label>Sürüm</label><input type="text" name="versiyon" value="1.0"></div>
+          <div class="alan"><label>Merkez</label><select name="merkez_id"><option value="">Merkezi</option>{% for cm in c.merkezler %}<option value="{{ cm.merkez_id }}">{{ cm.merkez.sehir }}</option>{% endfor %}</select></div></div>
+        <div class="alan"><label>Dosya</label><input type="file" name="dosya"></div>
+        <button class="btn birincil">Yükle</button>
+      </form>
+    </div>
+    {% endif %}
+    <div class="not">Yapı, DIA TMF Referans Modeli 3.x bölgelerine göre düzenlenmiştir. Her dosyanın SHA-256 özeti yükleme anında alınır; onay elektronik imza ile yapılır ve imza kaydı kullanıcı, zaman ve belge özeti ile birlikte saklanır.</div>
+  </div>
+</div>
+{% endblock %}

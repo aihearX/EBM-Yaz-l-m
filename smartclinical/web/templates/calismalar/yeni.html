@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block baslik %}Yeni çalışma{% endblock %}
+{% block yol %}<a href="/calismalar">Çalışmalar</a> › Yeni çalışma{% endblock %}
+{% block icerik %}
+<div class="baslik-satiri"><div><h1>Yeni çalışma</h1><small>Temel protokol bilgileri. Kriterler, merkezler ve eCRF sonraki adımlarda tanımlanır.</small></div></div>
+{% if hata %}<div class="mesaj hata">{{ hata }}</div>{% endif %}
+<form method="post" class="kart" style="max-width:860px">
+  <div class="izgara k2">
+    <div class="alan"><label>Protokol kodu</label><input type="text" name="kod" required placeholder="EBM-ONK-2026-003"></div>
+    <div class="alan"><label>Kısa ad</label><input type="text" name="kisa_ad" required placeholder="HER2- meme Ca neoadjuvan"></div>
+  </div>
+  <div class="alan"><label>Tam başlık</label><input type="text" name="baslik" required></div>
+  <div class="izgara k3">
+    <div class="alan"><label>Çalışma türü</label><select name="tur">{% for k, v in turler.items() %}<option value="{{ k.value }}">{{ v }}</option>{% endfor %}</select>
+      <div class="yardim">Tür; başvuru şablonlarını, varsayılan KRI setini ve güvenlik bildirim kurallarını belirler.</div></div>
+    <div class="alan"><label>Faz</label><select name="faz"><option value="">—</option><option>I</option><option>I/II</option><option>II</option><option>III</option><option>IV</option><option value="pilot">Pilot (cihaz)</option><option value="pivotal">Pivotal (cihaz)</option><option value="performans">Performans (IVD)</option></select></div>
+    <div class="alan"><label>Tasarım</label><input type="text" name="tasarim" placeholder="Randomize, çift kör, plasebo kontrollü"></div>
+  </div>
+  <div class="izgara k3">
+    <div class="alan"><label>Sponsor</label><input type="text" name="sponsor" required></div>
+    <div class="alan"><label>Terapötik alan</label><input type="text" name="terapotik_alan" required placeholder="Onkoloji"></div>
+    <div class="alan"><label>Endikasyon</label><input type="text" name="endikasyon"></div>
+  </div>
+  <div class="izgara k4">
+    <div class="alan"><label>Hedef gönüllü</label><input type="number" name="hedef_hasta" min="0" value="0"></div>
+    <div class="alan"><label>Hedef merkez</label><input type="number" name="hedef_merkez" min="0" value="0"></div>
+    <div class="alan"><label>Planlanan başlangıç</label><input type="date" name="baslangic"></div>
+    <div class="alan"><label>Planlanan son hasta</label><input type="date" name="planlanan_bitis"></div>
+  </div>
+  <button class="btn birincil">Çalışmayı oluştur</button> <a class="btn" href="/calismalar">Vazgeç</a>
+</form>
+{% endblock %}

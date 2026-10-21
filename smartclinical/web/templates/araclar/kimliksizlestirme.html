@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block baslik %}Kimliksizleştirme{% endblock %}
+{% block yol %}Yapay Zekâ Araçları › Kimliksizleştirme{% endblock %}
+{% block icerik %}
+<div class="baslik-satiri"><div><h1>Türkçe klinik metin kimliksizleştirme</h1><small>Epikriz, patoloji ve radyoloji raporlarındaki kişisel verileri (KVKK md. 6 özel nitelikli veri) maskeler. HBYS'den gelen tüm serbest metinler bu modülden geçmeden sisteme yazılmaz.</small></div></div>
+<form method="post" class="izgara k2">
+  <div class="kart">
+    <h2>Girdi</h2>
+    <textarea name="metin" style="min-height:360px;font-family:monospace;font-size:12.5px">{{ metin }}</textarea>
+    <div class="satir" style="display:flex;gap:8px;align-items:center;margin-top:8px">
+      <select name="mod" style="width:240px"><option value="maske" {{ 'selected' if mod == 'maske' }}>Maskele ([AD], [TARIH] ...)</option><option value="takma_ad" {{ 'selected' if mod == 'takma_ad' }}>Takma ad (tutarlı sahte değer)</option><option value="kaydir" {{ 'selected' if mod == 'kaydir' }}>Tarih kaydır + maskele</option></select>
+      <button class="btn birincil">Kimliksizleştir</button>
+    </div>
+  </div>
+  <div class="kart">
+    <h2>Çıktı</h2>
+    {% if sonuc %}
+    <pre style="min-height:360px">{{ sonuc.metin }}</pre>
+    <div style="margin-top:8px">{% for tur, n in sonuc.istatistik.items() %}<span class="rozet turkuaz">{{ tur }}: {{ n }}</span> {% endfor %}</div>
+    {% if uyarilar %}<div class="mesaj uyari" style="margin-top:8px">İkinci geçiş uyarıları: {{ uyarilar|join('; ') }}</div>{% else %}<div class="mesaj bilgi" style="margin-top:8px">İkinci geçiş doğrulaması: şüpheli kalıp bulunmadı.</div>{% endif %}
+    {% else %}<p class="kucuk">Sonuç burada görünecek. Örnek metin sentetiktir; gerçek hasta verisi içermez.</p>{% endif %}
+  </div>
+</form>
+<div class="not">Tespit türleri: TC kimlik no (algoritma doğrulamalı), telefon, e-posta, IBAN, plaka, tarih, dosya/protokol numarası, kişi adı (unvan ve sözlük tabanlı), kurum adı, il/ilçe ve adres, 89 yaş üstü. Klinik terimler beyaz liste ile korunur. Çalışma sürüm 2.3 – altın standart sette F1: 0,96 (bkz. ml/degerlendirme).</div>
+{% endblock %}

@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block baslik %}{{ c.kod }} · Güvenlik{% endblock %}
+{% block yol %}<a href="/calismalar">Çalışmalar</a> › <a href="/calismalar/{{ c.id }}">{{ c.kod }}</a> › Güvenlik{% endblock %}
+{% block icerik %}
+{% include "calismalar/_baslik.html" %}
+<div class="izgara k4" style="margin-bottom:16px">
+  <div class="olcum"><div class="etiket">Advers olay</div><div class="deger">{{ olaylar|length }}</div></div>
+  <div class="olcum"><div class="etiket">Ciddi (SAE)</div><div class="deger {{ 'tehlike' if sae }}">{{ sae|length }}</div></div>
+  <div class="olcum"><div class="etiket">SUSAR</div><div class="deger {{ 'tehlike' if susar }}">{{ susar|length }}</div><div class="alt">hızlandırılmış bildirim</div></div>
+  <div class="olcum"><div class="etiket">Bildirim süresi aşılan</div>{% set gec = sae|rejectattr('titck_bildirim')|selectattr('bildirim_suresi_gun')|selectattr('bildirim_suresi_gun','lt',0)|list %}<div class="deger {{ 'tehlike' if gec }}">{{ gec|length }}</div></div>
+</div>
+<div class="izgara k21">
+  <div class="kart">
+    <h2>Advers olaylar</h2>
+    <table>
+      <tr><th>Gönüllü</th><th>Olay (MedDRA PT)</th><th>Başlangıç</th><th>Derece</th><th>Nedensellik</th><th>Ciddi</th><th>Sonuç</th><th>Bildirimler</th></tr>
+      {% for a in olaylar %}
+      <tr>
+        <td><a href="/gonulluler/{{ a.gonullu_id }}">{{ a.gonullu.gonullu_no }}</a></td>
+        <td>{{ a.terim }}{% if a.meddra_pt %}<br><small>{{ a.meddra_pt }} · {{ a.meddra_soc }}</small>{% endif %}</td>
+        <td>{{ a.baslangic|tarih }}</td>
+        <td><span class="rozet {{ 'kirmizi' if a.siddet in ('4','5') else ('sari' if a.siddet == '3' else '') }}">{{ a.siddet }}</span></td>
+        <td>{{ a.nedensellik_etiket }}</td>
+        <td>{% if a.ciddi %}<span class="rozet kirmizi">SAE</span>{% if a.susar %} <span class="rozet kirmizi">SUSAR</span>{% endif %}{% else %}—{% endif %}</td>
+        <td>{{ a.sonuc or '—' }}</td>
+        <td>{% if a.ciddi %}
+          {% if a.titck_bildirim %}<span class="rozet yesil">TİTCK {{ a.titck_bildirim|tarih }}</span>{% else %}<span class="rozet {{ 'kirmizi' if a.bildirim_suresi_gun is not none and a.bildirim_suresi_gun < 0 else 'sari' }}">TİTCK bekliyor{% if a.bildirim_suresi_gun is not none %} ({{ a.bildirim_suresi_gun }} gün){% endif %}</span>{% endif %}
+          {% if a.etik_bildirim %}<span class="rozet yesil">EK</span>{% endif %}
+          {% else %}—{% endif %}</td>
+      </tr>
+      {% else %}<tr><td colspan="8" class="kucuk">Advers olay kaydı yok.</td></tr>{% endfor %}
+    </table>
+  </div>
+  <div>
+    <div class="kart"><h2>Sistem-organ sınıfı dağılımı</h2><div id="g-soc"></div></div>
+    <div class="not">Ciddi advers olaylarda bildirim süreleri: ölüm veya yaşamı tehdit eden olaylarda 7 gün, diğer ciddi olaylarda 15 gün (TİTCK Klinik Araştırmalar Hakkında Yönetmelik). Sistem farkındalık tarihinden itibaren geri sayar; süre aşımı RBM modülüne SAE_GEC_BILDIRIM göstergesi olarak yansır.</div>
+  </div>
+</div>
+{% endblock %}
+{% block script %}<script>SCGrafik.cubuk(document.getElementById("g-soc"), [{% for k, v in soc %}{etiket: {{ k|tojson }}, deger: {{ v }}, renk: "#16325c"},{% endfor %}]);</script>{% endblock %}

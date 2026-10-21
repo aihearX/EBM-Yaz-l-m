@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block baslik %}{{ c.kod }} · Gönüllüler{% endblock %}
+{% block yol %}<a href="/calismalar">Çalışmalar</a> › <a href="/calismalar/{{ c.id }}">{{ c.kod }}</a> › Gönüllüler{% endblock %}
+{% block icerik %}
+{% include "calismalar/_baslik.html" %}
+<div class="izgara k21">
+  <div class="kart">
+    <div class="baslik-satiri" style="margin-bottom:8px"><h2>Gönüllüler</h2>
+      <form method="get" class="satir"><select name="durum" onchange="this.form.submit()"><option value="">Tüm durumlar</option>{% for d in durumlar %}<option value="{{ d.value }}" {{ 'selected' if secili == d.value }}>{{ d.value }}</option>{% endfor %}</select></form></div>
+    <table>
+      <tr><th>Gönüllü no</th><th>Merkez</th><th>Durum</th><th>Onam</th><th>Randomizasyon</th><th>Kol</th><th class="sag">Vizit</th><th class="sag">Açık sorgu</th><th class="sag">AE</th></tr>
+      {% for g in liste %}
+      <tr>
+        <td><a href="/gonulluler/{{ g.id }}"><b>{{ g.gonullu_no }}</b></a></td>
+        <td>{{ g.calisma_merkez.merkez.sehir }}</td>
+        <td><span class="rozet {{ 'yesil' if g.durum.value in ('randomize','tedavide','takipte','tamamladi') else ('kirmizi' if g.durum.value in ('tarama_basarisiz','ayrildi') else 'mavi') }}">{{ g.durum_etiket }}</span></td>
+        <td>{{ g.onam_tarihi|tarih }}{% if g.onam_versiyonu %} <small>v{{ g.onam_versiyonu }}</small>{% endif %}</td>
+        <td>{{ g.randomizasyon_tarihi|tarih }}</td><td>{{ g.kol.ad if g.kol else '—' }}</td>
+        <td class="sayi">{{ g.vizitler|selectattr('gerceklesen')|list|length }}/{{ g.vizitler|length }}</td>
+        <td class="sayi">{% set n = g.form_kayitlari|map(attribute='sorgular')|sum(start=[])|selectattr('durum','equalto','acik')|list|length %}{% if n %}<span class="rozet sari">{{ n }}</span>{% else %}0{% endif %}</td>
+        <td class="sayi">{{ g.advers_olaylar|length }}{% if g.advers_olaylar|selectattr('ciddi')|list %} <span class="rozet kirmizi">SAE</span>{% endif %}</td>
+      </tr>
+      {% else %}<tr><td colspan="9" class="kucuk">Gönüllü yok.</td></tr>{% endfor %}
+    </table>
+  </div>
+  <div>
+    <div class="kart">
+      <h2>Tarama hunisi</h2>
+      <div id="g-huni"></div>
+    </div>
+    {% if izinli(kullanici, 'veri.gir') %}
+    <div class="kart">
+      <h2>Gönüllü ekle (manuel)</h2>
+      <form method="post" action="/gonulluler/yeni">
+        <input type="hidden" name="calisma_id" value="{{ c.id }}">
+        <div class="alan"><label>Merkez</label><select name="calisma_merkez_id">{% for cm in c.merkezler if cm.durum == 'aktif' %}<option value="{{ cm.id }}">{{ cm.merkez_no }} – {{ cm.merkez.ad }}</option>{% endfor %}</select></div>
+        <div class="ikili"><div class="alan"><label>Onam tarihi</label><input type="date" name="onam_tarihi"></div><div class="alan"><label>Onam sürümü</label><input type="text" name="onam_versiyonu" placeholder="2.0"></div></div>
+        <button class="btn">Oluştur</button>
+      </form>
+      <small>Eşleştirme motorunun önerdiği hastalar onaylandığında otomatik olarak buraya düşer.</small>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+{% block script %}<script>
+SCGrafik.cubuk(document.getElementById("g-huni"), [{% for k, v in huni.items() %}{etiket: {{ k|tojson }}, deger: {{ v }}},{% endfor %}]);
+</script>{% endblock %}

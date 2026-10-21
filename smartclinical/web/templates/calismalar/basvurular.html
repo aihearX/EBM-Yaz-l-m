@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block baslik %}{{ c.kod }} · Başvurular{% endblock %}
+{% block yol %}<a href="/calismalar">Çalışmalar</a> › <a href="/calismalar/{{ c.id }}">{{ c.kod }}</a> › Etik / TİTCK{% endblock %}
+{% block icerik %}
+{% include "calismalar/_baslik.html" %}
+<div class="izgara k21">
+  <div class="kart">
+    <h2>Etik kurul, TİTCK ve kurum başvuruları</h2>
+    <table>
+      <tr><th>Kurum</th><th>Tip</th><th>Merkez</th><th>Referans</th><th>Gönderim</th><th>Karar</th><th>Karar tarihi</th><th class="sag">Süre (gün)</th><th></th></tr>
+      {% for b in c.basvurular|sort(attribute='id', reverse=true) %}
+      <tr>
+        <td><b>{{ b.kurum_etiket }}</b></td><td>{{ b.tip_etiket }}</td><td>{{ b.merkez.ad if b.merkez else 'Tüm merkezler' }}</td>
+        <td>{{ b.referans_no or '—' }}</td><td>{{ b.gonderim_tarihi|tarih }}</td>
+        <td><span class="rozet {{ 'yesil' if b.karar == 'onay' else ('sari' if b.karar in ('beklemede','sartli_onay') else ('kirmizi' if b.karar == 'red' else '')) }}">{{ {'beklemede':'Beklemede','onay':'Onay','sartli_onay':'Şartlı onay','red':'Red','geri_cekildi':'Geri çekildi'}[b.karar] }}</span></td>
+        <td>{{ b.karar_tarihi|tarih }}</td>
+        <td class="sayi">{% if b.sure_gun is not none %}{{ b.sure_gun }}{% if b.karar == 'beklemede' and b.sure_gun > 60 %} <span class="rozet sari">uzun</span>{% endif %}{% else %}—{% endif %}</td>
+        <td>{% if b.karar == 'beklemede' and izinli(kullanici, 'calisma.duzenle') %}
+          <details><summary class="kucuk">karar gir</summary>
+          <form method="post" action="/calismalar/{{ c.id }}/basvurular/{{ b.id }}/karar" style="margin-top:6px">
+            <select name="karar"><option value="onay">Onay</option><option value="sartli_onay">Şartlı onay</option><option value="red">Red</option><option value="geri_cekildi">Geri çekildi</option></select>
+            <input type="date" name="karar_tarihi" style="margin-top:4px"><input type="text" name="notlar" placeholder="not" style="margin-top:4px">
+            <button class="btn kucuk" style="margin-top:4px">Kaydet</button></form></details>{% endif %}</td>
+      </tr>
+      {% else %}<tr><td colspan="9" class="kucuk">Başvuru kaydı yok.</td></tr>{% endfor %}
+    </table>
+  </div>
+  <div>
+    {% if izinli(kullanici, 'calisma.duzenle') %}
+    <div class="kart">
+      <h2>Başvuru kaydet</h2>
+      <form method="post" action="/calismalar/{{ c.id }}/basvurular">
+        <div class="alan"><label>Kurum</label><select name="kurum">{% for k, v in kurumlar.items() %}<option value="{{ k }}">{{ v }}</option>{% endfor %}</select></div>
+        <div class="alan"><label>Başvuru tipi</label><select name="tip">{% for k, v in tipler.items() %}<option value="{{ k }}">{{ v }}</option>{% endfor %}</select></div>
+        <div class="alan"><label>Merkez (isteğe bağlı)</label><select name="merkez_id"><option value="">Tüm merkezler / koordinatör</option>{% for cm in c.merkezler %}<option value="{{ cm.merkez_id }}">{{ cm.merkez.ad }}</option>{% endfor %}</select></div>
+        <div class="ikili"><div class="alan"><label>Referans no</label><input type="text" name="referans_no"></div><div class="alan"><label>Gönderim tarihi</label><input type="date" name="gonderim_tarihi"></div></div>
+        <div class="alan"><label>Not</label><input type="text" name="notlar"></div>
+        <button class="btn birincil">Kaydet</button>
+      </form>
+    </div>
+    {% endif %}
+    <div class="not">Süreler, Merkez Zekâsı modülündeki aktivasyon gecikme modelini besler. Etik kurul ve TİTCK karar süreleri merkez bazında öğrenilir; 60 günü aşan beklemeler otomatik olarak işaretlenir.</div>
+  </div>
+</div>
+{% endblock %}

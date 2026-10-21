@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block baslik %}Sistem{% endblock %}
+{% block yol %}Yönetim › Sistem Durumu{% endblock %}
+{% block icerik %}
+<div class="baslik-satiri"><div><h1>Sistem durumu</h1><small>EBM SmartClinical v{{ surum }}</small></div></div>
+<div class="izgara k2">
+  <div class="kart">
+    <h2>Uygulama</h2>
+    <table class="sikisik">
+      <tr><th>Sürüm</th><td>{{ surum }}</td></tr><tr><th>Ortam</th><td>{{ a.ortam }}</td></tr><tr><th>Veritabanı</th><td>{{ db_tur }}</td></tr>
+      <tr><th>Python</th><td>{{ python }}</td></tr><tr><th>Platform</th><td>{{ platform }}</td></tr>
+      <tr><th>Oturum süresi</th><td>{{ a.oturum_suresi_dk }} dk</td></tr><tr><th>Dosya dizini</th><td>{{ a.dosya_dizini }}</td></tr>
+      <tr><th>HBYS FHIR sunucusu</th><td>{{ a.fhir_sunucu_url or 'merkez bazında tanımlı' }}</td></tr>
+    </table>
+  </div>
+  <div class="kart">
+    <h2>Türkçe Klinik BDM</h2>
+    <table class="sikisik">{% for k, v in bdm_durum.items() %}<tr><th>{{ k }}</th><td>{{ v }}</td></tr>{% endfor %}</table>
+    <div class="not" style="margin-top:8px">Model hastane içindeki GPU sunucusunda (vLLM/llama.cpp) çalışır. Sunucuya erişilemediğinde sistem otomatik olarak kural tabanlı ayrıştırıcıya düşer ve bunu denetim izine yazar.</div>
+  </div>
+</div>
+<div class="kart">
+  <h2>Tablo kayıt sayıları</h2>
+  <div style="columns:4;font-size:12.5px">{% for t, n in sayilar.items() %}<div>{{ t }}: <b>{{ n }}</b></div>{% endfor %}</div>
+</div>
+{% endblock %}

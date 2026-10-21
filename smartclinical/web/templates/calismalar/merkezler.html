@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block baslik %}{{ c.kod }} · Merkezler{% endblock %}
+{% block yol %}<a href="/calismalar">Çalışmalar</a> › <a href="/calismalar/{{ c.id }}">{{ c.kod }}</a> › Merkezler{% endblock %}
+{% block icerik %}
+{% include "calismalar/_baslik.html" %}
+<div class="kart">
+  <h2>Çalışma merkezleri</h2>
+  <table>
+    <tr><th>No</th><th>Merkez</th><th>Baş araştırmacı</th><th>Durum</th><th>Seçim</th><th>Aktivasyon</th><th>İlk hasta</th><th class="sag">Hedef</th><th class="sag">Randomize</th><th class="sag">Tahmin (h/ay)</th><th class="sag">Gecikme riski</th><th class="sag">Risk puanı</th><th></th></tr>
+    {% for cm in c.merkezler|sort(attribute='merkez_no') %}
+    {% set rand = cm.gonulluler|selectattr('randomizasyon_tarihi')|list|length %}
+    <tr>
+      <td>{{ cm.merkez_no }}</td>
+      <td><a href="/merkezler/{{ cm.merkez_id }}">{{ cm.merkez.ad }}</a><br><small>{{ cm.merkez.sehir }} · {{ cm.merkez.kurum_tipi|replace('_',' ') }}</small></td>
+      <td>{{ cm.bas_arastirmaci.ad_soyad if cm.bas_arastirmaci else '—' }}</td>
+      <td><span class="rozet {{ 'yesil' if cm.durum == 'aktif' else ('mavi' if cm.durum in ('etik','sozlesme','siv') else '') }}">{{ cm.durum_etiket }}</span></td>
+      <td>{{ cm.secim_tarihi|tarih }}</td><td>{{ cm.aktivasyon_tarihi|tarih }}</td><td>{{ cm.ilk_hasta_tarihi|tarih }}</td>
+      <td class="sayi">{{ cm.hedef_hasta }}</td><td class="sayi">{{ rand }}</td>
+      <td class="sayi">{% if cm.tahmini_kazanim %}{{ cm.tahmini_kazanim|sayi(2) }}<br><small>{{ cm.tahmin_alt|sayi(2) }}–{{ cm.tahmin_ust|sayi(2) }}</small>{% else %}—{% endif %}</td>
+      <td class="sayi">{% if cm.gecikme_riski is not none %}<span class="rozet {{ 'kirmizi' if cm.gecikme_riski > 0.6 else ('sari' if cm.gecikme_riski > 0.35 else 'yesil') }}">{{ (cm.gecikme_riski*100)|round|int }}%</span>{% else %}—{% endif %}</td>
+      <td class="sayi">{% if cm.risk_puani is not none %}<span class="isi {{ 'aksiyon' if cm.risk_puani >= 60 else ('uyari' if cm.risk_puani >= 35 else 'normal') }}">{{ cm.risk_puani|round|int }}</span>{% else %}—{% endif %}</td>
+      <td>{% if izinli(kullanici, 'merkez.yonet') %}
+        <form method="post" action="/calismalar/{{ c.id }}/merkezler/{{ cm.id }}/durum" class="satir">
+          <select name="durum" style="width:150px">{% for k, v in durumlar %}<option value="{{ k }}" {{ 'selected' if k == cm.durum }}>{{ v }}</option>{% endfor %}</select><button class="btn kucuk">Güncelle</button>
+        </form>{% endif %}</td>
+    </tr>
+    {% else %}<tr><td colspan="13" class="kucuk">Henüz merkez eklenmedi. Merkez Zekâsı sekmesi aday merkezleri geçmiş performansa göre sıralar.</td></tr>{% endfor %}
+  </table>
+</div>
+{% if izinli(kullanici, 'merkez.yonet') %}
+<div class="kart" style="max-width:700px">
+  <h2>Merkez ekle</h2>
+  <form method="post" action="/calismalar/{{ c.id }}/merkezler/ekle" class="satir">
+    <div class="alan" style="flex:1"><label>Merkez</label><select name="merkez_id">{% for m in adaylar %}<option value="{{ m.id }}">{{ m.ad }} ({{ m.sehir }})</option>{% endfor %}</select></div>
+    <div class="alan"><label>Hedef hasta</label><input type="number" name="hedef_hasta" value="10" style="width:90px"></div>
+    <button class="btn birincil">Ekle</button>
+  </form>
+  <small>Listede olmayan bir merkez için önce <a href="/merkezler">merkez kayıt defterine</a> ekleyin.</small>
+</div>
+{% endif %}
+{% endblock %}

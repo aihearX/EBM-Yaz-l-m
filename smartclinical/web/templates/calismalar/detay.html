@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block baslik %}{{ c.kod }}{% endblock %}
+{% block yol %}<a href="/calismalar">Çalışmalar</a> › {{ c.kod }}{% endblock %}
+{% block icerik %}
+{% include "calismalar/_baslik.html" %}
+
+<div class="adimlar">
+  {% for d in DURUM_SIRASI %}<div class="adim {{ 'tamam' if loop.index0 < c.durum_indeks else ('simdi' if loop.index0 == c.durum_indeks) }}">{{ DURUM_ETIKET[d] }}</div>{% endfor %}
+</div>
+
+<div class="izgara k4" style="margin-bottom:16px">
+  <div class="olcum"><div class="etiket">Randomize / hedef</div><div class="deger">{{ o.kayitli }} <small>/ {{ c.hedef_hasta }}</small></div><div class="cubuk" style="margin-top:6px"><span style="width:{{ [o.oran,100]|min }}%"></span></div></div>
+  <div class="olcum"><div class="etiket">Aktif merkez</div><div class="deger">{{ o.aktif_merkez }} <small>/ {{ o.toplam_merkez }}</small></div><div class="alt">hedef {{ c.hedef_merkez }}</div></div>
+  <div class="olcum"><div class="etiket">Tarama hunisi</div><div class="deger" style="font-size:15px;padding-top:4px">{{ o.on_tarama }} ön tarama · {{ o.tarama_basarisiz }} tarama başarısız</div><div class="alt">{{ o.ayrilan }} erken ayrılma</div></div>
+  <div class="olcum"><div class="etiket">Güvenlik</div><div class="deger {{ 'tehlike' if o.bekleyen_sae }}">{{ o.sae }} SAE</div><div class="alt">{{ o.bekleyen_sae }} bildirimi bekleyen</div></div>
+</div>
+
+<div class="izgara k21">
+  <div>
+    <div class="kart">
+      <h2>Kayıt eğrisi – plan ve gerçekleşen</h2>
+      {% if egri %}<div class="grafik" id="g-egri"></div>
+      <div class="grafik-aciklama"><span><i style="background:#16325c"></i>Gerçekleşen</span><span><i style="background:#cfd3da"></i>Plan</span></div>
+      {% else %}<p class="kucuk">Başlangıç tarihi, planlanan bitiş ve hedef gönüllü sayısı girilince eğri oluşur.</p>{% endif %}
+    </div>
+    <div class="kart">
+      <h2>Çalışma bilgileri</h2>
+      <table class="sikisik">
+        <tr><th style="width:180px">Tam başlık</th><td>{{ c.baslik }}</td></tr>
+        <tr><th>Tasarım</th><td>{{ c.tasarim or '—' }}</td></tr>
+        <tr><th>Kayıt numaraları</th><td>{{ c.ct_gov_no or '—' }}{% if c.eudract_no %} · EudraCT {{ c.eudract_no }}{% endif %}</td></tr>
+        <tr><th>Planlanan süre</th><td>{{ c.baslangic|tarih }} – {{ c.planlanan_bitis|tarih }}</td></tr>
+        <tr><th>Güncel protokol</th><td>{% if c.versiyonlar %}v{{ c.versiyonlar[-1].versiyon }} ({{ c.versiyonlar[-1].tarih|tarih }}){% else %}<span class="rozet sari">Yüklenmedi</span>{% endif %}</td></tr>
+        <tr><th>Kollar</th><td>{% for k in c.kollar %}{{ k.ad }}{% if not loop.last %}, {% endif %}{% else %}—{% endfor %}</td></tr>
+        <tr><th>Notlar</th><td>{{ c.notlar or '—' }}</td></tr>
+      </table>
+    </div>
+  </div>
+  <div>
+    <div class="kart">
+      <h2>Aşama kontrol listesi – {{ c.durum_etiket }}</h2>
+      <ul class="liste-sade">{% for k in kontrol %}<li>▢ {{ k }}</li>{% endfor %}</ul>
+      {% if izinli(kullanici, 'calisma.duzenle') %}
+      <div class="ayrac"></div>
+      <form method="post" action="/calismalar/{{ c.id }}/durum" data-onay="Çalışma aşamasını değiştirmek istediğinize emin misiniz? İşlem denetim izine yazılır.">
+        <div class="alan"><label>Aşamayı güncelle</label><select name="durum">{% for d in DURUM_SIRASI %}<option value="{{ d.value }}" {{ 'selected' if d == c.durum }}>{{ DURUM_ETIKET[d] }}</option>{% endfor %}</select></div>
+        <div class="alan"><label>Gerekçe</label><input type="text" name="gerekce" placeholder="ör. Tüm merkezlerde etik onay alındı"></div>
+        <button class="btn">Güncelle</button>
+      </form>
+      {% endif %}
+    </div>
+    <div class="kart">
+      <h2>Son işlemler</h2>
+      <ul class="liste-sade">{% for d in son_denetim %}<li><small>{{ d.zaman|tarih }} · {{ d.kullanici_adi or 'sistem' }}</small><br>{{ d.islem }} · {{ d.varlik }}{% if d.gerekce %} – <i>{{ d.gerekce }}</i>{% endif %}</li>{% else %}<li class="kucuk">Kayıt yok</li>{% endfor %}</ul>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block script %}{% if egri %}
+<script>
+SCGrafik.cizgi(document.getElementById("g-egri"), {{ egri|map(attribute='t')|list|tojson }},
+  [{ad:"Plan", renk:"#cfd3da", kesik:true, degerler: {{ egri|map(attribute='plan')|list|tojson }}},
+   {ad:"Gerçekleşen", renk:"#16325c", alan:true, degerler: {{ egri|map(attribute='gercek')|list|tojson }}}], {maks: {{ c.hedef_hasta }}});
+</script>{% endif %}{% endblock %}

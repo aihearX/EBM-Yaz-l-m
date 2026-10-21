@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block baslik %}Gönüllü {{ g.gonullu_no }}{% endblock %}
+{% block yol %}<a href="/calismalar">Çalışmalar</a> › <a href="/calismalar/{{ g.calisma_id }}">{{ g.calisma.kod }}</a> › <a href="/calismalar/{{ g.calisma_id }}/gonulluler">Gönüllüler</a> › {{ g.gonullu_no }}{% endblock %}
+{% block icerik %}
+<div class="baslik-satiri">
+  <div><h1>Gönüllü {{ g.gonullu_no }}</h1><small>{{ g.calisma.kod }} · {{ g.calisma_merkez.merkez.ad }}{% if g.kol %} · Kol: {{ g.kol.ad }}{% endif %}{% if g.hasta %} · Kayıt: {{ g.hasta.kayit_no }}{% endif %}</small></div>
+  <div class="sag"><span class="rozet {{ 'yesil' if g.durum.value in ('randomize','tedavide','takipte','tamamladi') else ('kirmizi' if g.durum.value in ('tarama_basarisiz','ayrildi') else 'mavi') }}" style="font-size:13px">{{ g.durum_etiket }}</span></div>
+</div>
+<div class="izgara k21">
+  <div>
+    <div class="kart">
+      <h2>Vizit takvimi ve eCRF durumu</h2>
+      {% if matris %}
+      <table class="sikisik">
+        <tr><th>Vizit</th><th>Planlanan</th><th>Gerçekleşen</th><th>Durum</th>{% for f in formlar %}<th>{{ f.kod }}</th>{% endfor %}</tr>
+        {% for s in matris %}
+        <tr>
+          <td><b>{{ s.vizit.ad }}</b></td><td>{{ s.vizit.planlanan|tarih }}<br><small>±{{ s.vizit.pencere_gun }} gün</small></td>
+          <td>{% if s.vizit.gerceklesen %}{{ s.vizit.gerceklesen|tarih }}{% elif izinli(kullanici, 'veri.gir') %}<form method="post" action="/gonulluler/{{ g.id }}/vizit/{{ s.vizit.id }}" class="satir"><input type="date" name="gerceklesen" style="width:130px"><button class="btn kucuk">Kaydet</button></form>{% endif %}</td>
+          <td><span class="rozet {{ 'yesil' if s.vizit.durum == 'yapildi' else ('kirmizi' if s.vizit.durum in ('kacirildi','pencere_disi') else '') }}">{{ s.vizit.durum }}</span></td>
+          {% for h in s.hucreler %}<td>{% if h is none %}<span class="kucuk">·</span>{% elif h.kayit %}<a href="/gonulluler/{{ g.id }}/form/{{ h.form.id }}?vizit_id={{ s.vizit.id }}" class="rozet {{ 'yesil' if h.kayit.durum in ('sdv','kilitli') else ('mavi' if h.kayit.durum == 'tamamlandi' else 'sari') }}">{{ h.kayit.durum }}</a>{% else %}<a href="/gonulluler/{{ g.id }}/form/{{ h.form.id }}?vizit_id={{ s.vizit.id }}" class="rozet kontur">gir</a>{% endif %}</td>{% endfor %}
+        </tr>
+        {% endfor %}
+      </table>
+      {% else %}<p class="kucuk">Vizit takvimi randomizasyon ile oluşturulur. Tarama formları için: {% for f in formlar if f.vizit_adi == 'Tarama' %}<a href="/gonulluler/{{ g.id }}/form/{{ f.id }}">{{ f.ad }}</a>{% if not loop.last %}, {% endif %}{% endfor %}</p>{% endif %}
+    </div>
+    <div class="kart">
+      <h2>Advers olaylar</h2>
+      <table class="sikisik"><tr><th>Olay</th><th>Başlangıç</th><th>Bitiş</th><th>Derece</th><th>Nedensellik</th><th>Ciddi</th><th>Sonuç</th><th>Bildirim</th></tr>
+        {% for a in g.advers_olaylar %}<tr><td>{{ a.terim }}</td><td>{{ a.baslangic|tarih }}</td><td>{{ a.bitis|tarih }}</td><td>{{ a.siddet }}</td><td>{{ a.nedensellik_etiket }}</td>
+          <td>{% if a.ciddi %}<span class="rozet kirmizi">SAE</span>{% else %}—{% endif %}</td><td>{{ a.sonuc or '—' }}</td>
+          <td>{% if a.ciddi %}{% for h, ad in [('sponsor','Sponsor'),('titck','TİTCK'),('etik','EK')] %}{% set t = a[h ~ '_bildirim'] %}{% if t %}<span class="rozet yesil">{{ ad }} {{ t|tarih }}</span>{% elif izinli(kullanici, 'guvenlik.bildir') %}<form method="post" action="/gonulluler/{{ g.id }}/advers-olay/{{ a.id }}/bildirim" class="inline"><input type="hidden" name="hedef" value="{{ h }}"><button class="btn kucuk">{{ ad }} bildir</button></form>{% endif %} {% endfor %}{% endif %}</td></tr>
+        {% else %}<tr><td colspan="8" class="kucuk">Kayıt yok.</td></tr>{% endfor %}
+      </table>
+      {% if izinli(kullanici, 'guvenlik.bildir') %}
+      <details style="margin-top:10px"><summary>Advers olay bildir</summary>
+      <form method="post" action="/gonulluler/{{ g.id }}/advers-olay" style="margin-top:8px">
+        <div class="izgara k3">
+          <div class="alan"><label>Olay terimi</label><input type="text" name="terim" required placeholder="Nötropeni"></div>
+          <div class="alan"><label>Başlangıç</label><input type="date" name="baslangic" required></div>
+          <div class="alan"><label>Bitiş</label><input type="date" name="bitis"></div>
+        </div>
+        <div class="izgara k4">
+          <div class="alan"><label>Derece (CTCAE)</label><select name="siddet">{% for k, v in SIDDET.items() %}<option value="{{ k }}">{{ v }}</option>{% endfor %}</select></div>
+          <div class="alan"><label>Nedensellik</label><select name="nedensellik">{% for k, v in NEDENSELLIK.items() %}<option value="{{ k }}">{{ v }}</option>{% endfor %}</select></div>
+          <div class="alan"><label>Beklenen</label><select name="beklenen"><option value="1">Beklenen (IB/KÜB'de var)</option><option value="0">Beklenmeyen</option></select></div>
+          <div class="alan"><label>Ciddi</label><select name="ciddi"><option value="0">Hayır</option><option value="1">Evet (SAE)</option></select></div>
+        </div>
+        <div class="izgara k3">
+          <div class="alan"><label>Ciddiyet ölçütü</label><select name="ciddiyet_olcutu"><option value="">—</option>{% for k, v in CIDDIYET.items() %}<option value="{{ k }}">{{ v }}</option>{% endfor %}</select></div>
+          <div class="alan"><label>Sonuç</label><select name="sonuc"><option value="">—</option><option>İyileşti</option><option>Sekelle iyileşti</option><option>Devam ediyor</option><option>Ölüm</option></select></div>
+          <div class="alan"><label>Araştırma ürünü için alınan önlem</label><select name="alinan_onlem"><option value="">—</option><option>Değişiklik yok</option><option>Doz azaltıldı</option><option>Geçici kesildi</option><option>Kalıcı kesildi</option></select></div>
+        </div>
+        <div class="alan"><label>Anlatım</label><textarea name="anlatim" style="min-height:60px"></textarea></div>
+        <button class="btn birincil">Kaydet</button>
+      </form></details>{% endif %}
+    </div>
+  </div>
+  <div>
+    <div class="kart">
+      <h2>Durum ve geçiş</h2>
+      <table class="sikisik">
+        <tr><th>Onam</th><td>{{ g.onam_tarihi|tarih }}{% if g.onam_versiyonu %} (v{{ g.onam_versiyonu }}){% endif %}</td></tr>
+        <tr><th>Tarama</th><td>{{ g.tarama_tarihi|tarih }}</td></tr>
+        <tr><th>Randomizasyon</th><td>{{ g.randomizasyon_tarihi|tarih }}</td></tr>
+        <tr><th>Bitiş</th><td>{{ g.bitis_tarihi|tarih }}{% if g.ayrilma_nedeni %}<br><small>{{ g.ayrilma_nedeni }}</small>{% endif %}</td></tr>
+        {% if g.tarama_basarisizlik_nedeni %}<tr><th>Tarama başarısızlığı</th><td>{{ g.tarama_basarisizlik_nedeni }}</td></tr>{% endif %}
+      </table>
+      {% if izinli(kullanici, 'veri.gir') and g.durum.value not in ('tamamladi','ayrildi','tarama_basarisiz') %}
+      <div class="ayrac"></div>
+      <form method="post" action="/gonulluler/{{ g.id }}/durum">
+        <div class="alan"><label>Yeni durum</label><select name="durum">{% for d in durumlar %}<option value="{{ d.value }}">{{ d.value }}</option>{% endfor %}</select></div>
+        <div class="ikili"><div class="alan"><label>Tarih</label><input type="date" name="tarih"></div>
+        <div class="alan"><label>Kol (randomizasyon)</label><select name="kol_id"><option value="">—</option>{% for k in g.calisma.kollar %}<option value="{{ k.id }}">{{ k.ad }}</option>{% endfor %}</select></div></div>
+        <div class="alan"><label>Neden (ayrılma / tarama başarısızlığı)</label><input type="text" name="neden"></div>
+        <button class="btn">Güncelle</button>
+      </form>
+      {% endif %}
+    </div>
+    <div class="kart">
+      <h2>Açık sorgular ({{ sorgular|length }})</h2>
+      <ul class="liste-sade">
+        {% for s in sorgular %}
+        <li><b>{{ s.form_kaydi.form.kod }} / {{ s.alan }}</b> <span class="rozet {{ 'turkuaz' if s.kaynak == 'otomatik' else '' }}">{{ s.kaynak }}</span> <span class="rozet {{ 'sari' if s.durum == 'acik' else 'mavi' }}">{{ s.durum }}</span><br>
+          {{ s.soru }}{% if s.cevap %}<br><small>Cevap: {{ s.cevap }}</small>{% endif %}
+          <form method="post" action="/gonulluler/{{ g.id }}/sorgu/{{ s.id }}" class="satir" style="margin-top:4px">
+            {% if s.durum == 'acik' and izinli(kullanici, 'sorgu.cevapla') %}<input type="text" name="cevap" placeholder="cevap" style="width:160px"><button class="btn kucuk" name="islem" value="cevapla">Cevapla</button>{% endif %}
+            {% if izinli(kullanici, 'sorgu.ac') %}<button class="btn kucuk" name="islem" value="kapat">Kapat</button>{% endif %}
+          </form></li>
+        {% else %}<li class="kucuk">Açık sorgu yok.</li>{% endfor %}
+      </ul>
+    </div>
+    {% if g.hasta %}
+    <div class="kart">
+      <h2>Kaynak kayıt (kimliksizleştirilmiş)</h2>
+      <table class="sikisik"><tr><th>Yaş / cinsiyet</th><td>{{ g.hasta.yas }} / {{ g.hasta.cinsiyet }}</td></tr>
+        <tr><th>Tanılar</th><td>{% for t in g.hasta.tanilar or [] %}{{ t.icd10 }} {{ t.ad }}{% if not loop.last %}; {% endif %}{% endfor %}</td></tr>
+        <tr><th>Son senkron</th><td>{{ g.hasta.son_senkron|tarih }} ({{ g.hasta.kaynak }})</td></tr></table>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

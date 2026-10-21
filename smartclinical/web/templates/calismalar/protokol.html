@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block baslik %}{{ c.kod }} · Protokol{% endblock %}
+{% block yol %}<a href="/calismalar">Çalışmalar</a> › <a href="/calismalar/{{ c.id }}">{{ c.kod }}</a> › Protokol{% endblock %}
+{% block icerik %}
+{% include "calismalar/_baslik.html" %}
+<div class="izgara k21">
+  <div>
+    <div class="kart">
+      <h2>Dahil etme / hariç tutma kriterleri</h2>
+      <p class="kucuk">Her kriter, Türkçe Klinik BDM ({{ bdm_model }}{% if bdm == 'kural' %}, kural tabanlı mod{% endif %}) tarafından hesaplanabilir sorguya dönüştürülür. Araştırmacı onayı olmadan eşleştirme sonuçları "ön tarama" niteliğindedir.</p>
+      {% for tip, baslik in [('dahil', 'Dahil etme kriterleri'), ('haric', 'Hariç tutma kriterleri')] %}
+      <h3 style="margin-top:12px">{{ baslik }}</h3>
+      <table class="sikisik">
+        <tr><th style="width:30px">#</th><th>Kriter</th><th style="width:120px">Kategori</th><th style="width:70px">Güven</th><th style="width:90px">Durum</th><th style="width:150px"></th></tr>
+        {% for kr in c.kriterler if kr.tip == tip %}
+        <tr>
+          <td>{{ kr.sira }}</td>
+          <td>{{ kr.metin }}
+            <details><summary class="kucuk">yapısal sorgu</summary><pre style="margin:4px 0">{{ kr.yapisal|tojson(indent=1) }}</pre></details></td>
+          <td><span class="rozet kontur">{{ kr.yapisal.kategori if kr.yapisal else '—' }}</span></td>
+          <td class="sayi">{% if kr.guven is not none %}<span class="rozet {{ 'yesil' if kr.guven >= 0.8 else ('sari' if kr.guven >= 0.5 else 'kirmizi') }}">{{ (kr.guven*100)|round|int }}%</span>{% endif %}</td>
+          <td>{% if kr.onaylandi %}<span class="rozet yesil">Onaylı</span>{% else %}<span class="rozet sari">Onay bekliyor</span>{% endif %}</td>
+          <td>
+            {% if not kr.onaylandi and izinli(kullanici, 'kriter.onayla') %}
+            <form method="post" action="/calismalar/{{ c.id }}/protokol/kriter/{{ kr.id }}/onayla" class="inline"><button class="btn kucuk">Onayla</button></form>
+            {% endif %}
+            {% if izinli(kullanici, 'calisma.duzenle') %}
+            <form method="post" action="/calismalar/{{ c.id }}/protokol/kriter/{{ kr.id }}/sil" class="inline" data-onay="Kriter silinsin mi?"><input type="hidden" name="gerekce" value="Kullanıcı tarafından silindi"><button class="btn kucuk tehlike">Sil</button></form>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}<tr><td colspan="6" class="kucuk">Tanımlı kriter yok.</td></tr>{% endfor %}
+      </table>
+      {% endfor %}
+    </div>
+    {% if izinli(kullanici, 'calisma.duzenle') %}
+    <div class="kart">
+      <h2>Kriter ekle</h2>
+      <form method="post" action="/calismalar/{{ c.id }}/protokol/kriter">
+        <div class="ikili">
+          <div class="alan"><label>Tip</label><select name="tip"><option value="dahil">Dahil etme</option><option value="haric">Hariç tutma</option></select></div>
+        </div>
+        <div class="alan"><label>Kriter metni (her satır bir kriter; protokolden doğrudan yapıştırılabilir)</label>
+          <textarea name="metin" placeholder="18 yaş ve üzeri&#10;Histolojik olarak doğrulanmış HER2-negatif meme kanseri&#10;ECOG performans skoru 0-1"></textarea></div>
+        <button class="btn birincil">Yapılandır ve ekle</button>
+      </form>
+    </div>
+    {% endif %}
+  </div>
+  <div>
+    <div class="kart">
+      <h2>Protokol sürümleri</h2>
+      <table class="sikisik"><tr><th>Sürüm</th><th>Tarih</th><th>Not</th></tr>
+        {% for v in c.versiyonlar|reverse %}<tr><td>v{{ v.versiyon }}</td><td>{{ v.tarih|tarih }}</td><td>{{ v.degisiklik_notu or v.ozet or '—' }}</td></tr>{% else %}<tr><td colspan="3" class="kucuk">Sürüm yok</td></tr>{% endfor %}
+      </table>
+      {% if izinli(kullanici, 'calisma.duzenle') %}
+      <details style="margin-top:10px"><summary>Yeni sürüm ekle</summary>
+      <form method="post" action="/calismalar/{{ c.id }}/protokol/versiyon" style="margin-top:8px">
+        <div class="ikili"><div class="alan"><label>Sürüm</label><input type="text" name="versiyon" required placeholder="2.0"></div><div class="alan"><label>Tarih</label><input type="date" name="tarih" required></div></div>
+        <div class="alan"><label>Değişiklik notu</label><input type="text" name="degisiklik_notu"></div>
+        <div class="alan"><label>Protokol metni (isteğe bağlı; kriter çıkarımı için)</label><textarea name="metin"></textarea></div>
+        <button class="btn">Kaydet</button>
+      </form></details>
+      {% endif %}
+    </div>
+    <div class="kart">
+      <h2>Çalışma kolları</h2>
+      <ul class="liste-sade">{% for k in c.kollar %}<li><b>{{ k.ad }}</b> ({{ k.oran }}){% if k.aciklama %}<br><small>{{ k.aciklama }}</small>{% endif %}</li>{% else %}<li class="kucuk">Tanımlı kol yok.</li>{% endfor %}</ul>
+    </div>
+    <div class="not">Yapısal sorgular yalnızca ön tarama amaçlıdır. Nihai uygunluk kararı her zaman araştırmacıya aittir; sistem tüm önerileri kaynak cümlesiyle birlikte sunar ve kararı denetim izine yazar.</div>
+  </div>
+</div>
+{% endblock %}

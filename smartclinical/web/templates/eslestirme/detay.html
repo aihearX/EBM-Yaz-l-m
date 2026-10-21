@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block baslik %}{{ c.kod }} · Aday {{ s.hasta.kayit_no }}{% endblock %}
+{% block yol %}<a href="/calismalar/{{ c.id }}">{{ c.kod }}</a> › <a href="/calismalar/{{ c.id }}/eslestirme">Hasta Eşleştirme</a> › {{ s.hasta.kayit_no }}{% endblock %}
+{% block icerik %}
+{% include "calismalar/_baslik.html" %}
+<div class="baslik-satiri">
+  <div><h1>Aday hasta {{ s.hasta.kayit_no }}</h1><small>{{ s.hasta.merkez.ad }} · {{ s.hasta.yas }} yaş, {{ s.hasta.cinsiyet }} · model {{ s.model_surumu }} · {{ s.sure_ms }} ms</small></div>
+  <div class="sag"><span class="rozet {{ 'yesil' if s.karar == 'uygun' else ('sari' if s.karar == 'olasi' else ('kirmizi' if s.karar == 'uygun_degil' else '')) }}" style="font-size:13px">Model: {{ s.karar }} · skor {{ (s.skor*100)|round|int }}</span></div>
+</div>
+<div class="izgara k21">
+  <div>
+    <div class="kart">
+      <h2>Kriter bazında değerlendirme ve kanıt</h2>
+      <table>
+        <tr><th>Tip</th><th>Kriter</th><th>Sonuç</th><th>Kanıt (kaynak metin)</th><th class="sag">Güven</th><th>Yöntem</th></tr>
+        {% for r in satirlar %}
+        <tr>
+          <td><span class="rozet {{ 'mavi' if r.tip == 'dahil' else 'kirmizi' }}">{{ r.tip }}</span></td>
+          <td>{{ r.metin }}</td>
+          <td>{% set kotu = (r.tip == 'dahil' and r.sonuc == 'saglanmadi') or (r.tip == 'haric' and r.sonuc == 'saglandi') %}
+            <span class="rozet {{ 'kirmizi' if kotu else ('yesil' if r.sonuc in ('saglandi','saglanmadi') else 'sari') }}">{{ r.sonuc }}</span></td>
+          <td>{% if r.kanit %}<span class="kanit">{{ r.kanit }}</span>{% else %}<small>Kaynak kayıtta yeterli bilgi yok; araştırmacı değerlendirmesi gerekir.</small>{% endif %}</td>
+          <td class="sayi">{{ (r.guven*100)|round|int if r.guven is not none else '—' }}</td>
+          <td><small>{{ r.yontem }}</small></td>
+        </tr>
+        {% endfor %}
+      </table>
+    </div>
+    <div class="kart">
+      <h2>Kaynak kayıt özeti (kimliksizleştirilmiş)</h2>
+      <div class="izgara k2">
+        <div><h3>Tanılar</h3><ul class="liste-sade">{% for t in s.hasta.tanilar or [] %}<li><code>{{ t.icd10 }}</code> {{ t.ad }} <small>{{ t.tarih }}</small></li>{% else %}<li class="kucuk">—</li>{% endfor %}</ul>
+          <h3 style="margin-top:10px">İlaçlar</h3><ul class="liste-sade">{% for i in s.hasta.ilaclar or [] %}<li><code>{{ i.atc }}</code> {{ i.ad }}{% if i.aktif %} <span class="rozet yesil">aktif</span>{% endif %}</li>{% else %}<li class="kucuk">—</li>{% endfor %}</ul>
+          <h3 style="margin-top:10px">Performans</h3><small>{{ s.hasta.performans or '—' }}</small></div>
+        <div><h3>Laboratuvar</h3><table class="sikisik">{% for l in s.hasta.laboratuvar or [] %}<tr><td>{{ l.ad }}</td><td class="sayi">{{ l.deger }} {{ l.birim }}</td><td><small>{{ l.tarih }}</small></td></tr>{% endfor %}</table></div>
+      </div>
+      <h3 style="margin-top:12px">Klinik metinler</h3>
+      {% for m in s.hasta.metinler or [] %}<details {{ 'open' if loop.first }}><summary>{{ m.tur }} · {{ m.tarih }}</summary><pre>{{ m.metin }}</pre></details>{% else %}<small>Metin yok.</small>{% endfor %}
+    </div>
+  </div>
+  <div>
+    <div class="kart">
+      <h2>Araştırmacı kararı</h2>
+      {% if s.inceleme_karari %}
+      <p><span class="rozet {{ 'yesil' if s.inceleme_karari == 'onay' else ('kirmizi' if s.inceleme_karari == 'red' else 'mavi') }}">{{ s.inceleme_karari }}</span> {{ s.inceleyen.ad_soyad if s.inceleyen }} · {{ s.inceleme_zamani|tarih }}</p>
+      {% if s.inceleme_notu %}<p><small>{{ s.inceleme_notu }}</small></p>{% endif %}
+      {% if mevcut_gonullu %}<p>Gönüllü kaydı: <a href="/gonulluler/{{ mevcut_gonullu.id }}">{{ mevcut_gonullu.gonullu_no }}</a></p>{% endif %}
+      {% else %}
+      <p class="kucuk">Model önerisi bağlayıcı değildir. Kararınız ve gerekçeniz denetim izine yazılır; "onay" seçildiğinde hasta ön tarama listesine alınır ve onam görüşmesi planlanır.</p>
+      {% if izinli(kullanici, 'eslestirme.incele') %}
+      <form method="post" action="/calismalar/{{ c.id }}/eslestirme/{{ s.id }}/incele">
+        <div class="alan"><label>Karar</label><select name="karar"><option value="onay">Uygun – onam görüşmesine çağır</option><option value="beklet">Ek bilgi gerekli</option><option value="red">Uygun değil</option></select></div>
+        <div class="alan"><label>Merkez</label><select name="calisma_merkez_id">{% for cm in merkezler %}<option value="{{ cm.id }}">{{ cm.merkez_no }} – {{ cm.merkez.ad }}</option>{% endfor %}</select></div>
+        <div class="alan"><label>Not / gerekçe</label><textarea name="not" style="min-height:60px"></textarea></div>
+        <button class="btn birincil">Kaydet</button>
+      </form>
+      {% endif %}
+      {% endif %}
+    </div>
+    <div class="kart">
+      <h2>Modelin gerekçesi</h2>
+      <p>{{ s.kriter_sonuclari|length }} kriter değerlendirildi; {{ s.belirsiz_sayisi }} tanesi için yapısal veri veya metinsel kanıt bulunamadı.</p>
+      <p class="kucuk">Kanıt cümleleri hasta kaydından birebir alınır. Kaynakta bulunmayan bir ifade üretildiğinde koruma katmanı sonucu "belirsiz" olarak işaretler.</p>
+    </div>
+  </div>
+</div>
+{% endblock %}

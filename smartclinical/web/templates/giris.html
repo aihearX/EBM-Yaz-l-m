@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Giriş · EBM SmartClinical</title>
+<link rel="stylesheet" href="/static/css/uygulama.css">
+</head>
+<body>
+<div class="giris-kabuk">
+  <div class="giris-kutu">
+    <h1>EBM SmartClinical</h1>
+    <div class="alt-yazi">Klinik Araştırma Yönetim ve Karar Destek Platformu</div>
+    {% if hata %}<div class="mesaj hata">{{ hata }}</div>{% endif %}
+    <form method="post" action="/giris">
+      <input type="hidden" name="sonraki" value="{{ sonraki }}">
+      <div class="alan"><label>Kullanıcı adı</label><input type="text" name="kullanici_adi" autocomplete="username" autofocus required></div>
+      <div class="alan"><label>Parola</label><input type="password" name="parola" autocomplete="current-password" required></div>
+      <button class="btn birincil" type="submit" style="width:100%;padding:8px">Giriş yap</button>
+    </form>
+    <div class="giris-dip">
+      Bu sistem yalnızca yetkili kullanıcılar içindir. Tüm işlemler kullanıcı kimliği, tarih ve saat ile denetim izine kaydedilir (21 CFR Part 11, EU Annex 11).
+      Hasta verileri kurum dışına aktarılmaz; sistem hastane ağı içinde çalışır.<br>
+      <span style="color:#9aa">Sürüm {{ surum }} · Destek: destek@ebm-cro.com</span>
+    </div>
+  </div>
+</div>
+</body>
+</html>

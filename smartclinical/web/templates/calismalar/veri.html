@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block baslik %}{{ c.kod }} · Veri{% endblock %}
+{% block yol %}<a href="/calismalar">Çalışmalar</a> › <a href="/calismalar/{{ c.id }}">{{ c.kod }}</a> › Veri{% endblock %}
+{% block icerik %}
+{% include "calismalar/_baslik.html" %}
+<div class="izgara k4" style="margin-bottom:16px">
+  <div class="olcum"><div class="etiket">Form kaydı</div><div class="deger">{{ toplam_kayit }}</div></div>
+  <div class="olcum"><div class="etiket">Tamamlanan</div><div class="deger">{{ (durum_sayilari.get('tamamlandi',0) + durum_sayilari.get('sdv',0) + durum_sayilari.get('kilitli',0)) }}</div></div>
+  <div class="olcum"><div class="etiket">SDV yapılan</div><div class="deger">{{ durum_sayilari.get('sdv',0) + durum_sayilari.get('kilitli',0) }}</div></div>
+  <div class="olcum"><div class="etiket">Açık sorgu</div><div class="deger {{ 'uyari' if acik_sorgular }}">{{ acik_sorgular|length }}</div><div class="alt">{{ acik_sorgular|selectattr('kaynak','equalto','otomatik')|list|length }} otomatik edit-check</div></div>
+</div>
+{% if izinli(kullanici, 'disa_aktar') %}<div style="margin:-6px 0 14px;display:flex;gap:8px"><a class="btn" href="/calismalar/{{ c.id }}/veri/disa-aktar?bicim=csv">CSV paketi indir</a><a class="btn" href="/calismalar/{{ c.id }}/veri/disa-aktar?bicim=odm">CDISC ODM 1.3 dışa aktar</a><small style="align-self:center">Dışa aktarımlar denetim izine yazılır; kimlik verisi içermez.</small></div>{% endif %}
+<div class="izgara k2">
+  <div class="kart">
+    <h2>Merkez bazında veri durumu</h2>
+    <table class="sikisik"><tr><th>Merkez</th><th class="sag">Kayıt</th><th class="sag">Tamamlanan</th><th class="sag">SDV</th><th class="sag">Açık sorgu</th></tr>
+      {% for s in merkez_satir %}<tr><td>{{ s.cm.merkez_no }} – {{ s.cm.merkez.sehir }}</td><td class="sayi">{{ s.toplam }}</td><td class="sayi">{{ s.tamamlanan }}</td><td class="sayi">{{ s.sdv }}</td><td class="sayi">{{ s.acik_sorgu }}</td></tr>{% endfor %}
+    </table>
+  </div>
+  <div class="kart">
+    <h2>eCRF tanımları (CDASH uyumlu)</h2>
+    <table class="sikisik"><tr><th>Kod</th><th>Form</th><th>Vizit</th><th class="sag">Alan</th><th>Sürüm</th></tr>
+      {% for f in formlar %}<tr><td>{{ f.kod }}</td><td>{{ f.ad }}</td><td>{{ f.vizit_adi or 'Her vizit' }}</td><td class="sayi">{{ f.alanlar|length }}</td><td>{{ f.versiyon }}</td></tr>{% else %}<tr><td colspan="5" class="kucuk">Form tanımı yok.</td></tr>{% endfor %}
+    </table>
+  </div>
+</div>
+<div class="kart">
+  <h2>Açık sorgular</h2>
+  <table><tr><th>Gönüllü</th><th>Form</th><th>Alan</th><th>Sorgu</th><th>Kaynak</th><th>Açan</th><th class="sag">Açık gün</th></tr>
+    {% for s in acik_sorgular|sort(attribute='acilis') %}
+    <tr><td><a href="/gonulluler/{{ s.form_kaydi.gonullu_id }}">{{ s.form_kaydi.gonullu.gonullu_no }}</a></td><td>{{ s.form_kaydi.form.kod }}</td><td>{{ s.alan }}</td><td>{{ s.soru }}</td>
+      <td><span class="rozet {{ 'turkuaz' if s.kaynak == 'otomatik' else '' }}">{{ s.kaynak }}</span></td><td>{{ s.acan.kullanici_adi if s.acan else 'sistem' }}</td>
+      <td class="sayi">{{ s.acik_gun }}{% if s.acik_gun > 14 %} <span class="rozet sari">gecikmiş</span>{% endif %}</td></tr>
+    {% else %}<tr><td colspan="7" class="kucuk">Açık sorgu yok.</td></tr>{% endfor %}
+  </table>
+</div>
+{% endblock %}

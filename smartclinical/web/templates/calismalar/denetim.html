@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block baslik %}{{ c.kod }} · Denetim izi{% endblock %}
+{% block yol %}<a href="/calismalar">Çalışmalar</a> › <a href="/calismalar/{{ c.id }}">{{ c.kod }}</a> › Denetim izi{% endblock %}
+{% block icerik %}
+{% include "calismalar/_baslik.html" %}
+<div class="kart">
+  <h2>Çalışmaya ait denetim izi (son 200 kayıt)</h2>
+  {% include "yonetim/_denetim_tablo.html" %}
+</div>
+{% endblock %}

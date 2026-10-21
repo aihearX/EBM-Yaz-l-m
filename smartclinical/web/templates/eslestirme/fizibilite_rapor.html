@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="tr"><head><meta charset="utf-8"><title>{{ c.kod }} – Fizibilite ve Kazanım Raporu</title>
+<link rel="stylesheet" href="/static/css/uygulama.css">
+<style>body{background:#fff}.sayfa{max-width:960px;margin:0 auto;padding:28px 32px}.baslik{border-bottom:3px solid var(--lacivert);padding-bottom:10px;margin-bottom:18px}
+.baslik h1{font-size:22px}.gizli{font-size:11px;color:var(--gri-500)}@media print{.btn{display:none}}</style></head>
+<body><div class="sayfa">
+<div class="baslik"><div style="display:flex;justify-content:space-between;align-items:flex-end">
+  <div><div class="kucuk">EBM SmartClinical · Merkez Zekâsı Raporu</div><h1>{{ c.kod }} – Fizibilite ve Kazanım Raporu</h1><small>{{ c.baslik }}</small></div>
+  <div class="sag-hizali"><small>Rapor tarihi: {{ bugun|tarih }}<br>Hazırlayan: {{ kullanici.ad_soyad }}</small><br><a class="btn kucuk" href="javascript:print()">Yazdır / PDF</a></div></div></div>
+
+<div class="izgara k4" style="margin-bottom:16px">
+  <div class="olcum"><div class="etiket">Sponsor</div><div class="deger" style="font-size:15px;padding-top:6px">{{ c.sponsor }}</div></div>
+  <div class="olcum"><div class="etiket">Hedef gönüllü / merkez</div><div class="deger">{{ c.hedef_hasta }} <small>/ {{ c.hedef_merkez }}</small></div></div>
+  <div class="olcum"><div class="etiket">Randomize</div><div class="deger">{{ o.kayitli }}</div><div class="alt">{{ o.oran|yuzde }} hedefin</div></div>
+  <div class="olcum"><div class="etiket">Toplam tahmini hız</div><div class="deger">{{ toplam_hiz|sayi(2) }}</div><div class="alt">hasta/ay</div></div>
+</div>
+
+<h2>1. Merkez bazında performans ve tahmin</h2>
+<table class="sikisik">
+  <tr><th>No</th><th>Merkez</th><th>Durum</th><th>Aktivasyon</th><th class="sag">Taranan</th><th class="sag">Tarama başarısız</th><th class="sag">Randomize</th><th class="sag">Gözlenen hız</th><th class="sag">Tahmin (%90 aralık)</th><th class="sag">Gecikme riski</th></tr>
+  {% for s in satirlar %}<tr><td>{{ s.cm.merkez_no }}</td><td>{{ s.cm.merkez.ad }}<br><small>{{ s.cm.merkez.sehir }} · {{ s.cm.bas_arastirmaci.ad_soyad if s.cm.bas_arastirmaci else '' }}</small></td>
+    <td>{{ s.cm.durum_etiket }}</td><td>{{ s.cm.aktivasyon_tarihi|tarih }}</td><td class="sayi">{{ s.tarama }}</td><td class="sayi">{{ s.basarisiz }}</td><td class="sayi">{{ s.kayitli }}</td>
+    <td class="sayi">{{ s.hiz|sayi(2) if s.hiz is not none else '—' }}</td><td class="sayi">{{ s.cm.tahmini_kazanim|sayi(2) }} <small>({{ s.cm.tahmin_alt|sayi(2) }}–{{ s.cm.tahmin_ust|sayi(2) }})</small></td>
+    <td class="sayi">{{ (s.cm.gecikme_riski*100)|round|int if s.cm.gecikme_riski is not none else '—' }}%</td></tr>{% endfor %}
+</table>
+
+<h2 style="margin-top:18px">2. Merkez sıralaması ve gerekçeler</h2>
+<table class="sikisik"><tr><th>Sıra</th><th>Merkez</th><th class="sag">Puan</th><th>Gerekçe</th></tr>
+  {% for m in siralama %}<tr><td>{{ m.sira }}</td><td>{{ m.ad }}</td><td class="sayi">{{ m.puan|round|int }}</td><td><small>{{ m.gerekce }}</small></td></tr>{% endfor %}
+</table>
+
+<h2 style="margin-top:18px">3. Yöntem ve sınırlar</h2>
+<p class="kucuk">Kazanım tahmini: merkezin kendi geçmişi ile benzer terapötik alandaki merkez havuzunu birleştiren Gamma-Poisson hiyerarşik Bayes modeli; aralıklar %90 güvenilirlik aralığıdır ve az verili merkezlerde havuza doğru büzülür. Gecikme riski: seçimden aktivasyona geçen sürenin Weibull hızlandırılmış başarısızlık zamanı modeli (kurum tipi, önceki iş birliği, sözleşme şablonu kovaryatları). Puanlar karar desteği amaçlıdır; nihai merkez seçimi sponsor ve proje yöneticisinin sorumluluğundadır. Bu rapor kimlik verisi içermez.</p>
+<div class="gizli">EBM SmartClinical v{{ surum }} · Gizli – yalnızca sponsor ve EBM proje ekibi ile paylaşılır.</div>
+</div></body></html>

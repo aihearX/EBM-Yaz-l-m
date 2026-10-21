@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block baslik %}{{ c.kod }} · Gölge mod{% endblock %}
+{% block yol %}<a href="/calismalar/{{ c.id }}">{{ c.kod }}</a> › <a href="/calismalar/{{ c.id }}/eslestirme">Hasta Eşleştirme</a> › Gölge mod raporu{% endblock %}
+{% block icerik %}
+{% include "calismalar/_baslik.html" %}
+<div class="izgara k21">
+  <div class="kart">
+    <h2>Gölge mod: model önerisi ile araştırmacı kararının karşılaştırması</h2>
+    {% if metrikler %}
+    <div class="izgara k4" style="margin-bottom:12px">
+      <div class="olcum"><div class="etiket">Değerlendirilen</div><div class="deger">{{ metrikler.n }}</div></div>
+      <div class="olcum"><div class="etiket">Duyarlılık</div><div class="deger {{ 'iyi' if metrikler.duyarlilik >= 0.9 else 'uyari' }}">{{ (metrikler.duyarlilik*100)|round(1) }}%</div><div class="alt">hedef ≥ %90</div></div>
+      <div class="olcum"><div class="etiket">Özgüllük</div><div class="deger">{{ (metrikler.ozgulluk*100)|round(1) }}%</div></div>
+      <div class="olcum"><div class="etiket">Pozitif öngörü (PPV)</div><div class="deger">{{ (metrikler.ppv*100)|round(1) }}%</div></div>
+    </div>
+    <table class="sikisik"><tr><th></th><th>Araştırmacı: uygun</th><th>Araştırmacı: uygun değil</th></tr>
+      <tr><th>Model: uygun/olası</th><td class="sayi">{{ metrikler.karisiklik.tp }}</td><td class="sayi">{{ metrikler.karisiklik.fp }}</td></tr>
+      <tr><th>Model: uygun değil/belirsiz</th><td class="sayi">{{ metrikler.karisiklik.fn }}</td><td class="sayi">{{ metrikler.karisiklik.tn }}</td></tr></table>
+    {% else %}<p class="kucuk">Henüz araştırmacı kararı girilmiş eşleştirme sonucu yok.</p>{% endif %}
+  </div>
+  <div class="not">Gölge mod, pilot doğrulama protokolünün (PQ-001) bir parçasıdır: motor önerileri manuel ön tarama sonuçlarıyla eşzamanlı olarak karşılaştırılır; duyarlılık ve ön tarama süresindeki değişim merkez bazında raporlanır.</div>
+</div>
+{% endblock %}

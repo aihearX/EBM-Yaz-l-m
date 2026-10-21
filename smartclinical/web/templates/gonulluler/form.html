@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block baslik %}{{ g.gonullu_no }} · {{ f.ad }}{% endblock %}
+{% block yol %}<a href="/calismalar/{{ g.calisma_id }}">{{ g.calisma.kod }}</a> › <a href="/gonulluler/{{ g.id }}">{{ g.gonullu_no }}</a> › {{ f.ad }}{% endblock %}
+{% block icerik %}
+<div class="baslik-satiri">
+  <div><h1>{{ f.ad }} <small style="font-weight:400">({{ f.kod }} v{{ f.versiyon }})</small></h1><small>Gönüllü {{ g.gonullu_no }}{% if vizit %} · {{ vizit.ad }}{% endif %}</small></div>
+  <div class="sag">{% if kayit %}<span class="rozet {{ 'yesil' if kayit.durum in ('sdv','kilitli') else ('mavi' if kayit.durum == 'tamamlandi' else 'sari') }}">{{ kayit.durum }}</span>{% if kayit.sdv_zamani %}<small>SDV: {{ kayit.sdv_zamani|tarih }}</small>{% endif %}{% endif %}</div>
+</div>
+{% for alan, s in sorunlar %}<div class="mesaj uyari">{{ s }}</div>{% endfor %}
+<div class="izgara k21">
+  <form method="post" class="kart" {% if kayit and kayit.durum == 'kilitli' %}onsubmit="return false"{% endif %}>
+    <input type="hidden" name="vizit_id" value="{{ vizit.id if vizit else '' }}">
+    {% set kilitli = kayit and kayit.durum == 'kilitli' %}
+    <div class="izgara k2">
+    {% for a in f.alanlar %}
+      <div class="alan">
+        <label>{{ a.etiket }}{% if a.zorunlu %} *{% endif %}{% if a.birim %} <small>({{ a.birim }})</small>{% endif %}{% if a.cdash %} <small style="color:var(--gri-300)">{{ a.cdash }}</small>{% endif %}</label>
+        {% set v = veriler.get(a.kod, '') %}
+        {% if a.tip == 'secim' %}
+          <select name="{{ a.kod }}" {{ 'disabled' if kilitli }}><option value="">—</option>{% for s in a.secenekler %}<option {{ 'selected' if v == s }}>{{ s }}</option>{% endfor %}</select>
+        {% elif a.tip == 'tarih' %}<input type="date" name="{{ a.kod }}" value="{{ v }}" {{ 'disabled' if kilitli }}>
+        {% elif a.tip == 'sayi' %}<input type="text" name="{{ a.kod }}" value="{{ v }}" inputmode="decimal" {{ 'disabled' if kilitli }}>
+        {% elif a.tip == 'metin_uzun' %}<textarea name="{{ a.kod }}" {{ 'disabled' if kilitli }}>{{ v }}</textarea>
+        {% else %}<input type="text" name="{{ a.kod }}" value="{{ v }}" {{ 'disabled' if kilitli }}>{% endif %}
+        {% if a.min is defined or a.max is defined %}<div class="yardim">Beklenen aralık: {{ a.min }} – {{ a.max }}</div>{% endif %}
+      </div>
+    {% endfor %}
+    </div>
+    {% if not kilitli and izinli(kullanici, 'veri.gir') %}
+      {% if kayit and kayit.durum in ('tamamlandi','sdv') %}<div class="alan"><label>Değişiklik gerekçesi (zorunlu)</label><input type="text" name="gerekce" placeholder="Kaynak belgeye göre düzeltme"></div>{% endif %}
+      <button class="btn" name="islem" value="kaydet">Taslak kaydet</button>
+      <button class="btn birincil" name="islem" value="tamamla">Tamamla</button>
+    {% endif %}
+    <a class="btn" href="/gonulluler/{{ g.id }}">Geri</a>
+  </form>
+  <div>
+    {% if kayit %}
+    <div class="kart">
+      <h2>Kayıt bilgisi</h2>
+      <table class="sikisik"><tr><th>Giren</th><td>{{ kayit.giren_id }}</td></tr><tr><th>Son güncelleme</th><td>{{ kayit.guncelleme|tarih }}</td></tr><tr><th>Durum</th><td>{{ kayit.durum }}</td></tr>{% if kayit.kilit_zamani %}<tr><th>Kilit</th><td>{{ kayit.kilit_zamani|tarih }}</td></tr>{% endif %}</table>
+      {% if kayit.durum == 'tamamlandi' and izinli(kullanici, 'veri.sdv') %}<form method="post" action="/gonulluler/{{ g.id }}/form-kaydi/{{ kayit.id }}/sdv" style="margin-top:8px"><button class="btn">Kaynak belge doğrulaması (SDV) yapıldı</button></form>{% endif %}
+      {% if kayit.durum in ('tamamlandi','sdv') and izinli(kullanici, 'veri.kilitle') %}<form method="post" action="/gonulluler/{{ g.id }}/form-kaydi/{{ kayit.id }}/kilitle" class="satir" style="margin-top:8px"><input type="password" name="parola" placeholder="e-imza parolası" required><button class="btn">Kilitle</button></form>{% endif %}
+      <h3 style="margin-top:12px">Sorgular</h3>
+      <ul class="liste-sade">{% for s in kayit.sorgular %}<li><b>{{ s.alan }}</b> <span class="rozet {{ 'sari' if s.durum == 'acik' else '' }}">{{ s.durum }}</span><br>{{ s.soru }}{% if s.cevap %}<br><small>↳ {{ s.cevap }}</small>{% endif %}</li>{% else %}<li class="kucuk">Sorgu yok.</li>{% endfor %}</ul>
+      {% if izinli(kullanici, 'sorgu.ac') %}<form method="post" action="/gonulluler/{{ g.id }}/sorgu" style="margin-top:8px"><input type="hidden" name="form_kaydi_id" value="{{ kayit.id }}">
+        <div class="ikili"><select name="alan">{% for a in f.alanlar %}<option value="{{ a.kod }}">{{ a.etiket }}</option>{% endfor %}</select><input type="text" name="soru" placeholder="Sorgu metni" required></div><button class="btn kucuk" style="margin-top:4px">Sorgu aç</button></form>{% endif %}
+    </div>
+    {% endif %}
+    <div class="not">Alanlar CDASH değişken adlarıyla eşlenmiştir; SDTM dışa aktarımı veri yöneticisi tarafından çalışma kilidinden sonra yapılır. Aralık dışı değerler otomatik sorgu açar, kaydı engellemez.</div>
+  </div>
+</div>
+{% endblock %}

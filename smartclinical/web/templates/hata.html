@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block baslik %}Hata {{ kod }}{% endblock %}
+{% block icerik %}
+<div class="kart" style="max-width:560px">
+  <h2>{{ kod }} – {% if kod == 404 %}Bulunamadı{% elif kod == 403 %}Yetkisiz işlem{% else %}Hata{% endif %}</h2>
+  <p>{{ mesaj }}</p>
+  <a class="btn" href="/">Genel bakışa dön</a>
+</div>
+{% endblock %}

@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block baslik %}Ar-Ge Göstergeleri{% endblock %}
+{% block yol %}Yapay Zekâ › Ar-Ge Göstergeleri{% endblock %}
+{% block icerik %}
+{% set h = g.hedefler %}
+{% macro durum(deger, hedef, kucuk_iyi=False) -%}
+  {%- if deger is none -%}<span class="rozet">veri yok</span>
+  {%- elif (kucuk_iyi and deger <= hedef) or (not kucuk_iyi and deger >= hedef) -%}<span class="rozet yesil">hedef sağlandı</span>
+  {%- elif (kucuk_iyi and deger <= hedef * 1.4) or (not kucuk_iyi and deger >= hedef * 0.8) -%}<span class="rozet sari">hedefe yakın</span>
+  {%- else -%}<span class="rozet kirmizi">Ar-Ge sürüyor</span>{%- endif -%}
+{%- endmacro %}
+<div class="baslik-satiri">
+  <div><h1>Ar-Ge göstergeleri</h1><small>Proje başarı ölçütleri ve mevcut ölçümler · BDM yapılandırması: {{ bdm_model }}{% if bdm == 'kural' %} (kural tabanlı taban çizgisi; BDM sunucusu bağlı değil){% endif %}</small></div>
+</div>
+<div class="mesaj bilgi">Bu sayfadaki değerler sistemin kendi hesaplamalarıdır: altın standart set üzerinde çalıştırılan değerlendirme, gölge mod karşılaştırması ve aktif merkezlerde tahmin–gözlem farkı. Demo kurulumunda veriler sentetiktir; pilot merkez verisi geldikçe otomatik güncellenir.</div>
+
+<div class="kart">
+  <h2>Başarı ölçütleri özeti</h2>
+  <table>
+    <tr><th>Ölçüt</th><th>Modül</th><th class="sag">Hedef</th><th class="sag">Mevcut</th><th>Durum</th><th>Kaynak</th></tr>
+    {% set ke = g.altin.kriter_eslestirme if g.altin else none %}
+    <tr><td>Hasta–kriter eşleştirmede duyarlılık</td><td>Türkçe Klinik BDM / eşleştirme</td><td class="sayi">≥ {{ (h.duyarlilik*100)|round|int }}%</td>
+      <td class="sayi">{{ (ke.duyarlilik*100)|round(1) if ke else '—' }}%</td><td>{{ durum(ke.duyarlilik if ke else none, h.duyarlilik) }}</td><td><small>Altın standart set (n={{ g.altin.n if g.altin else 0 }}), {{ 'kural tabanlı taban' if bdm == 'kural' else 'BDM' }}</small></td></tr>
+    <tr><td>Halüsinasyon oranı (kanıt kaynakta yok)</td><td>Koruma katmanı</td><td class="sayi">≤ {{ (h.halusinasyon*100)|round|int }}%</td>
+      <td class="sayi">{{ (g.altin.kanit_cikar.halusinasyon_orani*100)|round(1) if g.altin else '—' }}%</td><td>{{ durum(g.altin.kanit_cikar.halusinasyon_orani if g.altin else none, h.halusinasyon, True) }}</td><td><small>Altın standart set</small></td></tr>
+    <tr><td>Kriter yapılandırma tam eşleşme</td><td>Kriter motoru</td><td class="sayi">≥ {{ (h.yapilandirma*100)|round|int }}%</td>
+      <td class="sayi">{{ (g.altin.kriter_yapilandir.tam_eslesme*100)|round(1) if g.altin else '—' }}%</td><td>{{ durum(g.altin.kriter_yapilandir.tam_eslesme if g.altin else none, h.yapilandirma) }}</td><td><small>Alan bazlı eşleşme: {{ (g.altin.kriter_yapilandir.alan_eslesme_ort*100)|round|int if g.altin else '—' }}%</small></td></tr>
+    <tr><td>Kimliksizleştirme duyarlılığı (recall)</td><td>Kimliksizleştirme</td><td class="sayi">≥ {{ (h.deid_recall*100)|round|int }}%</td>
+      <td class="sayi">{{ (g.deid.recall*100)|round(1) if g.deid else '—' }}%</td><td>{{ durum(g.deid.recall if g.deid else none, h.deid_recall) }}</td><td><small>Kesinlik {{ (g.deid.precision*100)|round|int if g.deid else '—' }}%, F1 {{ (g.deid.f1*100)|round|int if g.deid else '—' }}%, {{ g.deid.n if g.deid else 0 }} varlık</small></td></tr>
+    <tr><td>Kazanım tahmininde MAPE</td><td>Merkez zekâsı</td><td class="sayi">≤ {{ h.mape|round|int }}%</td>
+      <td class="sayi">{{ g.kazanim.mape|round(1) if g.kazanim else '—' }}%</td><td>{{ durum(g.kazanim.mape if g.kazanim else none, h.mape, True) }}</td><td><small>{{ g.kazanim.n if g.kazanim else 0 }} aktif çalışma, çalışma düzeyinde</small></td></tr>
+    <tr><td>Aktivasyon gecikme riskinde AUC</td><td>Merkez zekâsı</td><td class="sayi">≥ {{ h.auc }}</td>
+      <td class="sayi">{{ g.gecikme.auc|round(2) if g.gecikme else '—' }}</td><td>{{ durum(g.gecikme.auc if g.gecikme else none, h.auc) }}</td><td><small>{{ g.gecikme.n if g.gecikme else 0 }} merkez, örnek içi; &gt;{{ 120 }} gün = gecikme</small></td></tr>
+    <tr><td>Ön tarama süresinde azalma</td><td>Eşleştirme</td><td class="sayi">≥ {{ h.on_tarama_azalma|round|int }}%</td>
+      <td class="sayi">{{ g.on_tarama.azalma|round|int if g.on_tarama else '—' }}%</td><td>{{ durum(g.on_tarama.azalma if g.on_tarama else none, h.on_tarama_azalma) }}</td><td><small>Motor {{ g.on_tarama.motor_ms|round|int if g.on_tarama else '—' }} ms/hasta + {{ g.on_tarama.inceleme_dk if g.on_tarama else '—' }} dk inceleme; manuel {{ g.on_tarama.manuel_dk|round|int if g.on_tarama else '—' }} dk varsayımı (pilotta ölçülecek)</small></td></tr>
+  </table>
+</div>
+
+<div class="izgara k2">
+  <div class="kart">
+    <h2>Gölge mod: model önerisi ile araştırmacı kararı</h2>
+    <table class="sikisik"><tr><th>Çalışma</th><th class="sag">n</th><th class="sag">Duyarlılık</th><th class="sag">Özgüllük</th><th class="sag">PPV</th><th class="sag">NPV</th></tr>
+      {% for m in g.golge %}<tr><td>{{ m.calisma }}</td><td class="sayi">{{ m.n }}</td><td class="sayi">{{ (m.duyarlilik*100)|round(1) }}%</td><td class="sayi">{{ (m.ozgulluk*100)|round(1) }}%</td><td class="sayi">{{ (m.ppv*100)|round(1) }}%</td><td class="sayi">{{ (m.npv*100)|round(1) }}%</td></tr>
+      {% else %}<tr><td colspan="6" class="kucuk">Henüz 5'ten fazla araştırmacı kararı girilmiş çalışma yok.</td></tr>{% endfor %}
+    </table>
+    <small>Gölge modda model önerisi araştırmacıya gösterilmeden önce kaydedilir; pilotta manuel ön tarama ile eşzamanlı karşılaştırılır (PQ-001).</small>
+  </div>
+  <div class="kart">
+    <h2>Kazanım tahmini – gözlem (aktif çalışmalar)</h2>
+    <table class="sikisik"><tr><th>Çalışma</th><th class="sag">Merkez</th><th class="sag">Gözlenen (hasta/ay)</th><th class="sag">Tahmin</th><th class="sag">Sapma</th></tr>
+      {% for s in (g.kazanim.satirlar if g.kazanim else []) %}<tr><td>{{ s.calisma }}</td><td class="sayi">{{ s.merkez }}</td><td class="sayi">{{ s.gozlenen|sayi(2) }}</td><td class="sayi">{{ s.tahmin|sayi(2) }}</td><td class="sayi">{{ ((s.tahmin - s.gozlenen) / s.gozlenen * 100)|round|int }}%</td></tr>{% endfor %}
+    </table>
+    <small>Gözlemsel/kayıt çalışmalarında kazanım hızı girişimsel çalışmalardan farklıdır; çalışma türü kovaryatı 1.5 sürümünde modele ekleniyor.</small>
+  </div>
+</div>
+
+<div class="izgara k2">
+  <div class="kart">
+    <h2>Etki hesaplayıcı</h2>
+    <p class="kucuk">Sponsor/CRO bakış açısıyla: hasta kazanımının hızlanması çalışmanın toplam süresini kısaltır. Varsayımları kendi çalışmanıza göre değiştirin.</p>
+    <div class="izgara k2">
+      <div class="alan"><label>Hedef gönüllü</label><input type="number" id="e-hedef" value="120"></div>
+      <div class="alan"><label>Mevcut kazanım (hasta/ay, tüm merkezler)</label><input type="number" id="e-hiz" value="5" step="0.1"></div>
+      <div class="alan"><label>Ön tarama ile kazanım artışı (%)</label><input type="number" id="e-artis" value="20"></div>
+      <div class="alan"><label>Çalışmanın aylık sabit maliyeti</label><input type="number" id="e-maliyet" value="400000"></div>
+    </div>
+    <button class="btn" type="button" onclick="hesapla()">Hesapla</button>
+    <div id="e-sonuc" class="not" style="margin-top:10px">—</div>
+  </div>
+  <div class="kart">
+    <h2>Yöntem notları</h2>
+    <ul class="liste-sade">
+      <li><b>Altın standart set:</b> klinisyen etiketli (hasta metni, kriter, etiket, kanıt aralığı). Demo kurulumunda 28 sentetik örnek; pilot hedefi 2.000 etiketli çift, ≥2 etiketleyici, Cohen κ raporlanır.</li>
+      <li><b>Kural tabanlı taban çizgisi:</b> BDM olmadan çalışan deterministik yol. Belirsiz oranı yüksek ama halüsinasyon üretmez; BDM ile duyarlılık hedefi %90.</li>
+      <li><b>MAPE / AUC:</b> mevcut veriden örnek içi hesaplanır; prospektif doğrulama pilot protokolünde tanımlıdır.</li>
+      <li><b>Değerlendirme çıktıları:</b> {{ g.ciktilar|join(', ') or 'henüz yok' }} (<code>ml/ciktilar</code>).</li>
+      <li><b>RBM uyarıları:</b> {{ g.kri.toplam }} üretildi, {{ g.kri.acik }} açık{% if g.kri.yanlis_alarm_orani is not none %}, yanlış alarm oranı {{ (g.kri.yanlis_alarm_orani*100)|round|int }}%{% endif %}.</li>
+    </ul>
+  </div>
+</div>
+{% endblock %}
+{% block script %}<script>
+function hesapla(){
+  var hedef=+document.getElementById('e-hedef').value, hiz=+document.getElementById('e-hiz').value,
+      artis=+document.getElementById('e-artis').value/100, maliyet=+document.getElementById('e-maliyet').value;
+  if(!hiz){document.getElementById('e-sonuc').textContent='Kazanım hızı giriniz.';return;}
+  var ay1=hedef/hiz, ay2=hedef/(hiz*(1+artis)), fark=ay1-ay2;
+  document.getElementById('e-sonuc').innerHTML='Mevcut hızla hedefe <b>'+ay1.toFixed(1)+' ay</b>, artışla <b>'+ay2.toFixed(1)+' ay</b>. '+
+    'Kazanılan süre <b>'+fark.toFixed(1)+' ay</b>; sabit maliyet tasarrufu yaklaşık <b>'+Math.round(fark*maliyet).toLocaleString('tr-TR')+'</b>. '+
+    'Pazara erken giriş geliri bu hesaba dahil değildir.';
+}
+hesapla();
+</script>{% endblock %}

@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block baslik %}{{ c.kod }} · Merkez zekâsı{% endblock %}
+{% block yol %}<a href="/calismalar">Çalışmalar</a> › <a href="/calismalar/{{ c.id }}">{{ c.kod }}</a> › Merkez Zekâsı{% endblock %}
+{% block icerik %}
+{% include "calismalar/_baslik.html" %}
+<div class="baslik-satiri">
+  <div><h2 style="margin:0">Kazanım tahmini ve aktivasyon gecikme riski</h2><small>Hiyerarşik Bayesçi model (Gamma-Poisson) ve Weibull sağkalım modeli · son güncelleme {{ son_guncelleme|tarih if son_guncelleme else '—' }}</small></div>
+  <div class="sag">{% if izinli(kullanici, 'rbm.goruntule') %}<a class="btn" href="/calismalar/{{ c.id }}/merkez-zekasi/rapor" target="_blank">Sponsor fizibilite raporu</a>{% endif %}
+  {% if izinli(kullanici, 'merkez.yonet') %}<form method="post" action="/calismalar/{{ c.id }}/merkez-zekasi/guncelle"><button class="btn birincil">Tahminleri güncelle</button></form>{% endif %}</div>
+</div>
+{% if projeksiyon %}
+<div class="izgara k4" style="margin-bottom:16px">
+  <div class="olcum"><div class="etiket">Hedefe ulaşma (medyan)</div><div class="deger">{{ projeksiyon.tahmini_tarih|tarih if projeksiyon.tahmini_tarih else '—' }}</div><div class="alt">{{ projeksiyon.hedefe_ulasma_ay|sayi(1) }} ay</div></div>
+  <div class="olcum"><div class="etiket">Zamanında bitirme olasılığı</div><div class="deger {{ 'iyi' if projeksiyon.olasilik_zamaninda >= 0.7 else ('uyari' if projeksiyon.olasilik_zamaninda >= 0.4 else 'tehlike') }}">{{ (projeksiyon.olasilik_zamaninda*100)|round|int }}%</div><div class="alt">plan: {{ c.planlanan_bitis|tarih }}</div></div>
+  <div class="olcum"><div class="etiket">Toplam tahmini hız</div><div class="deger">{{ (satirlar|map(attribute='cm.tahmini_kazanim')|select|sum)|sayi(2) }}</div><div class="alt">hasta/ay, tüm merkezler</div></div>
+  <div class="olcum"><div class="etiket">Hedef</div><div class="deger">{{ c.hedef_hasta }}</div><div class="alt">{{ c.hedef_merkez }} merkez planlandı</div></div>
+</div>
+{% endif %}
+<div class="izgara k21">
+  <div>
+    <div class="kart">
+      <h2>Merkez bazında tahmin</h2>
+      <table>
+        <tr><th>Merkez</th><th>Durum</th><th class="sag">Gözlenen hız</th><th class="sag">Tahmin (hasta/ay)</th><th>%90 aralık</th><th class="sag">Gecikme riski</th><th class="sag">Hedef</th><th class="sag">Randomize</th></tr>
+        {% for s in satirlar %}
+        <tr>
+          <td><b>{{ s.cm.merkez_no }}</b> {{ s.cm.merkez.ad }}<br><small>{{ s.cm.merkez.sehir }}</small></td>
+          <td><span class="rozet {{ 'yesil' if s.cm.durum == 'aktif' else '' }}">{{ s.cm.durum_etiket }}</span></td>
+          <td class="sayi">{{ s.gercek_hiz|sayi(2) if s.gercek_hiz is not none else '—' }}</td>
+          <td class="sayi"><b>{{ s.cm.tahmini_kazanim|sayi(2) }}</b></td>
+          <td><small>{{ s.cm.tahmin_alt|sayi(2) }} – {{ s.cm.tahmin_ust|sayi(2) }}</small></td>
+          <td class="sayi">{% if s.cm.gecikme_riski is not none %}<span class="rozet {{ 'kirmizi' if s.cm.gecikme_riski > 0.6 else ('sari' if s.cm.gecikme_riski > 0.35 else 'yesil') }}">{{ (s.cm.gecikme_riski*100)|round|int }}%</span>{% else %}—{% endif %}</td>
+          <td class="sayi">{{ s.cm.hedef_hasta }}</td><td class="sayi">{{ s.kayitli }}</td>
+        </tr>
+        {% endfor %}
+      </table>
+    </div>
+    {% if projeksiyon and projeksiyon.egri %}
+    <div class="kart">
+      <h2>Kümülatif kazanım projeksiyonu (Monte Carlo, 2.000 simülasyon)</h2>
+      <div class="grafik" id="g-proj"></div>
+      <div class="grafik-aciklama"><span><i style="background:#16325c"></i>Medyan</span><span><i style="background:#0e8a8a;opacity:.4"></i>%10–%90 bandı</span><span><i style="background:#b23a3a"></i>Hedef</span></div>
+    </div>
+    {% endif %}
+  </div>
+  <div>
+    <div class="kart">
+      <h2>Merkez sıralaması</h2>
+      <p class="kucuk">Kazanım tahmini, gecikme riski, kalite geçmişi ve deneyime göre bileşik puan. Her satırda modelin gerekçesi görülebilir.</p>
+      <ol style="padding-left:18px;margin:0">
+        {% for m in siralama %}
+        <li style="margin-bottom:8px"><b>{{ m.ad }}</b> <span class="rozet mavi">{{ m.puan|round|int }}</span>
+          <details><summary class="kucuk">gerekçe</summary><small>{{ m.gerekce }}</small>
+            <table class="sikisik" style="margin-top:4px">{% for k, v in m.katkilar.items() %}<tr><td>{{ k }}</td><td class="sayi">{{ v|sayi(1) }}</td></tr>{% endfor %}</table></details></li>
+        {% else %}<li class="kucuk">Merkez yok.</li>{% endfor %}
+      </ol>
+    </div>
+    <div class="not">Az veri olan merkezlerde tahmin, benzer terapötik alandaki merkez havuzuna doğru büzülür (shrinkage); aralık genişliği bu belirsizliği yansıtır. Model çıktıları karar desteği amaçlıdır; merkez seçimi proje yöneticisinin sorumluluğundadır.</div>
+  </div>
+</div>
+{% endblock %}
+{% block script %}{% if projeksiyon and projeksiyon.egri %}
+<script>
+var e = {{ projeksiyon.egri|tojson }};
+SCGrafik.cizgi(document.getElementById("g-proj"), e.map(function(p){return p.ay;}),
+  [{ad:"Medyan", renk:"#16325c", degerler:e.map(function(p){return p.medyan;})},
+   {ad:"Hedef", renk:"#b23a3a", kesik:true, degerler:e.map(function(){return {{ c.hedef_hasta }};})}],
+  {bant:{alt:e.map(function(p){return p.p10;}), ust:e.map(function(p){return p.p90;})}, maks: {{ c.hedef_hasta }}});
+</script>{% endif %}{% endblock %}

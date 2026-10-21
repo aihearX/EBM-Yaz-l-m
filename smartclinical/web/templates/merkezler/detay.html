@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block baslik %}{{ m.ad }}{% endblock %}
+{% block yol %}<a href="/merkezler">Merkezler</a> › {{ m.ad }}{% endblock %}
+{% block icerik %}
+<div class="baslik-satiri"><div><h1>{{ m.ad }}</h1><small>{{ m.kod }} · {{ m.sehir }} · {{ m.kurum_tipi|replace('_',' ') }}{% if m.yatak_sayisi %} · {{ m.yatak_sayisi }} yatak{% endif %}</small></div></div>
+<div class="izgara k4" style="margin-bottom:16px">
+  <div class="olcum"><div class="etiket">Çalışma</div><div class="deger">{{ p.calisma }}</div></div>
+  <div class="olcum"><div class="etiket">Toplam randomize</div><div class="deger">{{ p.kayit }}</div></div>
+  <div class="olcum"><div class="etiket">Gözlenen hız</div><div class="deger">{{ p.hasta_ay|sayi(2) }}</div><div class="alt">hasta/ay</div></div>
+  <div class="olcum"><div class="etiket">HBYS hasta havuzu</div><div class="deger">{{ hasta_n }}</div><div class="alt">kimliksizleştirilmiş kayıt</div></div>
+</div>
+<div class="izgara k2">
+  <div class="kart">
+    <h2>Araştırmacılar</h2>
+    <table class="sikisik"><tr><th>Ad Soyad</th><th>Unvan</th><th>Uzmanlık</th><th>GCP eğitimi</th><th class="sag">Tamamlanan çalışma</th></tr>
+      {% for a in m.arastirmacilar %}<tr><td>{{ a.ad_soyad }}</td><td>{{ a.unvan or '—' }}</td><td>{{ a.uzmanlik or '—' }}</td><td>{{ a.gcp_egitim_tarihi|tarih }}{% if a.gcp_egitim_tarihi and (a.gcp_egitim_tarihi|gun_farki) > 730 %} <span class="rozet sari">yenilenmeli</span>{% endif %}</td><td class="sayi">{{ a.tamamlanan_calisma }}</td></tr>{% else %}<tr><td colspan="5" class="kucuk">Kayıt yok.</td></tr>{% endfor %}
+    </table>
+    {% if izinli(kullanici, 'merkez.yonet') %}<details style="margin-top:8px"><summary>Araştırmacı ekle</summary>
+    <form method="post" action="/merkezler/{{ m.id }}/arastirmaci" style="margin-top:6px">
+      <div class="ikili"><div class="alan"><label>Ad Soyad</label><input type="text" name="ad_soyad" required></div><div class="alan"><label>Unvan</label><input type="text" name="unvan"></div></div>
+      <div class="ikili"><div class="alan"><label>Uzmanlık</label><input type="text" name="uzmanlik"></div><div class="alan"><label>GCP eğitim tarihi</label><input type="date" name="gcp_egitim_tarihi"></div></div>
+      <button class="btn">Ekle</button></form></details>{% endif %}
+  </div>
+  <div class="kart">
+    <h2>Çalışma geçmişi</h2>
+    <table class="sikisik"><tr><th>Protokol</th><th>Durum</th><th>Seçim</th><th>Aktivasyon</th><th class="sag">Hedef</th><th class="sag">Randomize</th></tr>
+      {% for cm in m.calismalar %}<tr><td><a href="/calismalar/{{ cm.calisma_id }}">{{ cm.calisma.kod }}</a></td><td>{{ cm.durum_etiket }}</td><td>{{ cm.secim_tarihi|tarih }}</td><td>{{ cm.aktivasyon_tarihi|tarih }}</td><td class="sayi">{{ cm.hedef_hasta }}</td><td class="sayi">{{ cm.gonulluler|selectattr('randomizasyon_tarihi')|list|length }}</td></tr>{% endfor %}
+    </table>
+    <div class="ayrac"></div>
+    <table class="sikisik"><tr><th>HBYS</th><td>{{ m.hbys or '—' }}</td></tr><tr><th>FHIR uç noktası</th><td>{{ m.fhir_uc_noktasi or 'tanımlı değil' }}</td></tr><tr><th>Terapötik alanlar</th><td>{{ (m.terapotik_alanlar or [])|join(', ') or '—' }}</td></tr><tr><th>Notlar</th><td>{{ m.notlar or '—' }}</td></tr></table>
+  </div>
+</div>
+{% endblock %}
