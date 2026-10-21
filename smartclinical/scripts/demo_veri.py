@@ -394,8 +394,13 @@ def yukle(db):
                       son_giris=simdi() - timedelta(hours=r.randint(1, 200)))
         db.add(k)
         kullanicilar[kadi] = k
+    kullanicilar["sponsor.gorunum"].kurum = "Anadolu Biyofarma A.Ş."
     db.flush()
     admin, py, cra1, cra2 = kullanicilar["admin"], kullanicilar["pelin.aydin"], kullanicilar["burak.sen"], kullanicilar["elif.kara"]
+    from ..models import ApiAnahtari
+
+    db.add(ApiAnahtari(kullanici_id=kullanicilar["veri.ekibi"].id, ad="HBYS FHIR senkron – demo", onek="sc_demo0000",
+                       hash=yetki.api_anahtari_hashle("sc_demo-anahtari-uretimde-kullanmayin"), aktif=True))
     ara1, _koord = kullanicilar["dr.ozturk"], kullanicilar["hemsire.demir"]
     denetim.kaydet(db, admin, "olustur", "sistem", None, yeni={"not": "demo verisi yuklendi"})
 

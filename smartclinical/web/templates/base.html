@@ -16,7 +16,9 @@
       <a href="/" class="{{ 'aktif' if yol == '/' }}">Genel Bakış</a>
       <div class="grup">Operasyon</div>
       <a href="/calismalar" class="{{ 'aktif' if yol.startswith('/calismalar') }}">Çalışmalar</a>
-      <a href="/merkezler" class="{{ 'aktif' if yol.startswith('/merkezler') }}">Merkezler ve Araştırmacılar</a>
+      <a href="/merkezler" class="{{ 'aktif' if yol.startswith('/merkezler') and not yol.startswith('/merkezler/endeks') }}">Merkezler ve Araştırmacılar</a>
+      <a href="/merkezler/endeks" class="{{ 'aktif' if yol.startswith('/merkezler/endeks') }}">Merkez Performans Endeksi</a>
+      {% if kullanici and kullanici.rol.value in ('sponsor', 'yonetici', 'proje_yoneticisi') %}<a href="/sponsor" class="{{ 'aktif' if yol.startswith('/sponsor') }}">Sponsor Portalı</a>{% endif %}
       <div class="grup">Yapay Zekâ Araçları</div>
       <a href="/araclar/bdm" class="{{ 'aktif' if yol.startswith('/araclar/bdm') }}">Türkçe Klinik BDM Konsolu</a>
       <a href="/araclar/kimliksizlestirme" class="{{ 'aktif' if yol.startswith('/araclar/kimliksiz') }}">Kimliksizleştirme</a>
@@ -27,6 +29,7 @@
       {% endif %}
       {% if kullanici and izinli(kullanici, 'kullanici.yonet') %}
       <a href="/yonetim/kullanicilar" class="{{ 'aktif' if yol.startswith('/yonetim/kullanicilar') }}">Kullanıcılar ve Roller</a>
+      <a href="/yonetim/api-anahtarlari" class="{{ 'aktif' if yol.startswith('/yonetim/api') }}">API Anahtarları</a>
       <a href="/yonetim/sistem" class="{{ 'aktif' if yol.startswith('/yonetim/sistem') }}">Sistem Durumu</a>
       {% endif %}
       <a href="/api/belgeler" target="_blank">API Belgeleri</a>

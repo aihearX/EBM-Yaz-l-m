@@ -127,3 +127,34 @@ def test_arge_ve_disa_aktar(istemci):
     assert istemci.get(f"/calismalar/{c.id}/merkez-zekasi/rapor").status_code == 200
     r = istemci.post("/api/v1/yz/icd-kodla", json={"metin": "KOAH ve hipertansiyon"})
     assert r.status_code == 200 and any(b["icd10"] == ["J44"] for b in r.json()["bulgular"])
+
+
+def test_api_anahtari_ve_sponsor(istemci):
+    _giris(istemci, "admin")
+    r = istemci.post("/yonetim/api-anahtarlari", data={"ad": "test", "kullanici_id": "1", "gecerlilik_gun": "30"}, follow_redirects=True)
+    assert r.status_code == 200 and "sc_" in r.text
+    import re
+    ham = re.search(r"<code>(sc_[0-9a-f]+)</code>", r.text).group(1)
+    istemci.cookies.clear()
+    assert istemci.get("/api/v1/calismalar", headers={"X-SC-Anahtar": ham}).status_code == 200
+    assert istemci.get("/api/v1/calismalar", headers={"X-SC-Anahtar": "sc_yanlis"}).status_code == 401
+    _giris(istemci, "admin")
+    assert istemci.get("/sponsor").status_code == 200
+    assert istemci.get("/merkezler/endeks").status_code == 200
+    _giris(istemci, "denetci")
+    assert istemci.get("/sponsor").status_code == 403
+
+
+def test_csv_hasta_yukleme(istemci):
+    _giris(istemci, "admin")
+    csv = ("kayit_no;dogum_yili;cinsiyet;icd10;metin\n"
+           "HBYS-1;1960;K;C50.9;\"60 yaşında kadın hasta Ayşe Yılmaz, HER2 negatif.\"\n"
+           "HBYS-2;1970;E;E11.9;\"Telefon 0532 111 22 33 olan hasta\"\n")
+    r = istemci.post("/merkezler/1/hasta-yukle", files={"dosya": ("h.csv", csv.encode("utf-8"), "text/csv")})
+    assert r.status_code == 200 and "2 yeni" in r.text
+    from smartclinical.models import Hasta
+    db = oturum_fabrikasi()()
+    h = db.execute(select(Hasta).where(Hasta.merkez_id == 1)).scalars().all()
+    assert len(h) == 2 and all(x.kayit_no.startswith("P-") for x in h)
+    assert "Ayşe" not in h[0].metinler[0]["metin"] and "[AD]" in h[0].metinler[0]["metin"]
+    db.close()

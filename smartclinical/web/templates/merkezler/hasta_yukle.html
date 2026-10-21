@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block baslik %}Hasta havuzu yükle{% endblock %}
+{% block yol %}<a href="/merkezler">Merkezler</a> › <a href="/merkezler/{{ m.id }}">{{ m.ad }}</a> › Hasta havuzu yükle{% endblock %}
+{% block icerik %}
+<div class="baslik-satiri"><div><h1>Hasta havuzu yükle – {{ m.ad }}</h1><small>FHIR bağlantısı olmayan kurulumlar için düşük eşikli yol. HBYS'den alınan CSV dökümü yüklenir; kimlik alanları sisteme hiç yazılmaz, metinler kimliksizleştirilir, HBYS kimliği takma ada çevrilir.</small></div></div>
+{% if sonuc %}<div class="mesaj bilgi">{{ sonuc.yeni }} yeni, {{ sonuc.guncel }} güncellenen, {{ sonuc.red }} reddedilen kayıt.</div>{% for u in sonuc.uyarilar %}<div class="mesaj uyari">{{ u }}</div>{% endfor %}{% endif %}
+<div class="izgara k2">
+  <form method="post" class="kart" enctype="multipart/form-data">
+    <h2>CSV dosyası</h2>
+    <div class="alan"><input type="file" name="dosya" accept=".csv,text/csv" required></div>
+    <button class="btn birincil">Yükle ve kimliksizleştir</button>
+  </form>
+  <div class="kart">
+    <h2>Biçim</h2>
+    <p class="kucuk">Noktalı virgülle ayrılmış, UTF-8, ilk satır başlık:</p>
+    <pre>kayit_no;dogum_yili;cinsiyet;icd10;metin
+HBYS-48213;1962;K;C50.9,E11.9;"58 yaşında kadın hasta ... ER (+) %90, HER2 negatif ..."</pre>
+    <ul class="liste-sade">
+      <li><b>kayit_no</b>: HBYS hasta/protokol numarası; sistemde SHA-256 ile takma ada çevrilir, ham değer saklanmaz.</li>
+      <li><b>icd10</b>: virgülle ayrılmış tanı kodları (ön filtre ve yapısal değerlendirme için).</li>
+      <li><b>metin</b>: epikriz/patoloji metni; kimliksizleştirme ikinci geçişinde şüpheli kalıp kalırsa satır reddedilir.</li>
+    </ul>
+    <div class="not">Laboratuvar ve ilaç alanları için FHIR entegrasyonu önerilir; CSV yolunda bu alanlar metinden kalıp tabanlı çıkarılır.</div>
+  </div>
+</div>
+{% endblock %}

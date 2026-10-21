@@ -1,0 +1,35 @@
+# Federe LoRA tur yapılandırması (taslak; katılımcılar kurgusaldır)
+tur:
+  numara: 1
+  toplam_tur: 6
+  kuresel_adaptor: ml/modeller/federe/kuresel_r0.npz
+  minimum_katilimci: 3
+
+toplayici:
+  url: https://federe.ebm-cro.local/api/v1/tur
+  yontem: fedavg          # fedavg | fedprox
+  fedprox_mu: 0.01
+  dp:
+    etkin: true
+    sigma: 0.01           # Gauss gürültü ölçeği (ağırlık birimi)
+    kirpma_normu: 1.0     # istemci güncellemesi L2 kırpma
+  kabul_esigi:
+    g1_duyarlilik_min_artis: 0.0    # önceki turdan kötü olmamalı
+
+yerel_egitim:
+  config: ml/configs/talimat_ince_ayar.yaml
+  epoch: 1
+  maks_adim: 400
+  ogrenme_hizi: 1.0e-4
+  minimum_ornek: 200
+
+katilimcilar:
+  - kod: H-ANK-01
+    ad: Pilot Hastane 1 (onkoloji)
+    anahtar_parmak_izi: "sha256:0000…0001"
+  - kod: H-IST-02
+    ad: Pilot Hastane 2 (üniversite)
+    anahtar_parmak_izi: "sha256:0000…0002"
+  - kod: H-IZM-03
+    ad: Pilot Hastane 3 (şehir hastanesi)
+    anahtar_parmak_izi: "sha256:0000…0003"

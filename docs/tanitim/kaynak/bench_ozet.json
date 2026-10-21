@@ -1,0 +1,8 @@
+{"satirlar": [
+ ["G1 Kriter–hasta eşleştirme", "duyarlılık / özgüllük / belirsiz oranı", "0,75 / 0,88 / 0,28", "≥ 0,90 / ≥ 0,90 / ≤ 0,10"],
+ ["G2 Kanıt çıkarma", "halüsinasyon / kanıt aralığı örtüşmesi", "0,00 / 0,27", "≤ 0,02 / ≥ 0,70"],
+ ["G3 Kriter yapılandırma", "tam eşleşme / kategori doğruluğu", "0,94 / 1,00", "≥ 0,85"],
+ ["G4 Kimliksizleştirme", "duyarlılık / kesinlik / F1 / klinik terim koruma", "0,93 / 1,00 / 0,96 / 1,00", "≥ 0,98 / ≥ 0,95"],
+ ["G5 ICD-10 kodlama", "duyarlılık / kesinlik / F1", "1,00 / 0,94 / 0,97", "≥ 0,95"],
+ ["G6 Çalışma odaklı özet", "kapsama / madde uyumu", "0,58 / 1,00", "≥ 0,85"]
+]}

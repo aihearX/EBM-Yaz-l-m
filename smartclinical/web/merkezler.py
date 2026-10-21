@@ -80,3 +80,65 @@ def arastirmaci_ekle(request: Request, mid: int, k: Kullanici = Depends(gerekli(
     denetim.kaydet(db, k, "olustur", "arastirmaci", a.id, yeni={"merkez_id": mid, "ad_soyad": ad_soyad}, ip=ip(request))
     db.commit()
     return RedirectResponse(f"/merkezler/{mid}", status_code=303)
+
+
+# --- CSV ile hasta havuzu yukleme (FHIR olmayan kurulumlar icin dusuk esikli yol) --------------
+
+@router.get("/{mid}/hasta-yukle")
+def hasta_yukle_form(request: Request, mid: int, k: Kullanici = Depends(gerekli("hasta.goruntule")), db: Session = Depends(get_db)):
+    request.state.kullanici = k
+    m = db.get(Merkez, mid)
+    if not m:
+        raise HTTPException(404)
+    return goster(request, "merkezler/hasta_yukle.html", m=m, sonuc=None)
+
+
+@router.post("/{mid}/hasta-yukle")
+async def hasta_yukle(request: Request, mid: int, k: Kullanici = Depends(gerekli("hasta.goruntule")), db: Session = Depends(get_db)):
+    """CSV kolonlari: kayit_no;dogum_yili;cinsiyet;icd10;metin  (icd10 virgulle ayrilmis).
+    kayit_no HBYS kimligi ise sha256 ile takma ada cevrilir; metinler kimliksizlestirilir."""
+    import csv
+    import hashlib
+    import io
+
+    from ..models._ortak import simdi
+    from ..services.kimliksizlestirme import kimliksizlestir, metni_dogrula
+
+    request.state.kullanici = k
+    m = db.get(Merkez, mid)
+    if not m:
+        raise HTTPException(404)
+    form = await request.form()
+    dosya = form.get("dosya")
+    icerik = (await dosya.read()).decode("utf-8-sig") if dosya else ""
+    okuyucu = csv.DictReader(io.StringIO(icerik), delimiter=";")
+    yeni = guncel = red = 0
+    uyarilar = []
+    for i, satir in enumerate(okuyucu, 1):
+        ham = (satir.get("kayit_no") or "").strip()
+        if not ham:
+            continue
+        kayit_no = "P-" + hashlib.sha256(f"{mid}:{ham}".encode()).hexdigest()[:12]
+        metin = (satir.get("metin") or "").strip()
+        metinler = []
+        if metin:
+            s = kimliksizlestir(metin)
+            if metni_dogrula(s.metin):
+                red += 1
+                uyarilar.append(f"Satır {i}: kimliksizleştirme sonrası şüpheli kalıp kaldı; kayıt alınmadı.")
+                continue
+            metinler = [{"tur": "epikriz", "tarih": str(date.today()), "metin": s.metin}]
+        tanilar = [{"icd10": kod.strip().upper(), "ad": "", "tarih": ""} for kod in (satir.get("icd10") or "").split(",") if kod.strip()]
+        mevcut = db.execute(select(Hasta).where(Hasta.merkez_id == mid, Hasta.kayit_no == kayit_no)).scalar_one_or_none()
+        h = mevcut or Hasta(merkez_id=mid, kayit_no=kayit_no)
+        h.dogum_yili = int(satir["dogum_yili"]) if (satir.get("dogum_yili") or "").strip().isdigit() else h.dogum_yili
+        h.cinsiyet = (satir.get("cinsiyet") or h.cinsiyet or "").strip()[:1].upper() or None
+        h.tanilar = tanilar or h.tanilar
+        h.metinler = metinler or h.metinler
+        h.kaynak, h.son_senkron = "csv", simdi()
+        db.add(h)
+        guncel += mevcut is not None
+        yeni += mevcut is None
+    denetim.kaydet(db, k, "yukle", "merkez", mid, yeni={"yeni": yeni, "guncel": guncel, "red": red, "kaynak": "csv"}, ip=ip(request))
+    db.commit()
+    return goster(request, "merkezler/hasta_yukle.html", m=m, sonuc={"yeni": yeni, "guncel": guncel, "red": red, "uyarilar": uyarilar[:20]})

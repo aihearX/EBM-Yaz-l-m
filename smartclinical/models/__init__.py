@@ -11,6 +11,6 @@ from .izlem import (  # noqa: F401
     RiskGostergesi,
     RiskUyarisi,
 )
-from .kullanici import Kullanici, Rol  # noqa: F401
+from .kullanici import ApiAnahtari, Kullanici, Rol  # noqa: F401
 from .merkez import Arastirmaci, CalismaMerkez, KilometreTasi, Merkez  # noqa: F401
 from .veri import Form, FormKaydi, Sorgu  # noqa: F401

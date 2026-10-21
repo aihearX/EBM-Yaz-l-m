@@ -32,7 +32,10 @@ bileşenler hastane ağı içinde (on-premise) çalışır.
 | Ziyaret ve sapmalar | SIV/IMV/COV/uzaktan ziyaret planı, bulgu takibi, protokol sapmaları |
 | TMF | DIA TMF referans modeli bölgeleri, SHA-256 özet, e-imza ile onay, tamlık kontrolü |
 | Kalite | Hash zincirli denetim izi, elektronik imza, rol bazlı erişim, hesap kilitleme |
-| Entegrasyon | FHIR R4 (Patient, Condition, Observation, ResearchStudy...), OMOP CDM dışa aktarım, REST API |
+| Sponsor portalı | Kurum bazlı salt okunur portföy görünümü, takvim riski, fizibilite raporu |
+| Merkez performans endeksi | Çalışmalar arası anonim kıyaslama, yüzdelik dilimler, kurum tipi medyanları |
+| Ar-Ge göstergeleri | Altın standart ve gölge mod metrikleri, MAPE/AUC, ön tarama süresi, etki hesaplayıcı |
+| Entegrasyon | FHIR R4, CSV hasta havuzu yükleme, CDISC ODM/CSV ve OMOP dışa aktarım, REST API + API anahtarı, klinik NLP servis uçları |
 
 ## Hızlı başlangıç
 
@@ -67,7 +70,7 @@ smartclinical/        uygulama (FastAPI)
   web/                Jinja2 şablonları ve sayfa rotaları
   api/                REST API v1
   scripts/            yönetim betikleri (demo veri, yönetici oluşturma, denetim doğrulama, OMOP aktarım)
-ml/                   BDM veri hazırlama, eğitim (LoRA), değerlendirme, nicemleme
+ml/                   BDM veri hazırlama, eğitim (LoRA), değerlendirme, TR-KlinikBench, federe güncelleme, model/veri kartları
 deploy/               Docker, nginx, systemd, PostgreSQL yetkileri, yedekleme, kurulum kılavuzu
 docs/validasyon/      CSV dosyası (URS, FRS, risk analizi, IQ/OQ/PQ, izlenebilirlik, 21 CFR 11 / Annex 11, KVKK)
 docs/tanitim/         ürün tanıtım dokümanı ve ekran görüntüleri

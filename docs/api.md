@@ -2,9 +2,10 @@
 
 Taban yol: `/api/v1`. Etkileşimli belgeler: `/api/belgeler` (OpenAPI).
 
-Kimlik doğrulama: web oturumu çerezi (`sc_oturum`). Makine-makine entegrasyonlar için
-API anahtarı başlığı (`X-SC-Anahtar`) 1.5 sürümünde planlanmıştır; şimdilik entegrasyon
-kullanıcıları için ayrı hesap açılması önerilir.
+Kimlik doğrulama: web oturumu çerezi (`sc_oturum`) veya makine-makine entegrasyonlar için
+`X-SC-Anahtar` başlığı. Anahtarlar Yönetim › API Anahtarları sayfasından, belirli bir kullanıcı
+adına ve geçerlilik süresiyle üretilir; anahtar sahibinin rol izinleri geçerlidir. Entegrasyonlar
+için en az yetkili ayrı bir hesap açılması önerilir.
 
 Tüm yazma işlemleri denetim izine `"api": true` işaretiyle kaydedilir.
 

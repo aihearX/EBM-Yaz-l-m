@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block baslik %}Sponsor portalı{% endblock %}
+{% block yol %}Sponsor Portalı{% endblock %}
+{% block icerik %}
+<div class="baslik-satiri">
+  <div><h1>Sponsor portalı</h1><small>{{ kullanici.kurum or 'Tüm sponsorlar' }} · {{ bugun|tarih }} · salt okunur, kimliksizleştirilmiş özet veriler</small></div>
+  <div class="sag"><a class="btn" href="javascript:print()">Portföy raporunu yazdır</a></div>
+</div>
+<div class="izgara k4" style="margin-bottom:16px">
+  <div class="olcum"><div class="etiket">Aktif çalışma</div><div class="deger">{{ satirlar|length }}</div></div>
+  <div class="olcum"><div class="etiket">Randomize gönüllü</div><div class="deger">{{ satirlar|map(attribute='kayitli')|sum }}</div><div class="alt">hedef {{ satirlar|map(attribute='c.hedef_hasta')|sum }}</div></div>
+  <div class="olcum"><div class="etiket">Takvim riski taşıyan</div>{% set r = satirlar|selectattr('takvim','equalto','risk')|list|length %}<div class="deger {{ 'tehlike' if r else 'iyi' }}">{{ r }}</div><div class="alt">mevcut hızla hedefe geç kalan</div></div>
+  <div class="olcum"><div class="etiket">Aksiyon seviyesinde uyarı</div>{% set a = satirlar|map(attribute='aksiyon')|sum %}<div class="deger {{ 'tehlike' if a else 'iyi' }}">{{ a }}</div><div class="alt">{{ satirlar|map(attribute='uyari')|sum }} açık uyarı</div></div>
+</div>
+<div class="kart">
+  <h2>Çalışma portföyü</h2>
+  <table>
+    <tr><th>Protokol</th><th>Aşama</th><th class="sag">Merkez</th><th class="sag">Randomize / hedef</th><th style="width:140px">İlerleme</th><th class="sag">Hız (h/ay)</th><th class="sag">Hedefe kalan</th><th>Takvim</th><th class="sag">Uyarı</th><th class="sag">SAE</th><th>En riskli merkez</th><th></th></tr>
+    {% for s in satirlar %}
+    <tr>
+      <td><b>{{ s.c.kod }}</b><br><small>{{ s.c.kisa_ad }}</small></td>
+      <td><span class="rozet mavi">{{ s.c.durum_etiket }}</span></td>
+      <td class="sayi">{{ s.aktif_merkez }}/{{ s.c.merkezler|length }}</td>
+      <td class="sayi">{{ s.kayitli }} / {{ s.c.hedef_hasta }}</td>
+      <td><div class="cubuk"><span class="{{ 'kirmizi' if s.takvim == 'risk' }}" style="width:{{ [s.oran,100]|min }}%"></span></div><small>{{ s.oran|yuzde }}</small></td>
+      <td class="sayi">{{ s.hiz|sayi(2) if s.hiz else '—' }}</td>
+      <td class="sayi">{{ s.tahmini_ay|sayi(1) if s.tahmini_ay is not none else '—' }} ay{% if s.plan_ay is not none %}<br><small>plan {{ s.plan_ay|sayi(1) }} ay</small>{% endif %}</td>
+      <td>{% if s.takvim == 'zamaninda' %}<span class="rozet yesil">zamanında</span>{% elif s.takvim == 'risk' %}<span class="rozet kirmizi">gecikme riski</span>{% else %}<span class="rozet">—</span>{% endif %}</td>
+      <td class="sayi">{% if s.aksiyon %}<span class="rozet kirmizi">{{ s.uyari }}</span>{% elif s.uyari %}<span class="rozet sari">{{ s.uyari }}</span>{% else %}0{% endif %}</td>
+      <td class="sayi">{{ s.sae }}{% if s.bekleyen_sae %} <span class="rozet kirmizi">{{ s.bekleyen_sae }} bildirim</span>{% endif %}</td>
+      <td>{% if s.en_riskli %}{{ s.en_riskli.merkez_no }} – {{ s.en_riskli.merkez.sehir }} <span class="isi {{ 'aksiyon' if (s.en_riskli.risk_puani or 0) >= 60 else ('uyari' if (s.en_riskli.risk_puani or 0) >= 35 else 'normal') }}">{{ (s.en_riskli.risk_puani or 0)|round|int }}</span>{% else %}—{% endif %}</td>
+      <td><a class="btn kucuk" href="/calismalar/{{ s.c.id }}/merkez-zekasi/rapor" target="_blank">Fizibilite raporu</a></td>
+    </tr>
+    {% else %}<tr><td colspan="12" class="kucuk">Kurumunuza ait aktif çalışma bulunmuyor.</td></tr>{% endfor %}
+  </table>
+</div>
+<div class="not">Sponsor portalı hasta kimlik verisi içermez; eşleştirme motoru çıktıları, hasta kayıtları ve kaynak belgeler yalnızca araştırma merkezi tarafından görülebilir. Her görüntüleme denetim izine yazılır.</div>
+{% endblock %}

@@ -24,8 +24,8 @@ tarayıcı ──HTTPS──▶ nginx ──▶ uvicorn/FastAPI ──▶ Postgr
   (çağıran eder). İstisna: `eslestirme.calisma_icin_tara` uzun sürebildiği için kendi commit'ini yapar.
 - `web/` – Jinja2 şablonları, sunucu tarafı render. JavaScript yalnızca grafik çizimi ve küçük
   davranışlar için; harici kütüphane yok (kapalı ağ).
-- `api/` – REST API v1, Pydantic şemaları. Oturum çerezi ile kimlik doğrulama; makine-makine
-  entegrasyon için API anahtarı desteği planlı (bkz. `docs/api.md`).
+- `api/` – REST API v1, Pydantic şemaları. Oturum çerezi veya `X-SC-Anahtar` başlığı ile kimlik
+  doğrulama (bkz. `docs/api.md`).
 
 ## Yapay zekâ katmanı
 
@@ -40,6 +40,8 @@ tarayıcı ──HTTPS──▶ nginx ──▶ uvicorn/FastAPI ──▶ Postgr
 | Eşleştirici | `services/eslestirme/__init__.py` | Yapısal → metin → karar; gölge mod |
 | Merkez zekâsı | `services/merkez_zekasi/` | Gamma-Poisson, Weibull AFT, sıralama |
 | RBM | `services/rbm/` | KRI hesaplama, anomali, uyarı, QTL |
+| Kıyaslama | `services/kiyaslama.py` | Merkez performans endeksi; çalışmalar arası yüzdelik dilimler |
+| Ar-Ge göstergeleri | `services/arge.py` | Altın standart, gölge mod, MAPE/AUC, ön tarama süresi ölçümleri |
 | Kimliksizleştirme | `services/kimliksizlestirme/` | Regex + sözlük; maske / takma ad / tarih kaydırma |
 
 Karar ilkesi: hiçbir model çıktısı tek başına işlem yapmaz. Eşleştirme önerileri araştırmacı
@@ -63,7 +65,7 @@ kullanıcısının `denetim_kaydi` ve `e_imza` tablolarında UPDATE/DELETE yetki
 ## Bilinen sınırlar / yol haritası
 
 - Çalışma bazlı kullanıcı ataması (kullanıcı × çalışma × rol) henüz yok; rol globaldir,
-  araştırmacı/koordinatör merkezine göre kısıtlanır. (#142)
+  araştırmacı/koordinatör merkezine, sponsor kurumuna göre kısıtlanır. (#142, 1.6)
 - Vizit takvimi varsayılan şablondan üretilir; protokol bazlı vizit tasarımı eCRF tasarımcısına
   taşınacak.
 - Randomizasyon (IWRS) dış sistemdir; kol ataması elle girilir.

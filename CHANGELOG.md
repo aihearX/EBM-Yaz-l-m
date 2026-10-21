@@ -2,6 +2,17 @@
 
 Biçim: Keep a Changelog. Sürümleme: anlamsal (major.minor.patch).
 
+## [1.5.0] - 2026-10-22
+### Eklendi
+- Sponsor portalı: kurum bazlı salt okunur portföy görünümü, takvim riski, en riskli merkez, fizibilite raporu bağlantısı.
+- Merkez Performans Endeksi: çalışmalar arası anonim kıyaslama (aktivasyon, hasta/ay, tarama başarısızlığı, sorgu oranı; yüzdelik dilimler, kurum tipi medyanları).
+- CSV ile hasta havuzu yükleme (FHIR bağlantısı olmayan kurulumlar için); kimlik alanı yazılmaz, metinler kimliksizleştirilir, şüpheli satırlar reddedilir.
+- API anahtarı ile makine-makine erişim (`X-SC-Anahtar`), yönetim sayfası, geçerlilik süresi ve iptal.
+- Ar-Ge göstergeleri sayfası: altın standart, gölge mod, MAPE/AUC, ön tarama süresi, etki hesaplayıcı.
+- CDISC ODM 1.3.2 ve CSV paketi dışa aktarımı; sponsor fizibilite raporu.
+- Genel amaçlı klinik NLP uçları: ICD-10 kodlama, özet, soru-cevap.
+- TR-KlinikBench değerlendirme seti, federe LoRA güncelleme iskeleti, model ve veri kartları (`ml/`).
+
 ## [1.4.2] - 2026-10-21
 ### Düzeltildi
 - Kriter yapısal sorgusu `KriterYapisi.to_dict()` ile sarmalanmış kaydedildiğinde eşleştirme

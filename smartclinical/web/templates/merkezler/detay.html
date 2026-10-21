@@ -2,7 +2,8 @@
 {% block baslik %}{{ m.ad }}{% endblock %}
 {% block yol %}<a href="/merkezler">Merkezler</a> › {{ m.ad }}{% endblock %}
 {% block icerik %}
-<div class="baslik-satiri"><div><h1>{{ m.ad }}</h1><small>{{ m.kod }} · {{ m.sehir }} · {{ m.kurum_tipi|replace('_',' ') }}{% if m.yatak_sayisi %} · {{ m.yatak_sayisi }} yatak{% endif %}</small></div></div>
+<div class="baslik-satiri"><div><h1>{{ m.ad }}</h1><small>{{ m.kod }} · {{ m.sehir }} · {{ m.kurum_tipi|replace('_',' ') }}{% if m.yatak_sayisi %} · {{ m.yatak_sayisi }} yatak{% endif %}</small></div>
+  <div class="sag">{% if izinli(kullanici, 'hasta.goruntule') %}<a class="btn" href="/merkezler/{{ m.id }}/hasta-yukle">CSV ile hasta havuzu yükle</a>{% endif %}</div></div>
 <div class="izgara k4" style="margin-bottom:16px">
   <div class="olcum"><div class="etiket">Çalışma</div><div class="deger">{{ p.calisma }}</div></div>
   <div class="olcum"><div class="etiket">Toplam randomize</div><div class="deger">{{ p.kayit }}</div></div>

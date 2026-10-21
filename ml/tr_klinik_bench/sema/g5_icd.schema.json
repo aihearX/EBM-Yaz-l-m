@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ebm-cro.com/tr-klinik-bench/0.3/g5_icd.schema.json",
+  "title": "g5_icd",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "id",
+    "metin",
+    "icd10"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^G5-"
+    },
+    "metin": {
+      "type": "string"
+    },
+    "icd10": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Z][0-9]{2}(\\.[0-9]{1,2})?$"
+      }
+    },
+    "etiketleyen": {
+      "type": "string"
+    },
+    "ikinci_etiketleyen": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "ikinci_etiket": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "uyum": {
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
+    "hakem_karari": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "zorluk": {
+      "enum": [
+        "kolay",
+        "orta",
+        "zor"
+      ]
+    },
+    "etiket_tarihi": {
+      "type": "string"
+    },
+    "notlar": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  }
+}

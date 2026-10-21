@@ -110,3 +110,48 @@ def sistem(request: Request, k: Kullanici = Depends(gerekli("kullanici.yonet")),
     return goster(request, "yonetim/sistem.html", a=a, surum=__version__, python=sys.version.split()[0],
                   platform=platform.platform(), bdm_durum=bdm_durum, sayilar=sayilar,
                   db_tur=a.db_url.split(":")[0])
+
+
+# --- API anahtarlari -------------------------------------------------------
+
+@router.get("/api-anahtarlari")
+def api_anahtarlari(request: Request, k: Kullanici = Depends(gerekli("kullanici.yonet")), db: Session = Depends(get_db)):
+    from ..models import ApiAnahtari
+
+    request.state.kullanici = k
+    liste = db.execute(select(ApiAnahtari).order_by(ApiAnahtari.id.desc())).scalars().all()
+    kullanicilar = db.execute(select(Kullanici).where(Kullanici.aktif.is_(True)).order_by(Kullanici.kullanici_adi)).scalars().all()
+    yeni = request.session.pop("yeni_anahtar", None)
+    return goster(request, "yonetim/api_anahtarlari.html", liste=liste, kullanicilar=kullanicilar, yeni=yeni)
+
+
+@router.post("/api-anahtarlari")
+def api_anahtari_olustur(request: Request, k: Kullanici = Depends(gerekli("kullanici.yonet")), db: Session = Depends(get_db),
+                         ad: str = Form(...), kullanici_id: int = Form(...), gecerlilik_gun: int = Form(365)):
+    from datetime import timedelta
+
+    from ..models import ApiAnahtari
+    from ..models._ortak import simdi
+
+    ham = yetki.api_anahtari_uret()
+    a = ApiAnahtari(kullanici_id=kullanici_id, ad=ad, onek=ham[:11], hash=yetki.api_anahtari_hashle(ham),
+                    son_gecerlilik=simdi() + timedelta(days=gecerlilik_gun) if gecerlilik_gun else None)
+    db.add(a)
+    db.flush()
+    denetim.kaydet(db, k, "olustur", "api_anahtari", a.id, yeni={"ad": ad, "kullanici_id": kullanici_id, "onek": a.onek}, ip=ip(request))
+    db.commit()
+    request.session["yeni_anahtar"] = ham  # bir kez gosterilir
+    return RedirectResponse("/yonetim/api-anahtarlari", status_code=303)
+
+
+@router.post("/api-anahtarlari/{aid}/iptal")
+def api_anahtari_iptal(request: Request, aid: int, k: Kullanici = Depends(gerekli("kullanici.yonet")), db: Session = Depends(get_db)):
+    from ..models import ApiAnahtari
+
+    a = db.get(ApiAnahtari, aid)
+    if not a:
+        raise HTTPException(404)
+    a.aktif = False
+    denetim.kaydet(db, k, "guncelle", "api_anahtari", a.id, yeni={"aktif": False}, ip=ip(request))
+    db.commit()
+    return RedirectResponse("/yonetim/api-anahtarlari", status_code=303)

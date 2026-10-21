@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block baslik %}API anahtarları{% endblock %}
+{% block yol %}Yönetim › API Anahtarları{% endblock %}
+{% block icerik %}
+<div class="baslik-satiri"><div><h1>API anahtarları</h1><small>HBYS, veri ambarı ve sponsor sistemleri için makine-makine erişim. İstekler <code>X-SC-Anahtar</code> başlığı ile gönderilir; anahtar sahibinin rol izinleri geçerlidir.</small></div></div>
+{% if yeni %}<div class="mesaj uyari">Yeni anahtar (yalnızca bir kez gösterilir, güvenli saklayın): <code>{{ yeni }}</code></div>{% endif %}
+<div class="izgara k21">
+  <div class="kart">
+    <table><tr><th>Ad</th><th>Önek</th><th>Kullanıcı / rol</th><th>Oluşturma</th><th>Son kullanım</th><th>Geçerlilik</th><th>Durum</th><th></th></tr>
+      {% for a in liste %}<tr><td>{{ a.ad }}</td><td><code>{{ a.onek }}…</code></td><td>{{ a.kullanici.kullanici_adi }}<br><small>{{ a.kullanici.rol_etiket }}</small></td><td>{{ a.olusturma|tarih }}</td><td>{{ a.son_kullanim|tarih }}</td><td>{{ a.son_gecerlilik|tarih }}</td>
+        <td>{% if a.aktif %}<span class="rozet yesil">aktif</span>{% else %}<span class="rozet">iptal</span>{% endif %}</td>
+        <td>{% if a.aktif %}<form method="post" action="/yonetim/api-anahtarlari/{{ a.id }}/iptal" class="inline" data-onay="Anahtar iptal edilsin mi?"><button class="btn kucuk tehlike">İptal et</button></form>{% endif %}</td></tr>
+      {% else %}<tr><td colspan="8" class="kucuk">Anahtar yok.</td></tr>{% endfor %}
+    </table>
+  </div>
+  <div class="kart">
+    <h2>Anahtar oluştur</h2>
+    <form method="post" action="/yonetim/api-anahtarlari">
+      <div class="alan"><label>Ad</label><input type="text" name="ad" required placeholder="HBYS FHIR senkron – Ankara"></div>
+      <div class="alan"><label>Hangi kullanıcı adına</label><select name="kullanici_id">{% for u in kullanicilar %}<option value="{{ u.id }}">{{ u.kullanici_adi }} ({{ u.rol_etiket }})</option>{% endfor %}</select><div class="yardim">Entegrasyonlar için en az yetkili ayrı bir hesap açılması önerilir.</div></div>
+      <div class="alan"><label>Geçerlilik (gün)</label><input type="number" name="gecerlilik_gun" value="365" min="1"></div>
+      <button class="btn birincil">Oluştur</button>
+    </form>
+    <div class="not" style="margin-top:10px">Örnek: <code>curl -H "X-SC-Anahtar: sc_..." https://sunucu/api/v1/calismalar</code></div>
+  </div>
+</div>
+{% endblock %}

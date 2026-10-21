@@ -1,0 +1,117 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ebm-cro.com/tr-klinik-bench/0.3/g1_eslestirme.schema.json",
+  "title": "g1_eslestirme",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "id",
+    "kriter_metni",
+    "kriter_tipi",
+    "metin",
+    "etiket"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^G1-"
+    },
+    "hasta_id": {
+      "type": "string"
+    },
+    "kriter_id": {
+      "type": "string"
+    },
+    "kriter_metni": {
+      "type": "string"
+    },
+    "kriter_tipi": {
+      "enum": [
+        "dahil",
+        "haric"
+      ]
+    },
+    "metin": {
+      "type": "string"
+    },
+    "etiket": {
+      "enum": [
+        "saglandi",
+        "saglanmadi",
+        "belirsiz"
+      ]
+    },
+    "kanit_span": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "baslangic",
+          "bitis",
+          "metin"
+        ],
+        "properties": {
+          "baslangic": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "bitis": {
+            "type": "integer"
+          },
+          "metin": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "yapisal": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "etiketleyen": {
+      "type": "string"
+    },
+    "ikinci_etiketleyen": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "ikinci_etiket": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "uyum": {
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
+    "hakem_karari": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "zorluk": {
+      "enum": [
+        "kolay",
+        "orta",
+        "zor"
+      ]
+    },
+    "etiket_tarihi": {
+      "type": "string"
+    },
+    "notlar": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  }
+}

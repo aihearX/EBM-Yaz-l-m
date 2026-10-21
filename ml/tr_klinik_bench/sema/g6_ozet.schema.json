@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ebm-cro.com/tr-klinik-bench/0.3/g6_ozet.schema.json",
+  "title": "g6_ozet",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "id",
+    "metin",
+    "anahtar_bilgiler"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^G6-"
+    },
+    "metin": {
+      "type": "string"
+    },
+    "anahtar_bilgiler": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 2
+    },
+    "maks_madde": {
+      "type": "integer",
+      "default": 6
+    },
+    "etiketleyen": {
+      "type": "string"
+    },
+    "ikinci_etiketleyen": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "ikinci_etiket": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "uyum": {
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
+    "hakem_karari": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "zorluk": {
+      "enum": [
+        "kolay",
+        "orta",
+        "zor"
+      ]
+    },
+    "etiket_tarihi": {
+      "type": "string"
+    },
+    "notlar": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  }
+}

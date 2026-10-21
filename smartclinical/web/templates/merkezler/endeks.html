@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block baslik %}Merkez performans endeksi{% endblock %}
+{% block yol %}Merkezler › Performans Endeksi{% endblock %}
+{% block icerik %}
+<div class="baslik-satiri"><div><h1>Merkez performans endeksi</h1><small>{{ e.n }} merkez, çalışmalar arası kıyaslama · yüzdelik dilimler tüm havuza ve aynı kurum tipine göre{% if anonim %} · merkez adları gizlenmiştir{% endif %}</small></div></div>
+<div class="izgara k21">
+  <div class="kart">
+    <table>
+      <tr><th>Merkez</th><th class="sag">Çalışma</th><th class="sag">Aktivasyon (gün)</th><th class="sag">Hasta/ay</th><th class="sag">Tarama başarısız</th><th class="sag">Sorgu/form</th><th class="sag">Endeks</th></tr>
+      {% for o in e.merkezler %}
+      <tr>
+        <td><b>{{ o.etiket }}</b>{% if not anonim %}<br><small>{{ o.merkez.sehir }} · {{ o.merkez.kurum_tipi|replace('_',' ') }} · {{ o.alanlar|join(', ') }}</small>{% endif %}</td>
+        <td class="sayi">{{ o.calisma }}</td>
+        {% for kod in ['aktivasyon_gun','hasta_ay','tarama_basarisiz','sorgu_orani'] %}
+        {% set v = o[kod] %}{% set p = o[kod ~ '_p'] %}
+        <td class="sayi">{% if v is none %}—{% else %}{{ v|sayi(2 if kod in ('hasta_ay','sorgu_orani') else 0) }}{% if kod == 'tarama_basarisiz' %}%{% endif %}<br><small class="rozet {{ 'yesil' if p >= 66 else ('sari' if p >= 33 else 'kirmizi') }}">P{{ p }}</small>{% endif %}</td>
+        {% endfor %}
+        <td class="sayi"><span class="isi {{ 'normal' if (o.endeks or 0) >= 66 else ('uyari' if (o.endeks or 0) >= 33 else 'aksiyon') }}">{{ o.endeks if o.endeks is not none else '—' }}</span></td>
+      </tr>
+      {% endfor %}
+    </table>
+  </div>
+  <div>
+    <div class="kart">
+      <h2>Kurum tipine göre medyanlar</h2>
+      <table class="sikisik"><tr><th>Kurum tipi</th><th class="sag">n</th><th class="sag">Aktivasyon</th><th class="sag">Hasta/ay</th><th class="sag">Tarama baş.</th></tr>
+        {% for tip, d in e.tip_ozet.items() %}<tr><td>{{ tip|replace('_',' ') }}</td><td class="sayi">{{ d.n }}</td><td class="sayi">{{ d.aktivasyon_gun|sayi(0) }}</td><td class="sayi">{{ d.hasta_ay|sayi(2) }}</td><td class="sayi">{{ d.tarama_basarisiz|sayi(0) }}%</td></tr>{% endfor %}
+      </table>
+    </div>
+    <div class="not">Endeks, dört göstergenin tüm havuza göre yüzdelik dilimlerinin ortalamasıdır; sponsor ve CRO'lar için merkez seçiminde, merkezler için kendi konumlarını görmede kullanılır. Kıyaslama havuzu platformdaki çalışma sayısıyla büyür; kurumlar arası paylaşımda yalnızca toplulaştırılmış ve anonim göstergeler kullanılır.</div>
+  </div>
+</div>
+{% endblock %}

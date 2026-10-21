@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ebm-cro.com/tr-klinik-bench/0.3/g3_yapilandirma.schema.json",
+  "title": "g3_yapilandirma",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "id",
+    "kriter_metni",
+    "kriter_tipi",
+    "kategori",
+    "yapisal"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^G3-"
+    },
+    "kriter_metni": {
+      "type": "string"
+    },
+    "kriter_tipi": {
+      "enum": [
+        "dahil",
+        "haric"
+      ]
+    },
+    "kategori": {
+      "type": "string"
+    },
+    "yapisal": {
+      "type": "object"
+    },
+    "etiketleyen": {
+      "type": "string"
+    },
+    "ikinci_etiketleyen": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "ikinci_etiket": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "uyum": {
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
+    "hakem_karari": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "zorluk": {
+      "enum": [
+        "kolay",
+        "orta",
+        "zor"
+      ]
+    },
+    "etiket_tarihi": {
+      "type": "string"
+    },
+    "notlar": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  }
+}

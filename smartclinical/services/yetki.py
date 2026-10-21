@@ -55,7 +55,35 @@ def giris_yap(db: Session, kullanici_adi: str, parola: str) -> Kullanici | None:
     return k
 
 
+def api_anahtari_uret() -> str:
+    return "sc_" + os.urandom(24).hex()
+
+
+def api_anahtari_hashle(anahtar: str) -> str:
+    return hashlib.sha256(anahtar.encode()).hexdigest()
+
+
+def _anahtarla_kullanici(db: Session, anahtar: str) -> Kullanici | None:
+    from ..models import ApiAnahtari
+
+    k = db.execute(select(ApiAnahtari).where(ApiAnahtari.hash == api_anahtari_hashle(anahtar),
+                                             ApiAnahtari.aktif.is_(True))).scalar_one_or_none()
+    if not k or (k.son_gecerlilik and k.son_gecerlilik < simdi()):
+        return None
+    k.son_kullanim = simdi()
+    db.commit()
+    return k.kullanici if k.kullanici.aktif else None
+
+
 def mevcut_kullanici(request: Request, db: Session = Depends(get_db)) -> Kullanici:
+    # Makine-makine entegrasyon: X-SC-Anahtar basligi oturum cerezine alternatiftir
+    anahtar = request.headers.get("X-SC-Anahtar")
+    if anahtar:
+        k = _anahtarla_kullanici(db, anahtar)
+        if not k:
+            raise HTTPException(status.HTTP_401_UNAUTHORIZED, "API anahtarı geçersiz")
+        request.state.api_anahtari = True
+        return k
     kid = request.session.get("kid")
     if not kid:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Oturum bulunamadı")
