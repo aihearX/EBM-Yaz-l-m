@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "EBM SmartClinical altın standart etiket kaydı",
+  "description": "Klinisyen / klinik araştırma uzmanı tarafından etiketlenmiş hasta-kriter çifti. Her satır bir JSONL kaydıdır.",
+  "type": "object",
+  "required": ["id", "hasta_id", "kriter_id", "kriter_metni", "kriter_tipi", "metin", "etiket", "etiketleyen"],
+  "properties": {
+    "id": {"type": "string", "description": "Kayıt kimliği (AS-000123)"},
+    "hasta_id": {"type": "string", "description": "Kimliksizleştirilmiş hasta takma adı"},
+    "kriter_id": {"type": "string", "description": "Protokol kriter kodu (ör. INC-03, EXC-07)"},
+    "kriter_metni": {"type": "string"},
+    "kriter_tipi": {"type": "string", "enum": ["dahil", "haric"]},
+    "metin": {"type": "string", "description": "Kimliksizleştirilmiş kaynak metin parçası (epikriz, patoloji vb.)"},
+    "etiket": {"type": "string", "enum": ["saglandi", "saglanmadi", "belirsiz"],
+               "description": "Kriter koşulunun metne göre durumu (hariç kriterde de koşulun kendisi etiketlenir)"},
+    "kanit_span": {
+      "type": ["array", "null"],
+      "description": "Karar dayanağı olan karakter aralıkları; etiket belirsiz ise null olabilir",
+      "items": {"type": "object", "required": ["baslangic", "bitis"],
+                "properties": {"baslangic": {"type": "integer"}, "bitis": {"type": "integer"}, "metin": {"type": "string"}}}
+    },
+    "yapisal": {
+      "type": ["object", "null"],
+      "description": "Kriterin beklenen hesaplanabilir karşılığı (kriter yapılandırma görevi için referans)"
+    },
+    "etiketleyen": {"type": "string", "description": "Etiketleyici kodu (K01, K02 ...). Ad tutulmaz."},
+    "ikinci_etiketleyen": {"type": ["string", "null"]},
+    "ikinci_etiket": {"type": ["string", "null"], "enum": ["saglandi", "saglanmadi", "belirsiz", null]},
+    "uyum": {"type": ["boolean", "null"], "description": "İki etiketleyici uyuştu mu"},
+    "hakem_karari": {"type": ["string", "null"], "description": "Uyumsuzlukta üçüncü değerlendiricinin kararı"},
+    "zorluk": {"type": ["string", "null"], "enum": ["kolay", "orta", "zor", null],
+               "description": "Çıkarım gerektiren, olumsuzlama içeren ya da zaman kısıtı olan örnekler 'zor'"},
+    "etiket_tarihi": {"type": "string", "format": "date"},
+    "notlar": {"type": ["string", "null"]}
+  }
+}

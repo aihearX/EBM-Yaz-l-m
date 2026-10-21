@@ -1,0 +1,24 @@
+# GGUF nicemleme – llama.cpp
+# Hedef: 24GB VRAM'li tek kart veya 32GB RAM'li CPU sunucuda çalışan sürüm.
+
+girdi_model: ml/modeller/ebm-klinik-tr-7b
+cikti_dizini: ml/modeller/gguf
+llama_cpp_dizini: /opt/llama.cpp
+
+surumler:
+  - ad: ebm-klinik-tr-7b-q4      # varsayılan hastane içi sürüm
+    tip: Q4_K_M
+  - ad: ebm-klinik-tr-7b-q8      # doğrulama / karşılaştırma için
+    tip: Q8_0
+
+# Nicemleme sonrası kalite kontrolü: altın standart üzerinde duyarlılık düşüşü %2'den fazlaysa sürüm yayınlanmaz
+kalite_kontrol:
+  altin_standart: ml/degerlendirme/ornek_altin_standart.jsonl
+  izin_verilen_duyarlilik_dususu: 0.02
+
+ollama:
+  modelfile_sablonu: |
+    FROM {gguf}
+    PARAMETER temperature 0
+    PARAMETER num_ctx 8192
+    SYSTEM "Klinik araştırma uzmanlarına yardımcı olan bir asistansın. Yalnızca verilen metne dayan."

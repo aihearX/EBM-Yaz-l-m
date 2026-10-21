@@ -1,0 +1,36 @@
+# Docker kullanılmayan kurulumlar için systemd birimi.
+# Kurulum: cp deploy/systemd/smartclinical.service /etc/systemd/system/ && systemctl daemon-reload && systemctl enable --now smartclinical
+[Unit]
+Description=EBM SmartClinical uygulama sunucusu
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=smartclinical
+Group=smartclinical
+WorkingDirectory=/opt/smartclinical
+EnvironmentFile=/opt/smartclinical/.env
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/opt/smartclinical/.venv/bin/uvicorn smartclinical.main:app --host 127.0.0.1 --port 8000 --workers 2 --proxy-headers --forwarded-allow-ips 127.0.0.1
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=30
+
+# Sıkılaştırma
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/smartclinical/veri /opt/smartclinical/yuklemeler /var/log/smartclinical
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+
+StandardOutput=append:/var/log/smartclinical/uygulama.log
+StandardError=append:/var/log/smartclinical/hata.log
+
+[Install]
+WantedBy=multi-user.target

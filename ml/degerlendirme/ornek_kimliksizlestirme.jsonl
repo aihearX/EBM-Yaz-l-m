@@ -1,0 +1,15 @@
+{"id": "KS-01", "metin": "Hasta Mehmet Yılmaz, TC 10000000146, 12.03.2024 tarihinde Çankaya'daki polikliniğe başvurdu.", "varliklar": ["AD", "TCKN", "TARIH", "IL"]}
+{"id": "KS-02", "metin": "Dr. Ayşe Kaya tarafından değerlendirilen hastanın telefonu 0532 417 22 85 olarak kaydedildi.", "varliklar": ["AD", "TELEFON"]}
+{"id": "KS-03", "metin": "Protokol No: 2024/88213. Hasta Erzurum'dan sevkle geldi.", "varliklar": ["KAYIT_NO", "IL"]}
+{"id": "KS-04", "metin": "İletişim: fatma.demir@example.com, IBAN TR33 0006 1005 1978 6457 8413 26.", "varliklar": ["EPOSTA", "IBAN"]}
+{"id": "KS-05", "metin": "58 yaşında kadın hasta, invaziv duktal karsinom tanısıyla neoadjuvan kemoterapi planlandı.", "varliklar": []}
+{"id": "KS-06", "metin": "Hb 11,8 g/dL, trombosit 215 x10³/µL, kreatinin 0,8 mg/dL. ECOG 1.", "varliklar": []}
+{"id": "KS-07", "metin": "Prof. Dr. Hakan Erdem'in önerisiyle 16.05.2024 tarihinde kontrol planlandı.", "varliklar": ["AD", "TARIH"]}
+{"id": "KS-08", "metin": "Hasta Marmara Kuzey Üniversitesi Tıp Fakültesi Hastanesi onkoloji servisinde yatmaktadır.", "varliklar": ["KURUM"]}
+{"id": "KS-09", "metin": "93 yaşında erkek hasta, kalp yetmezliği nedeniyle izleniyor.", "varliklar": ["YAS"]}
+{"id": "KS-10", "metin": "Plaka 34 ABC 123 ile acile getirilen hastada sol femur kırığı saptandı.", "varliklar": ["PLAKA"]}
+{"id": "KS-11", "metin": "Metformin 2x1000 mg, amlodipin 1x10 mg kullanıyor. Bilinen ilaç alerjisi yok.", "varliklar": []}
+{"id": "KS-12", "metin": "Sn. Zeynep Arslan 03/07/2023 tarihli epikrizde HER2 negatif olarak raporlandı.", "varliklar": ["AD", "TARIH"]}
+{"id": "KS-13", "metin": "Dosya No 48213 olan hasta Adana Çukurova Bölge Eğitim ve Araştırma Hastanesi'nden sevk edildi.", "varliklar": ["KAYIT_NO", "IL", "KURUM"]}
+{"id": "KS-14", "metin": "PET-BT'de uzak metastaz saptanmadı; klinik evre T2N1M0, Ki-67 %25.", "varliklar": []}
+{"id": "KS-15", "metin": "Hastanın oğlu Ahmet Çelik ile 0212 555 44 33 numarasından görüşüldü.", "varliklar": ["AD", "TELEFON"]}

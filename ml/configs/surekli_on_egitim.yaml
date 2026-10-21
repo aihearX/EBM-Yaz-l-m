@@ -1,0 +1,34 @@
+# Sürekli ön eğitim (continued pre-training) – Türkçe tıbbi derlem
+# Amaç: açık kaynak temel modeli Türkçe klinik dile uyarlamak.
+
+temel_model: Qwen/Qwen2.5-7B
+cikti_dizini: ml/ciktilar/on_egitim
+veri:
+  dosyalar:
+    - veri/temiz/derlem.jsonl        # derlem_temizle.py çıktısı
+  metin_alani: metin
+  maks_uzunluk: 4096
+  paketleme: true                    # kısa belgeleri birleştir (packing)
+
+egitim:
+  epoch: 1
+  ogrenme_orani: 1.0e-5
+  isinma_orani: 0.03
+  toplu_boyut: 4
+  gradyan_birikim: 8
+  agirlik_cozulmesi: 0.01
+  lr_zamanlayici: cosine
+  karisik_hassasiyet: bf16
+  gradient_checkpointing: true
+  kaydetme_adimi: 500
+  log_adimi: 20
+
+# Tam ince ayar yerine LoRA ile ön eğitim de mümkün (bellek sınırlıysa)
+lora:
+  etkin: true
+  r: 64
+  alpha: 128
+  dropout: 0.05
+  hedef_moduller: [q_proj, k_proj, v_proj, o_proj, gate_proj, up_proj, down_proj]
+
+tohum: 42

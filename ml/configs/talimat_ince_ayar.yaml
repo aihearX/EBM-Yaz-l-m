@@ -1,0 +1,46 @@
+# Talimat ince ayarı (QLoRA) – klinik araştırma görevleri
+# Görevler: kriter yapılandırma, kanıt çıkarma, epikriz özeti, soru-cevap
+
+temel_model: ml/ciktilar/on_egitim/birlesik      # ön eğitimden çıkan model; yoksa Qwen/Qwen2.5-7B-Instruct
+cikti_dizini: ml/ciktilar/lora
+veri:
+  egitim: veri/talimat/egitim.jsonl
+  dogrulama: veri/talimat/dogrulama.jsonl
+  sohbet_sablonu: chatml
+  maks_uzunluk: 4096
+
+nicemleme:
+  yukle_4bit: true
+  tip: nf4
+  cift_nicemleme: true
+  hesaplama_dtype: bfloat16
+
+lora:
+  r: 16
+  alpha: 32
+  dropout: 0.05
+  hedef_moduller: [q_proj, k_proj, v_proj, o_proj, gate_proj, up_proj, down_proj]
+  bias: none
+
+egitim:
+  epoch: 3
+  ogrenme_orani: 2.0e-4
+  isinma_orani: 0.05
+  toplu_boyut: 2
+  gradyan_birikim: 16
+  lr_zamanlayici: cosine
+  karisik_hassasiyet: bf16
+  gradient_checkpointing: true
+  degerlendirme_adimi: 200
+  kaydetme_adimi: 200
+  en_iyi_modeli_yukle: true
+  erken_durdurma_sabri: 3
+
+# Görev başına örnek ağırlıkları (talimat_seti_olustur.py bunları kullanır)
+gorev_agirliklari:
+  kriter_yapilandir: 0.35
+  kanit_cikar: 0.35
+  klinik_ozet: 0.15
+  soru_cevap: 0.15
+
+tohum: 42
