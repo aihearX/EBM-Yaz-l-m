@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>EBM SmartClinical – Tek Sayfa Tanıtım</title>
+<style>
+  @page { size: A4; margin: 0; }
+  * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: "Carlito", "Calibri", "Liberation Sans", Arial, sans-serif; color: #1f2430; font-size: 8.9pt; line-height: 1.3; width: 210mm; height: 297mm; background: #fff; overflow: hidden; }
+  .sayfa { width: 210mm; height: 297mm; display: flex; flex-direction: column; }
+
+  /* baslik bandi */
+  .bant { background: linear-gradient(110deg, #0f2342 0%, #16325c 55%, #1f4a7a 100%); color: #fff; padding: 9mm 12mm 8.5mm; position: relative; overflow: hidden; }
+  .bant::after { content: ""; position: absolute; right: -30mm; top: -30mm; width: 90mm; height: 90mm; border-radius: 50%; background: radial-gradient(circle, rgba(14,138,138,.45) 0%, rgba(14,138,138,0) 70%); }
+  .bant .marka { font-size: 8.4pt; letter-spacing: 1.6px; text-transform: uppercase; color: #9fd3d3; margin-bottom: 1.5mm; }
+  .bant h1 { margin: 0; font-size: 25pt; font-weight: 700; letter-spacing: .2px; line-height: 1.05; }
+  .bant .alt { font-size: 11pt; color: #cfe6e6; margin-top: 1.4mm; }
+  .bant .slogan { margin-top: 3.6mm; font-size: 10.8pt; font-weight: 600; max-width: 178mm; line-height: 1.3; }
+  .bant .cip { position: absolute; right: 12mm; top: 9mm; text-align: right; font-size: 7.8pt; color: #cfe6e6; line-height: 1.45; }
+  .bant .cip b { display: inline-block; background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.35); border-radius: 10px; padding: .6mm 2.4mm; color: #fff; font-size: 8pt; margin-bottom: 1mm; }
+
+  .govde { padding: 5mm 12mm 0; flex: 1; display: flex; flex-direction: column; }
+
+  /* deger kartlari */
+  .kartlar { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3mm; margin-top: -1mm; }
+  .kart { background: #fff; border: 1px solid #d9dde4; border-top: 3px solid #0e8a8a; border-radius: 3px; padding: 2.6mm 3mm 2.4mm; box-shadow: 0 1px 2px rgba(20,30,50,.06); }
+  .kart .ust { display: flex; align-items: center; gap: 2mm; margin-bottom: 1.2mm; }
+  .kart .ikon { width: 7mm; height: 7mm; border-radius: 2px; background: #e3f3f3; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .kart .ikon svg { width: 4.4mm; height: 4.4mm; stroke: #0e8a8a; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .kart b { color: #16325c; font-size: 10pt; }
+  .kart p { margin: 0; font-size: 8.5pt; color: #3d4350; }
+
+  .izgara { display: grid; grid-template-columns: 1.04fr 0.96fr; gap: 4.5mm; margin-top: 4mm; flex: 1; }
+  h2 { margin: 0 0 1.6mm; font-size: 9.4pt; color: #16325c; text-transform: uppercase; letter-spacing: .7px; display: flex; align-items: center; gap: 2mm; }
+  h2::after { content: ""; flex: 1; height: 1px; background: #d9dde4; }
+  .blok { margin-bottom: 3.6mm; }
+  ul { margin: 0; padding-left: 3.6mm; }
+  li { margin-bottom: .9mm; }
+  p { margin: 0 0 1.2mm; }
+  .tik li { list-style: none; position: relative; padding-left: 4mm; }
+  .tik li::before { content: ""; position: absolute; left: 0; top: 1.4mm; width: 2.4mm; height: 2.4mm; border-radius: 50%; background: #0e8a8a; }
+
+  /* akis */
+  .akis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.6mm; }
+  .adim { background: #eef2f8; border-radius: 3px; padding: 1.8mm 2mm 1.6mm; font-size: 8pt; color: #3d4350; position: relative; }
+  .adim .no { display: inline-block; width: 4.6mm; height: 4.6mm; border-radius: 50%; background: #16325c; color: #fff; font-weight: 700; font-size: 7.6pt; text-align: center; line-height: 4.6mm; margin-bottom: 1mm; }
+  .adim b { display: block; color: #16325c; font-size: 8.4pt; margin-bottom: .5mm; }
+  .adim:not(:last-child)::after { content: "›"; position: absolute; right: -1.7mm; top: 40%; color: #9aa3b2; font-size: 12pt; }
+
+  /* sag kolon */
+  .ekran-kutu { border: 1px solid #cfd3da; border-radius: 3px; overflow: hidden; height: 54mm; background: #fff; box-shadow: 0 1px 3px rgba(20,30,50,.08); }
+  .ekran-kutu img { width: 100%; display: block; }
+  .altyazi { font-size: 7.4pt; color: #595959; margin-top: 1mm; }
+  .rakamlar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.8mm; }
+  .rakam { background: #16325c; color: #fff; border-radius: 3px; padding: 1.8mm 1mm 1.5mm; text-align: center; }
+  .rakam .deger { font-size: 14pt; font-weight: 700; line-height: 1.05; color: #9fd3d3; }
+  .rakam .ad { font-size: 7.2pt; color: #cfe6e6; margin-top: .7mm; line-height: 1.15; }
+  table { width: 100%; border-collapse: collapse; font-size: 8pt; }
+  th, td { text-align: left; padding: 1mm 1.4mm; border-bottom: 1px solid #e6e8ec; vertical-align: middle; }
+  th { color: #16325c; font-size: 7.6pt; text-transform: uppercase; letter-spacing: .4px; border-bottom: 1.5px solid #cfd3da; }
+  td.s { text-align: right; white-space: nowrap; color: #16325c; font-weight: 600; }
+  .rozet { display: inline-block; font-size: 7.2pt; padding: .2mm 1.6mm; border-radius: 8px; background: #e4f3ea; color: #2e7d4f; font-weight: 600; white-space: nowrap; }
+  .rozet.sari { background: #fdf3e0; color: #b7791f; }
+  .rozet.mavi { background: #e7eef9; color: #16325c; }
+
+  .cta { background: #0e8a8a; color: #fff; border-radius: 3px; padding: 2.6mm 3mm; margin-top: 1mm; }
+  .cta h3 { margin: 0 0 1mm; font-size: 10pt; }
+  .cta p { margin: 0; font-size: 8.3pt; color: #e3f3f3; }
+  .cta b { color: #fff; }
+
+  .dip { margin-top: auto; background: #f5f6f8; border-top: 1px solid #d9dde4; padding: 2.4mm 12mm; display: flex; justify-content: space-between; align-items: center; font-size: 7.4pt; color: #595959; }
+  .dip b { color: #16325c; font-size: 8pt; }
+</style>
+</head>
+<body>
+<div class="sayfa">
+  <div class="bant">
+    <div class="marka">EBM Klinik Araştırma Hizmetleri</div>
+    <h1>EBM SmartClinical</h1>
+    <div class="alt">Klinik Araştırma Yönetimi ve Türkçe Klinik Karar Destek Platformu</div>
+    <div class="slogan">Protokolden hastaya, merkezden riske: Türkçe klinik metni anlayan, hastane içinde çalışan tek platform.</div>
+    <div class="cip"><b>Sürüm 1.5 · Ekim 2026</b><br>TÜSEB – Ulusal Klinik Türkçe BDM ve<br>Karar Destek Altyapısı proje alanı</div>
+  </div>
+
+  <div class="govde">
+    <div class="kartlar">
+      <div class="kart">
+        <div class="ust"><div class="ikon"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3M8 11h6M11 8v6"/></svg></div><b>Hasta ön tarama</b></div>
+        <p>Dahil/hariç kriterleri hesaplanabilir sorguya çevrilir; kimliksizleştirilmiş HBYS kayıtları taranır; her öneri kaynak cümlesiyle araştırmacıya sunulur.</p>
+      </div>
+      <div class="kart">
+        <div class="ust"><div class="ikon"><svg viewBox="0 0 24 24"><path d="M3 20h18M5 16l4-5 4 3 6-8"/><circle cx="19" cy="6" r="1.5"/></svg></div><b>Merkez zekâsı</b></div>
+        <p>Hiyerarşik Bayes kazanım tahmini, Weibull aktivasyon gecikme riski, Monte Carlo projeksiyon, açıklanabilir merkez sıralaması ve performans endeksi.</p>
+      </div>
+      <div class="kart">
+        <div class="ust"><div class="ikon"><svg viewBox="0 0 24 24"><path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z"/><path d="M12 8v5M12 16h.01"/></svg></div><b>Risk bazlı izlem</b></div>
+        <p>ICH E6(R3) uyumlu 15 KRI, kalite tolerans limitleri, merkezler arası anomali tespiti; "neden tetiklendi" açıklamalı erken uyarı ve izlem önerisi.</p>
+      </div>
+    </div>
+
+    <div class="izgara">
+      <div>
+        <div class="blok">
+          <h2>Sorun</h2>
+          <ul>
+            <li><b>Uygun hastalar görünmez.</b> Kriterleri karşılayan hastalar Türkçe serbest metin raporlarda; koordinatörler dosyaları elle tarıyor.</li>
+            <li><b>Merkez seçimi deneyime dayalı.</b> Fizibilite beyanı ile gerçekleşen kazanım arasındaki fark takvimi kaydırıyor.</li>
+            <li><b>Riskler geç görülüyor.</b> Veri kalitesi ve güvenlik bildirim sorunları olaydan haftalar sonra fark ediliyor.</li>
+          </ul>
+          <p style="margin-top:1.2mm;color:#3d4350">Yurt dışı çözümler İngilizce ve bulut tabanlı: Türkçe metni işleyemez, KVKK gereği hastane verisine erişemez.</p>
+        </div>
+
+        <div class="blok">
+          <h2>Nasıl çalışır</h2>
+          <div class="akis">
+            <div class="adim"><span class="no">1</span><b>HBYS → kimliksizleştir</b>FHIR R4 veya CSV; TCKN, ad, tarih, kurum maskelenir; ikinci geçiş doğrulaması</div>
+            <div class="adim"><span class="no">2</span><b>Kriter → sorgu</b>Türkçe Klinik BDM veya kural motoru; düşük güvenlide araştırmacı onayı</div>
+            <div class="adim"><span class="no">3</span><b>Eşleştir, kanıtla</b>Yapısal veri + RAG; halüsinasyon koruması; uygun / olası / belirsiz</div>
+            <div class="adim"><span class="no">4</span><b>Karar ve izlem</b>Araştırmacı onayı, gönüllü kaydı, KRI uyarıları, denetim izi</div>
+          </div>
+        </div>
+
+        <div class="blok">
+          <h2>Uçtan uca platform</h2>
+          <p>9 aşamalı yaşam döngüsü (tasarım → arşiv), etik kurul / TİTCK / KVKK başvuru takibi, CDASH uyumlu eCRF ve sorgu yönetimi, AE/SAE/SUSAR ve 7/15 gün bildirim sayacı, DIA modeline göre TMF, hash zincirli denetim izi ve e-imza, sponsor portalı, CDISC ODM / OMOP dışa aktarım. İlaç, biyobenzer, tıbbi cihaz, IVD, gözlemsel, kayıt ve araştırmacı başlatımlı çalışmalar aynı veri modelinde.</p>
+        </div>
+
+        <div class="blok">
+          <h2>Neden farklı</h2>
+          <ul class="tik">
+            <li><b>Türkçe Klinik BDM</b> hastane GPU'sunda nicemlenmiş çalışır; sunucu yoksa kural tabanlı mod devreye girer, sistem durmaz.</li>
+            <li><b>Veri kurum dışına çıkmaz.</b> Hastane içi kurulum; model iyileştirme federe LoRA ile, yalnızca ağırlıklar paylaşılır.</li>
+            <li><b>İnsan kararı merkezde.</b> Hiçbir model çıktısı tek başına işlem yapmaz; her karar gerekçesiyle denetim izinde.</li>
+            <li><b>Uyum paketi ürünle gelir.</b> 21 CFR Part 11 / Annex 11, KVKK etki değerlendirmesi, GAMP 5 validasyon dosyası.</li>
+            <li><b>Ağ etkisi.</b> Merkez performans endeksi her yeni çalışmayla kuvvetlenir; sponsor görünümü anonimdir.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div>
+        <div class="blok">
+          <div class="ekran-kutu"><img src="../ekran/09_eslestirme_detay.png" alt="Aday hasta detayı"></div>
+          <div class="altyazi">Aday hasta ekranı: kriter bazında sonuç, kaynak cümle, güven ve yöntem; araştırmacı kararı gerekçesiyle kaydedilir (demo, sentetik veri).</div>
+        </div>
+
+        <div class="blok">
+          <div class="rakamlar">
+            <div class="rakam"><div class="deger">9</div><div class="ad">yaşam döngüsü aşaması</div></div>
+            <div class="rakam"><div class="deger">7</div><div class="ad">çalışma türü</div></div>
+            <div class="rakam"><div class="deger">15</div><div class="ad">varsayılan KRI</div></div>
+            <div class="rakam"><div class="deger">%0</div><div class="ad">halüsinasyon (koruma katmanı)</div></div>
+          </div>
+        </div>
+
+        <div class="blok">
+          <h2>Olgunluk ve hedefler</h2>
+          <table>
+            <tr><th>Bileşen</th><th>Durum</th><th style="text-align:right">Hedef</th></tr>
+            <tr><td>Çalışma yönetimi, eCRF, güvenlik, TMF, denetim izi, sponsor portalı</td><td><span class="rozet">Üretim</span></td><td class="s">THS 7–8</td></tr>
+            <tr><td>Kimliksizleştirme (recall %91, F1 0,95)</td><td><span class="rozet sari">Pilot</span></td><td class="s">recall ≥ %98</td></tr>
+            <tr><td>Merkez zekâsı (MAPE %34, AUC 0,79)</td><td><span class="rozet sari">Pilot</span></td><td class="s">≤ %25 · ≥ 0,80</td></tr>
+            <tr><td>Eşleştirme, kural tabanlı taban (duyarlılık %77)</td><td><span class="rozet sari">Pilot</span></td><td class="s">≥ %90</td></tr>
+            <tr><td>Türkçe Klinik BDM, federe güncelleme</td><td><span class="rozet mavi">Ar-Ge</span></td><td class="s">THS 4 → 7</td></tr>
+          </table>
+          <div class="altyazi">Ölçümler sentetik demo verisi ve değerlendirme setleri üzerinde sistemin kendi hesaplamalarıdır; prospektif doğrulama üç pilot hastanede gölge modla yapılır.</div>
+        </div>
+
+        <div class="blok">
+          <h2>Ulusal altyapı katkısı</h2>
+          <p>TR-KlinikBench açık değerlendirme seti (6 görev), federe model güncelleme protokolü, model ve veri kartları, kimliksizleştirme aracı, FHIR R4 / OMOP eşlemeleri ve klinik NLP servis API'si diğer kurumların kullanımına açılır; ticari platform bu altyapının sürdürülmesini finanse eder.</p>
+        </div>
+
+        <div class="cta">
+          <h3>Gölge mod pilot programı</h3>
+          <p><b>6 ay, lisans ücreti yok.</b> Kurulum ve eğitim EBM tarafından; FHIR veya CSV ile hasta havuzu; eşleştirme, merkez zekâsı ve RBM gölge modda. Hastane kendi merkezlerinin performans endeksini ve pilot raporunu alır. Lisans sınıfları: kurumsal · çalışma bazlı · SaaS · akademik · bileşen/OEM.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="dip">
+    <div><b>EBM Klinik Araştırma Hizmetleri</b> · Yazılım ve Veri Bilimi Ekibi · yazilim@ebm-cro.com · www.ebm-cro.com</div>
+    <div>Gizli – değerlendirme amaçlıdır. Demo ekranlarındaki veriler sentetiktir; merkez adları kurgusaldır.</div>
+  </div>
+</div>
+</body>
+</html>
