@@ -44,8 +44,12 @@
       <td>{% if s.inceleme_karari %}<span class="rozet {{ 'yesil' if s.inceleme_karari == 'onay' else ('kirmizi' if s.inceleme_karari == 'red' else 'mavi') }}">{{ s.inceleme_karari }}</span> <small>{{ s.inceleyen.kullanici_adi if s.inceleyen }}</small>{% else %}<span class="rozet sari">bekliyor</span>{% endif %}</td>
       <td><small>{{ s.olusturma|tarih }}{% if s.golge_mod %} · gölge{% endif %}</small></td>
     </tr>
-    {% else %}<tr><td colspan="8" class="kucuk">Henüz tarama yapılmadı. "Ön taramayı çalıştır" ile aktif merkezlerin kimliksizleştirilmiş HBYS kayıtları protokol kriterleriyle eşleştirilir.</td></tr>{% endfor %}
+    {% else %}<tr><td colspan="8" class="kucuk">
+      {% if not c.merkezler %}Bu çalışmada henüz merkez yok; eşleştirme merkez eklendikten sonra çalışır.{% if izinli(kullanici, 'merkez.yonet') %} <a href="/calismalar/{{ c.id }}/merkezler">Merkez ekle</a>{% endif %}
+      {% elif not hasta_havuzu %}Merkezde kimliksizleştirilmiş hasta kaydı yok.{% if ilk_merkez %} <a href="/merkezler/{{ ilk_merkez.merkez_id }}/hasta-yukle">CSV ile hasta kaydı yükle</a>{% endif %}
+      {% elif not c.kriterler %}Protokol kriterleri tanımlı değil.{% if izinli(kullanici, 'calisma.duzenle') %} <a href="/calismalar/{{ c.id }}/protokol">Kriter ekle</a>{% endif %}
+      {% else %}Henüz tarama yapılmadı.{% if izinli(kullanici, 'eslestirme.calistir') %} "Ön taramayı çalıştır" ile merkezlerin kimliksizleştirilmiş kayıtları protokol kriterleriyle eşleştirilir.{% endif %}{% endif %}</td></tr>{% endfor %}
   </table>
 </div>
-<div class="not">Eşleştirme motoru hastane içindeki Türkçe Klinik BDM ile çalışır; hasta verisi kurum dışına çıkmaz. Her öneri, kaynak cümlesi ile birlikte sunulur. Araştırmacı onayı olmadan hiçbir hasta çalışmaya alınmaz; model önerisi ile araştırmacı kararı arasındaki uyum gölge mod raporunda izlenir.</div>
+<div class="not">Eşleştirme hastane içinde çalışır; hasta verisi kurum dışına çıkmaz. Her öneri kaynak cümlesiyle birlikte sunulur. Araştırmacı onayı olmadan hiçbir hasta çalışmaya alınmaz; model önerisi ile araştırmacı kararı arasındaki uyum gölge mod raporunda izlenir.</div>
 {% endblock %}

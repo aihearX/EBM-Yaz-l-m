@@ -8,9 +8,11 @@ from ._ortak import ZamanDamgasi, simdi
 
 
 class Form(Taban):
-    """eCRF tanimi. `alanlar` CDASH uyumlu alan listesi:
+    """eCRF tanimi. `alanlar` alan sozlugu listesi (standart: services/ecrf.ALAN_ANAHTARLARI):
     [{"kod": "SYSBP", "etiket": "Sistolik KB", "tip": "sayi", "birim": "mmHg", "zorunlu": true,
-      "min": 60, "max": 250, "secenekler": [...], "cdash": "VS.VSORRES"}]
+      "min": 60, "max": 250, "secenekler": [...], "cdash": "VS.VSORRES", "bolum": "Olcumler",
+      "kosul": {"alan": "VSYN", "deger": "Evet"}}]
+    tip: metin | metin_uzun | sayi | tarih | secim | coklu_secim | evet_hayir
     """
 
     __tablename__ = "form"
@@ -19,12 +21,28 @@ class Form(Taban):
     calisma_id: Mapped[int] = mapped_column(ForeignKey("calisma.id"))
     kod: Mapped[str] = mapped_column(String(16))
     ad: Mapped[str] = mapped_column(String(120))
-    vizit_adi: Mapped[str | None] = mapped_column(String(40), nullable=True)  # None -> her vizitte
+    vizit_adi: Mapped[str | None] = mapped_column(String(40), nullable=True)  # eski alan; bkz. vizit_listesi
+    vizitler: Mapped[list] = mapped_column(JSON, default=list)  # vizit adi listesi; bos -> her vizitte
     sira: Mapped[int] = mapped_column(Integer, default=0)
     alanlar: Mapped[list] = mapped_column(JSON, default=list)
     versiyon: Mapped[str] = mapped_column(String(8), default="1.0")
+    durum: Mapped[str] = mapped_column(String(12), default="taslak")  # taslak | yayinda
+    aciklama: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     calisma = relationship("Calisma", back_populates="formlar")
+
+    @property
+    def vizit_listesi(self) -> list[str]:
+        """Formun bagli oldugu vizit adlari; bos liste her vizit demektir."""
+        if self.vizitler:
+            return [v for v in self.vizitler if v and v != "*"]
+        if self.vizit_adi and self.vizit_adi != "*":
+            return [self.vizit_adi]
+        return []
+
+    def vizitte_var(self, vizit_adi: str) -> bool:
+        liste = self.vizit_listesi
+        return not liste or vizit_adi in liste
 
 
 class FormKaydi(Taban, ZamanDamgasi):

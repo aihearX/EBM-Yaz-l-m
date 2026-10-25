@@ -8,7 +8,8 @@
     <h2>İzlem ziyaretleri</h2>
     <table class="sikisik"><tr><th>Merkez</th><th>Tip</th><th>Planlanan</th><th>Gerçekleşen</th><th>CRA</th><th class="sag">SDV</th><th class="sag">Bulgu</th></tr>
       {% for z in ziyaretler %}<tr><td>{{ z.calisma_merkez.merkez_no }} – {{ z.calisma_merkez.merkez.sehir }}</td><td><span class="rozet {{ 'turkuaz' if z.tip == 'tetiklenmis' else '' }}">{{ z.tip }}</span></td><td>{{ z.planlanan|tarih }}</td><td>{{ z.gerceklesen|tarih }}</td><td>{{ z.cra.ad_soyad if z.cra else '—' }}</td><td class="sayi">{{ z.sdv_orani|yuzde if z.sdv_orani is not none else '—' }}</td><td class="sayi">{{ z.bulgular|length if z.bulgular else 0 }}</td></tr>
-      {% else %}<tr><td colspan="7" class="kucuk">Ziyaret yok.</td></tr>{% endfor %}
+      {% else %}<tr><td colspan="7" class="kucuk">Henüz izlem ziyareti planlanmadı.
+        {% if izinli(kullanici, 'rbm.yonet') %}{% if c.merkezler %}Aşağıdan ilk ziyareti planlayın.{% else %}<a href="/calismalar/{{ c.id }}/merkezler">Önce merkez ekleyin</a>{% endif %}{% endif %}</td></tr>{% endfor %}
     </table>
     {% if izinli(kullanici, 'rbm.yonet') %}
     <details style="margin-top:10px"><summary>Ziyaret planla</summary>
@@ -23,7 +24,7 @@
     <h2>Protokol sapmaları</h2>
     <table class="sikisik"><tr><th>Tarih</th><th>Merkez</th><th>Gönüllü</th><th>Kategori</th><th>Önem</th><th>Açıklama</th><th>Durum</th></tr>
       {% for s in sapmalar %}<tr><td>{{ s.tarih|tarih }}</td><td>{{ s.calisma_merkez.merkez_no }}</td><td>{{ s.gonullu.gonullu_no if s.gonullu else '—' }}</td><td>{{ s.kategori_etiket }}</td><td><span class="rozet {{ 'kirmizi' if s.onem == 'major' else 'sari' }}">{{ s.onem }}</span></td><td>{{ s.aciklama }}</td><td>{{ 'Kapalı' if s.kapali else 'Açık' }}</td></tr>
-      {% else %}<tr><td colspan="7" class="kucuk">Sapma kaydı yok.</td></tr>{% endfor %}
+      {% else %}<tr><td colspan="7" class="kucuk">Protokol sapması kaydedilmedi.{% if izinli(kullanici, 'rbm.yonet') and c.merkezler %} Sapma tespit edilirse aşağıdan kaydedin.{% endif %}</td></tr>{% endfor %}
     </table>
     {% if izinli(kullanici, 'rbm.yonet') %}
     <details style="margin-top:10px"><summary>Sapma kaydet</summary>

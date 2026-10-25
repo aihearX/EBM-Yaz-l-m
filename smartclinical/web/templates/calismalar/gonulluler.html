@@ -20,7 +20,10 @@
         <td class="sayi">{% set n = g.form_kayitlari|map(attribute='sorgular')|sum(start=[])|selectattr('durum','equalto','acik')|list|length %}{% if n %}<span class="rozet sari">{{ n }}</span>{% else %}0{% endif %}</td>
         <td class="sayi">{{ g.advers_olaylar|length }}{% if g.advers_olaylar|selectattr('ciddi')|list %} <span class="rozet kirmizi">SAE</span>{% endif %}</td>
       </tr>
-      {% else %}<tr><td colspan="9" class="kucuk">Gönüllü yok.</td></tr>{% endfor %}
+      {% else %}<tr><td colspan="9" class="kucuk">{% if secili %}Bu durumda gönüllü yok. <a href="/calismalar/{{ c.id }}/gonulluler">Tümünü göster</a>
+        {% else %}Henüz gönüllü yok.
+        {% if o.aktif_merkez == 0 %}{% if izinli(kullanici, 'merkez.yonet') %}<a href="/calismalar/{{ c.id }}/merkezler">Önce merkez ekleyin</a>{% else %}Önce bir merkezin aktif olması gerekir.{% endif %}
+        {% elif izinli(kullanici, 'hasta.goruntule') %}<a href="/calismalar/{{ c.id }}/eslestirme">Aday hastaları tarayın</a>{% endif %}{% endif %}</td></tr>{% endfor %}
     </table>
   </div>
   <div>

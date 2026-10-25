@@ -6,8 +6,8 @@
   <div><h1>Çalışmalar</h1><small>{{ satirlar|length }} çalışma</small></div>
   <div class="sag">
     <form class="satir" method="get">
-      <input type="text" name="q" value="{{ q }}" placeholder="Protokol kodu, ad, sponsor" style="width:220px">
-      <select name="tur" style="width:170px"><option value="">Tüm türler</option>{% for k, v in turler.items() %}<option value="{{ k.value }}" {{ 'selected' if tur == k.value }}>{{ v }}</option>{% endfor %}</select>
+      <input type="text" name="q" value="{{ q }}" placeholder="{{ 'Protokol kodu veya ad' if sade else 'Protokol kodu, ad, sponsor' }}" style="width:220px">
+      {% if not sade %}<select name="tur" style="width:170px"><option value="">Tüm türler</option>{% for k, v in turler.items() %}<option value="{{ k.value }}" {{ 'selected' if tur == k.value }}>{{ v }}</option>{% endfor %}</select>{% endif %}
       <select name="durum" style="width:170px"><option value="">Tüm aşamalar</option>{% for d in durumlar %}<option value="{{ d.value }}" {{ 'selected' if durum == d.value }}>{{ DURUM_ETIKET[d] }}</option>{% endfor %}</select>
       <button class="btn">Filtrele</button>
     </form>
@@ -16,11 +16,11 @@
 </div>
 <div class="kart">
 <table>
-  <tr><th>Protokol</th><th>Tür</th><th>Faz</th><th>Sponsor</th><th>Alan</th><th>Aşama</th><th class="sag">Merkez</th><th class="sag">Kayıt</th><th class="sag">Açık sorgu</th><th class="sag">Uyarı</th><th>Başlangıç</th></tr>
+  <tr><th>Protokol</th>{% if not sade %}<th>Tür</th>{% endif %}<th>Faz</th>{% if not sade %}<th>Sponsor</th>{% endif %}<th>Alan</th><th>Aşama</th><th class="sag">Merkez</th><th class="sag">Kayıt</th><th class="sag">Açık sorgu</th><th class="sag">Uyarı</th><th>Başlangıç</th></tr>
   {% for s in satirlar %}
   <tr>
     <td><a href="/calismalar/{{ s.c.id }}"><b>{{ s.c.kod }}</b></a><br><small>{{ s.c.kisa_ad }}</small></td>
-    <td>{{ s.c.tur_etiket }}</td><td>{{ s.c.faz or '—' }}</td><td>{{ s.c.sponsor }}</td><td>{{ s.c.terapotik_alan }}</td>
+    {% if not sade %}<td>{{ s.c.tur_etiket }}</td>{% endif %}<td>{{ s.c.faz or '—' }}</td>{% if not sade %}<td>{{ s.c.sponsor }}</td>{% endif %}<td>{{ s.c.terapotik_alan }}</td>
     <td><span class="rozet mavi">{{ s.c.durum_etiket }}</span></td>
     <td class="sayi">{{ s.o.aktif_merkez }}/{{ s.o.toplam_merkez }}</td>
     <td class="sayi">{{ s.o.kayitli }}/{{ s.c.hedef_hasta }}</td>
@@ -28,7 +28,10 @@
     <td class="sayi">{% if s.o.aksiyon_uyari %}<span class="rozet kirmizi">{{ s.o.acik_uyari }}</span>{% elif s.o.acik_uyari %}<span class="rozet sari">{{ s.o.acik_uyari }}</span>{% else %}—{% endif %}</td>
     <td>{{ s.c.baslangic|tarih }}</td>
   </tr>
-  {% else %}<tr><td colspan="11" class="kucuk">Kayıt yok.</td></tr>{% endfor %}
+  {% else %}<tr><td colspan="{{ 9 if sade else 11 }}" class="kucuk">
+    {% if q or durum or tur %}Bu filtreye uyan çalışma yok. <a href="/calismalar">Filtreyi temizle</a>
+    {% elif izinli(kullanici, 'calisma.olustur') %}Henüz çalışma yok. <a href="/sihirbaz">İlk çalışmanızı oluşturun</a>
+    {% else %}Henüz size atanmış çalışma yok; proje yöneticinizle görüşün.{% endif %}</td></tr>{% endfor %}
 </table>
 </div>
 {% endblock %}

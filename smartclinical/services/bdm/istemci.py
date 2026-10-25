@@ -21,6 +21,36 @@ log = logging.getLogger(__name__)
 
 SURUM = "ebm-klinik-tr/istemci-1.3"
 
+# Protokol taslagi: uzun metinlerde yalnizca bu basliklarin cevresi modele gider
+PROTOKOL_METIN_SINIRI = 12000
+PROTOKOL_BASLIKLARI = ("dahil etme", "dahil olma", "hariç tutma", "haric tutma", "dışlama", "dislama",
+                       "çalışma kolları", "calisma kollari", "tedavi grupları", "tedavi gruplari",
+                       "vizit takvimi", "değerlendirme çizelgesi", "degerlendirme cizelgesi", "vizit çizelgesi")
+
+
+def _baslik_cevresi(metin: str, basliklar, genislik: int = 2500) -> str:
+    """Basliklarin gectigi yerlerin cevresindeki bolumleri birlestirir (ortusen pencereler tek parca)."""
+    kucuk = metin.translate(str.maketrans("İI", "iı")).lower()
+    pencereler: list[tuple[int, int]] = []
+    for b in basliklar:
+        bas = 0
+        while True:
+            i = kucuk.find(b, bas)
+            if i < 0:
+                break
+            pencereler.append((max(0, i - 200), min(len(metin), i + genislik)))
+            bas = i + len(b)
+    if not pencereler:
+        return metin[:PROTOKOL_METIN_SINIRI]
+    pencereler.sort()
+    birlesik = [pencereler[0]]
+    for a, b in pencereler[1:]:
+        if a <= birlesik[-1][1]:
+            birlesik[-1] = (birlesik[-1][0], max(b, birlesik[-1][1]))
+        else:
+            birlesik.append((a, b))
+    return "\n...\n".join(metin[a:b] for a, b in birlesik)
+
 
 @dataclass
 class KanitSonucu:
@@ -203,6 +233,27 @@ class BDMIstemci:
             if v:
                 return [str(m) for m in v["maddeler"]][:6]
         return self._kural_ozet(metin)
+
+    def protokol_taslagi(self, metin: str) -> dict | None:
+        """Protokol metninden tasarim taslagi (kriter, kol, vizit, form onerisi). Kural modunda None.
+
+        Cikti yalnizca oneridir; uygulanmasi insan onayiyla olur (web/ecrf.py).
+        """
+        if self.kural_modu or not (metin or "").strip():
+            return None
+        metin = metin.strip()
+        if len(metin) > PROTOKOL_METIN_SINIRI:
+            metin = _baslik_cevresi(metin, PROTOKOL_BASLIKLARI)
+        v = self._uret_json(istemler.PROTOKOL_TASLAK.format(metin=metin[:PROTOKOL_METIN_SINIRI]),
+                            {"dahil": list, "haric": list, "kollar": list, "vizitler": list, "formlar": list,
+                             "guven": (int, float)}, maks_token=1500)
+        if not v or not korumalar.json_sema(v, {"dahil": [str], "haric": [str], "kollar": [str],
+                                                "vizitler": [{"ad": str, "gun": (int, float)}], "formlar": [str]}):
+            return None
+        v["vizitler"] = [{"ad": x["ad"][:40], "gun": int(x["gun"]), "pencere": int(x.get("pencere") or 0)}
+                         for x in v["vizitler"]]
+        v["guven"] = max(0.0, min(1.0, float(v["guven"])))
+        return v
 
     def soru_cevap(self, soru: str, baglam: str) -> dict:
         if not self.kural_modu:

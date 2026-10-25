@@ -46,11 +46,6 @@ class MetinIstek(BaseModel):
     metin: str
 
 
-class SoruIstek(BaseModel):
-    soru: str
-    baglam: str
-
-
 @router.post("/icd-kodla")
 def icd_kodla(g: MetinIstek, k: Kullanici = Depends(gerekli("bdm.kullan"))):
     """Serbest metindeki tani ifadelerini ICD-10 on ekleriyle eslestirir (sozluk tabanli; BDM ile zenginlestirilecek)."""
@@ -76,15 +71,3 @@ def klinik_ozet(g: MetinIstek, db: Session = Depends(get_db), k: Kullanici = Dep
     denetim.kaydet(db, k, "bdm", "bdm", None, yeni={"gorev": "ozet", "uzunluk": len(g.metin), "api": True})
     db.commit()
     return {"ozet": i.klinik_ozet(temiz), "model": i.model_adi}
-
-
-@router.post("/soru-cevap")
-def soru_cevap(g: SoruIstek, db: Session = Depends(get_db), k: Kullanici = Depends(gerekli("bdm.kullan"))):
-    from ..services.bdm import BDMIstemci
-    from ..services.kimliksizlestirme import kimliksizlestir
-
-    i = BDMIstemci.olustur()
-    cevap = i.soru_cevap(g.soru, kimliksizlestir(g.baglam).metin)
-    denetim.kaydet(db, k, "bdm", "bdm", None, yeni={"gorev": "soru_cevap", "uzunluk": len(g.baglam), "api": True})
-    db.commit()
-    return {**cevap, "model": i.model_adi}

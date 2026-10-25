@@ -154,3 +154,15 @@ def test_klinik_ozet_ve_soru_cevap(istemci):
     assert 1 <= len(oz) <= 5
     c = istemci.soru_cevap("Hasta hangi antihipertansif ilacı kullanıyor?", EPIKRIZ)
     assert "amlodipin" in c["cevap"].lower()
+
+
+def test_protokol_taslagi_kural_modunda_none(istemci):
+    assert istemci.protokol_taslagi("4.1 Dahil Etme Kriterleri\n1. 18 yaş ve üzeri") is None
+
+
+def test_json_sema_ic_ice():
+    sema = {"vizitler": [{"ad": str, "gun": (int, float)}], "formlar": [str], "guven": (int, float)}
+    assert korumalar.json_sema({"vizitler": [{"ad": "V1", "gun": 0}], "formlar": ["VS"], "guven": 0.8}, sema)
+    assert not korumalar.json_sema({"vizitler": [{"ad": "V1"}], "formlar": ["VS"], "guven": 0.8}, sema)
+    assert not korumalar.json_sema({"vizitler": [], "formlar": [1], "guven": 0.8}, sema)
+    assert not korumalar.json_sema(None, sema)

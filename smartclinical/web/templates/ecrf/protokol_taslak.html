@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block baslik %}{{ c.kod }} · Protokolden taslak{% endblock %}
+{% block yol %}<a href="/calismalar">Çalışmalar</a> › <a href="/calismalar/{{ c.id }}">{{ c.kod }}</a> › <a href="/calismalar/{{ c.id }}/tasarim">Tasarım</a> › Protokolden taslak{% endblock %}
+{% block icerik %}
+{% include "calismalar/_baslik.html" %}
+<div class="izgara k21">
+  <form method="post" action="/calismalar/{{ c.id }}/tasarim/protokol-taslak" class="kart">
+    <h2>Protokol metninden tasarım taslağı</h2>
+    <p class="kucuk">Protokolün ilgili bölümlerini (dahil etme / hariç tutma kriterleri, çalışma kolları, vizit takvimi, değerlendirmeler) yapıştırın. Sistem başlıkları ve madde satırlarını tanır; Türkçe Klinik BDM mevcutsa öneriler onunla zenginleştirilir. Hiçbir öneri siz onaylamadan kaydedilmez.</p>
+    <div class="alan"><label>Protokol metni</label><textarea name="metin" style="min-height:360px;font-family:ui-monospace,monospace;font-size:12.5px" placeholder="4.1 Dahil Etme Kriterleri&#10;1. 18 yaş ve üzeri&#10;2. ...&#10;&#10;4.2 Hariç Tutma Kriterleri&#10;a) ...&#10;&#10;Vizit Takvimi&#10;Tarama (-14 gün ± 7), Vizit 1 (Gün 0), Vizit 2 (Gün 28 ± 3), Hafta 12">{{ metin }}</textarea></div>
+    <button class="btn birincil">Taslak çıkar</button>
+    <a class="btn" href="/calismalar/{{ c.id }}/tasarim">Vazgeç</a>
+  </form>
+  <div>
+    <div class="kart">
+      <h2>Nasıl çalışır</h2>
+      <ul class="liste-sade kucuk">
+        <li>Kriter başlıkları: "Dahil etme kriterleri", "Hariç tutma / dışlama kriterleri". Her numaralı, tireli veya harfli satır bir kriter olur.</li>
+        <li>Kollar: "Çalışma kolları" veya "Tedavi grupları" başlığı altındaki satırlar ya da "Kol A: ..." biçimindeki satırlar.</li>
+        <li>Vizitler: "Vizit 2 (Gün 28 ± 3)", "Hafta 12", "Tarama (-14 gün)" kalıpları.</li>
+        <li>Formlar: metinde geçen vital, laboratuvar, ECOG, eşlik eden ilaç, demografi, anket/ölçek sözcüklerinden standart formlar önerilir.</li>
+        <li>Metin kimlik verisi içeriyorsa modele gönderilmez; kural tabanlı sonuç gösterilir.</li>
+      </ul>
+    </div>
+    {% if c.versiyonlar %}<div class="not">Metin, son protokol sürümünün kayıtlı metninden önceden dolduruldu. Değiştirebilirsiniz.</div>{% endif %}
+  </div>
+</div>
+{% endblock %}

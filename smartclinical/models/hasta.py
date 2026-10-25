@@ -6,6 +6,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..db import Taban
 from ._ortak import ZamanDamgasi, simdi
+from .tasarim import VizitTanimi  # noqa: F401  (vizit.vizit_tanimi_id FK hedefi metadata'ya kaydedilsin)
 
 
 class Hasta(Taban, ZamanDamgasi):
@@ -104,6 +105,7 @@ class Vizit(Taban):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     gonullu_id: Mapped[int] = mapped_column(ForeignKey("gonullu.id"))
+    vizit_tanimi_id: Mapped[int | None] = mapped_column(ForeignKey("vizit_tanimi.id"), nullable=True)
     ad: Mapped[str] = mapped_column(String(40))  # Tarama, V1, V2, ... , Çalışma Sonu
     sira: Mapped[int] = mapped_column(Integer, default=0)
     planlanan: Mapped[date | None] = mapped_column(Date, nullable=True)
@@ -112,6 +114,7 @@ class Vizit(Taban):
     durum: Mapped[str] = mapped_column(String(16), default="planli")  # planli | yapildi | kacirildi | pencere_disi
 
     gonullu = relationship("Gonullu", back_populates="vizitler")
+    vizit_tanimi = relationship("VizitTanimi")
 
     @property
     def pencere_disi(self) -> bool:

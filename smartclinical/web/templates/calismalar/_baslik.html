@@ -1,4 +1,4 @@
-{# Calisma sayfalarinin ortak basligi ve sekmeleri #}
+{# Calisma sayfalarinin ortak basligi ve sekmeleri; sekme listesi rol izinlerine gore web/calismalar.py'de kurulur #}
 <div class="baslik-satiri">
   <div>
     <h1>{{ c.kod }} <span style="font-weight:400;color:var(--gri-500)">· {{ c.kisa_ad }}</span></h1>
@@ -10,18 +10,7 @@
   </div>
 </div>
 <div class="sekmeler">
-  {% set b = '/calismalar/' ~ c.id %}
-  <a href="{{ b }}" class="{{ 'aktif' if sekme == 'ozet' }}">Özet</a>
-  <a href="{{ b }}/protokol" class="{{ 'aktif' if sekme == 'protokol' }}">Protokol ve Kriterler<span class="sayac">{{ c.kriterler|length }}</span></a>
-  <a href="{{ b }}/merkezler" class="{{ 'aktif' if sekme == 'merkezler' }}">Merkezler<span class="sayac">{{ o.aktif_merkez }}/{{ o.toplam_merkez }}</span></a>
-  <a href="{{ b }}/basvurular" class="{{ 'aktif' if sekme == 'basvurular' }}">Etik / TİTCK{% if o.bekleyen_basvuru %}<span class="sayac">{{ o.bekleyen_basvuru }}</span>{% endif %}</a>
-  <a href="{{ b }}/eslestirme" class="{{ 'aktif' if sekme == 'eslestirme' }}">Hasta Eşleştirme</a>
-  <a href="{{ b }}/gonulluler" class="{{ 'aktif' if sekme == 'gonulluler' }}">Gönüllüler<span class="sayac">{{ o.kayitli }}</span></a>
-  <a href="{{ b }}/veri" class="{{ 'aktif' if sekme == 'veri' }}">Veri (eCRF){% if o.acik_sorgu %}<span class="sayac">{{ o.acik_sorgu }}</span>{% endif %}</a>
-  <a href="{{ b }}/guvenlik" class="{{ 'aktif' if sekme == 'guvenlik' }}">Güvenlik{% if o.bekleyen_sae %}<span class="sayac kirmizi">{{ o.bekleyen_sae }}</span>{% endif %}</a>
-  <a href="{{ b }}/merkez-zekasi" class="{{ 'aktif' if sekme == 'merkez-zekasi' }}">Merkez Zekâsı</a>
-  <a href="{{ b }}/rbm" class="{{ 'aktif' if sekme == 'rbm' }}">Risk Bazlı İzlem{% if o.acik_uyari %}<span class="sayac {{ 'kirmizi' if o.aksiyon_uyari }}">{{ o.acik_uyari }}</span>{% endif %}</a>
-  <a href="{{ b }}/izlem" class="{{ 'aktif' if sekme == 'izlem' }}">Ziyaret ve Sapmalar</a>
-  <a href="{{ b }}/belgeler" class="{{ 'aktif' if sekme == 'belgeler' }}">TMF</a>
-  {% if izinli(kullanici, 'denetim.goruntule') %}<a href="{{ b }}/denetim" class="{{ 'aktif' if sekme == 'denetim' }}">Denetim İzi</a>{% endif %}
+  {% for s in sekmeler(kullanici, c, o) %}
+  <a href="{{ s.url }}" class="{{ 'aktif' if sekme == s.anahtar }}">{{ s.etiket }}{% if s.sayac is not none %}<span class="sayac {{ s.sinif }}">{{ s.sayac }}</span>{% endif %}</a>
+  {% endfor %}
 </div>

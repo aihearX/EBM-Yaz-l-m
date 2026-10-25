@@ -24,11 +24,12 @@
           <select name="durum" style="width:150px">{% for k, v in durumlar %}<option value="{{ k }}" {{ 'selected' if k == cm.durum }}>{{ v }}</option>{% endfor %}</select><button class="btn kucuk">Güncelle</button>
         </form>{% endif %}</td>
     </tr>
-    {% else %}<tr><td colspan="13" class="kucuk">Henüz merkez eklenmedi. Merkez Zekâsı sekmesi aday merkezleri geçmiş performansa göre sıralar.</td></tr>{% endfor %}
+    {% else %}<tr><td colspan="13" class="kucuk">Bu çalışmaya henüz merkez eklenmedi.
+      {% if izinli(kullanici, 'merkez.yonet') %}{% if adaylar %}<a href="#merkez-ekle">Merkez ekle</a>{% else %}<a href="/merkezler">Önce merkez kayıt defterine merkez ekleyin</a>{% endif %}{% else %}Merkez seçimini proje yöneticisi yapar.{% endif %}</td></tr>{% endfor %}
   </table>
 </div>
 {% if izinli(kullanici, 'merkez.yonet') %}
-<div class="kart" style="max-width:700px">
+<div class="kart" style="max-width:700px" id="merkez-ekle">
   <h2>Merkez ekle</h2>
   <form method="post" action="/calismalar/{{ c.id }}/merkezler/ekle" class="satir">
     <div class="alan" style="flex:1"><label>Merkez</label><select name="merkez_id">{% for m in adaylar %}<option value="{{ m.id }}">{{ m.ad }} ({{ m.sehir }})</option>{% endfor %}</select></div>

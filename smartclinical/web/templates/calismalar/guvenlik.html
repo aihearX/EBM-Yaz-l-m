@@ -9,6 +9,26 @@
   <div class="olcum"><div class="etiket">SUSAR</div><div class="deger {{ 'tehlike' if susar }}">{{ susar|length }}</div><div class="alt">hızlandırılmış bildirim</div></div>
   <div class="olcum"><div class="etiket">Bildirim süresi aşılan</div>{% set gec = sae|rejectattr('titck_bildirim')|selectattr('bildirim_suresi_gun')|selectattr('bildirim_suresi_gun','lt',0)|list %}<div class="deger {{ 'tehlike' if gec }}">{{ gec|length }}</div></div>
 </div>
+{% if kullanici.rol.value == 'sponsor' %}
+<div class="kart">
+  <h2>Ciddi advers olaylar (SAE)</h2>
+  <table>
+    <tr><th>Olay (MedDRA PT)</th><th>Başlangıç</th><th>Derece</th><th>Nedensellik</th><th>Sonuç</th><th>Bildirimler</th></tr>
+    {% for a in sae %}
+    <tr>
+      <td>{{ a.terim }}{% if a.meddra_pt %}<br><small>{{ a.meddra_pt }} · {{ a.meddra_soc }}</small>{% endif %}</td>
+      <td>{{ a.baslangic|tarih }}</td>
+      <td><span class="rozet {{ 'kirmizi' if a.siddet in ('4','5') else ('sari' if a.siddet == '3' else '') }}">{{ a.siddet }}</span></td>
+      <td>{{ a.nedensellik_etiket }}{% if a.susar %} <span class="rozet kirmizi">SUSAR</span>{% endif %}</td>
+      <td>{{ a.sonuc or '—' }}</td>
+      <td>{% if a.titck_bildirim %}<span class="rozet yesil">TİTCK {{ a.titck_bildirim|tarih }}</span>{% else %}<span class="rozet {{ 'kirmizi' if a.bildirim_suresi_gun is not none and a.bildirim_suresi_gun < 0 else 'sari' }}">TİTCK bekliyor{% if a.bildirim_suresi_gun is not none %} ({{ a.bildirim_suresi_gun }} gün){% endif %}</span>{% endif %}
+        {% if a.etik_bildirim %}<span class="rozet yesil">EK</span>{% endif %}</td>
+    </tr>
+    {% else %}<tr><td colspan="6" class="kucuk">Bu çalışmada ciddi advers olay bildirilmedi.</td></tr>{% endfor %}
+  </table>
+  <small>Sponsor görünümü gönüllü kimliği ve olay anlatımı içermez.</small>
+</div>
+{% else %}
 <div class="izgara k21">
   <div class="kart">
     <h2>Advers olaylar</h2>
@@ -28,7 +48,8 @@
           {% if a.etik_bildirim %}<span class="rozet yesil">EK</span>{% endif %}
           {% else %}—{% endif %}</td>
       </tr>
-      {% else %}<tr><td colspan="8" class="kucuk">Advers olay kaydı yok.</td></tr>{% endfor %}
+      {% else %}<tr><td colspan="8" class="kucuk">Bu çalışmada henüz advers olay bildirilmedi.
+        {% if izinli(kullanici, 'guvenlik.bildir') and o.toplam_gonullu %}Bildirim gönüllü sayfasından yapılır: <a href="/calismalar/{{ c.id }}/gonulluler">Gönüllüler</a>{% endif %}</td></tr>{% endfor %}
     </table>
   </div>
   <div>
@@ -36,5 +57,6 @@
     <div class="not">Ciddi advers olaylarda bildirim süreleri: ölüm veya yaşamı tehdit eden olaylarda 7 gün, diğer ciddi olaylarda 15 gün (TİTCK Klinik Araştırmalar Hakkında Yönetmelik). Sistem farkındalık tarihinden itibaren geri sayar; süre aşımı RBM modülüne SAE_GEC_BILDIRIM göstergesi olarak yansır.</div>
   </div>
 </div>
+{% endif %}
 {% endblock %}
-{% block script %}<script>SCGrafik.cubuk(document.getElementById("g-soc"), [{% for k, v in soc %}{etiket: {{ k|tojson }}, deger: {{ v }}, renk: "#16325c"},{% endfor %}]);</script>{% endblock %}
+{% block script %}{% if kullanici.rol.value != 'sponsor' %}<script>SCGrafik.cubuk(document.getElementById("g-soc"), [{% for k, v in soc %}{etiket: {{ k|tojson }}, deger: {{ v }}, renk: "#16325c"},{% endfor %}]);</script>{% endif %}{% endblock %}

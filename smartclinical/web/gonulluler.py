@@ -1,4 +1,4 @@
-from datetime import date, timedelta
+from datetime import date
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import RedirectResponse
@@ -9,54 +9,19 @@ from ..models import AdversOlay, CalismaMerkez, FormKaydi, Gonullu, GonulluDurum
 from ..models import Form as CRF
 from ..models._ortak import simdi
 from ..models.guvenlik import CIDDIYET_OLCUTU, NEDENSELLIK, SIDDET
-from ..services import denetim
+from ..models.hasta import GD_ETIKET
+from ..services import denetim, ecrf
 from ..services.yetki import gerekli
 from ._ortak import bilgi, ip, oturumlu
 from .sablon import goster
 
 router = APIRouter(prefix="/gonulluler")
 
-# Standart vizit takvimi; protokole gore calisma bazinda ezilebilir (TODO: Form/vizit sablonu tablosu)
-VARSAYILAN_VIZITLER = [("Tarama", -14, 7), ("V1 (Başlangıç)", 0, 0), ("V2", 28, 3), ("V3", 56, 3),
-                       ("V4", 84, 5), ("V5", 112, 5), ("Çalışma Sonu", 168, 7)]
-
-
 def _gonullu(db: Session, gid: int) -> Gonullu:
     g = db.get(Gonullu, gid)
     if not g:
         raise HTTPException(404, "Gönüllü bulunamadı")
     return g
-
-
-def _edit_check(form: CRF, veriler: dict) -> list[tuple[str, str]]:
-    """Basit otomatik edit-check'ler. Donus: (alan, soru) listesi."""
-    sorunlar = []
-    for alan in form.alanlar:
-        kod = alan["kod"]
-        v = veriler.get(kod, "")
-        if alan.get("zorunlu") and v in ("", None):
-            sorunlar.append((kod, f"'{alan['etiket']}' zorunlu alan boş bırakılmış."))
-            continue
-        if v in ("", None):
-            continue
-        if alan.get("tip") == "sayi":
-            try:
-                f = float(str(v).replace(",", "."))
-            except ValueError:
-                sorunlar.append((kod, f"'{alan['etiket']}' sayısal değer bekleniyor, girilen: {v}"))
-                continue
-            if alan.get("min") is not None and f < alan["min"]:
-                sorunlar.append((kod, f"'{alan['etiket']}' = {v} {alan.get('birim','')} beklenen aralığın altında (min {alan['min']}). Lütfen doğrulayın."))
-            if alan.get("max") is not None and f > alan["max"]:
-                sorunlar.append((kod, f"'{alan['etiket']}' = {v} {alan.get('birim','')} beklenen aralığın üstünde (maks {alan['max']}). Lütfen doğrulayın."))
-        if alan.get("tip") == "tarih":
-            try:
-                t = date.fromisoformat(str(v))
-                if t > date.today():
-                    sorunlar.append((kod, f"'{alan['etiket']}' gelecek tarihli olamaz."))
-            except ValueError:
-                sorunlar.append((kod, f"'{alan['etiket']}' geçerli tarih değil."))
-    return sorunlar
 
 
 @router.post("/yeni")
@@ -83,21 +48,25 @@ def yeni(request: Request, k: Kullanici = Depends(gerekli("veri.gir")), db: Sess
 @router.get("/{gid}")
 def detay(request: Request, gid: int, k: Kullanici = Depends(oturumlu), db: Session = Depends(get_db)):
     g = _gonullu(db, gid)
-    formlar = sorted(g.calisma.formlar, key=lambda f: f.sira)
+    # yalnizca yayindaki formlar veri girisinde gorunur; taslaklar tasarimcida kalir
+    tum_formlar = sorted(g.calisma.formlar, key=lambda f: f.sira)
+    formlar = [f for f in tum_formlar if f.durum != "taslak"]
     kayit_haritasi = {(fk.form_id, fk.vizit_id): fk for fk in g.form_kayitlari}
-    # vizit x form matrisi
+    # vizit x form matrisi: Form.vizit_listesi bos ise her vizitte
     matris = []
     for v in g.vizitler:
         satir = {"vizit": v, "hucreler": []}
         for f in formlar:
-            if f.vizit_adi and f.vizit_adi != v.ad and f.vizit_adi != "*":
+            if not f.vizitte_var(v.ad):
                 satir["hucreler"].append(None)
                 continue
             satir["hucreler"].append({"form": f, "kayit": kayit_haritasi.get((f.id, v.id))})
         matris.append(satir)
     sorgular = [s for fk in g.form_kayitlari for s in fk.sorgular if s.durum != "kapali"]
     return goster(request, "gonulluler/detay.html", g=g, formlar=formlar, matris=matris, sorgular=sorgular,
-                  durumlar=GonulluDurumu, SIDDET=SIDDET, NEDENSELLIK=NEDENSELLIK, CIDDIYET=CIDDIYET_OLCUTU)
+                  taslak_form=len(tum_formlar) - len(formlar), sema_var=bool(g.calisma.vizit_tanimlari),
+                  durumlar=GonulluDurumu, GD_ETIKET=GD_ETIKET, SIDDET=SIDDET, NEDENSELLIK=NEDENSELLIK,
+                  CIDDIYET=CIDDIYET_OLCUTU)
 
 
 @router.post("/{gid}/durum")
@@ -124,9 +93,7 @@ def durum(request: Request, gid: int, k: Kullanici = Depends(gerekli("veri.gir")
         if kol_id:
             g.kol_id = int(kol_id)
         if not g.vizitler:
-            for i, (ad, gun, pencere) in enumerate(VARSAYILAN_VIZITLER):
-                db.add(Vizit(gonullu_id=g.id, ad=ad, sira=i, planlanan=t + timedelta(days=gun), pencere_gun=pencere,
-                             durum="yapildi" if gun <= 0 else "planli", gerceklesen=t if gun == 0 else None))
+            ecrf.gonullu_vizitleri_olustur(db, g, t)
     elif yeni_durum in (GonulluDurumu.AYRILDI, GonulluDurumu.TAMAMLADI):
         g.bitis_tarihi = t
         g.ayrilma_nedeni = neden or None
@@ -176,7 +143,7 @@ async def form_kaydet(request: Request, gid: int, form_id: int, k: Kullanici = D
     gelen = await request.form()
     vizit_id = int(gelen.get("vizit_id")) if gelen.get("vizit_id") else None
     islem = gelen.get("islem", "kaydet")
-    veriler = {a["kod"]: gelen.get(a["kod"], "") for a in f.alanlar}
+    veriler = ecrf.veri_oku(f, gelen)
     kayit = next((fk for fk in g.form_kayitlari if fk.form_id == f.id and fk.vizit_id == vizit_id), None)
     if kayit and kayit.durum == "kilitli":
         raise HTTPException(403, "Kilitli form değiştirilemez")
@@ -193,7 +160,7 @@ async def form_kaydet(request: Request, gid: int, form_id: int, k: Kullanici = D
     kayit.giren_id = k.id
     if kayit.durum == "sdv":
         kayit.durum = "tamamlandi"  # degisiklik sonrasi SDV yenilenmeli
-    sorunlar = _edit_check(f, veriler)
+    sorunlar = ecrf.edit_check(f, veriler)
     if islem == "tamamla":
         kayit.durum = "tamamlandi"
     db.flush()

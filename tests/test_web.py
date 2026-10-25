@@ -114,9 +114,8 @@ def test_guvenlik_basliklari(istemci):
     assert r.headers["X-Frame-Options"] == "DENY" and r.headers["Cache-Control"] == "no-store"
 
 
-def test_arge_ve_disa_aktar(istemci):
+def test_disa_aktar(istemci):
     _giris(istemci, "admin")
-    assert istemci.get("/arge").status_code == 200
     db = oturum_fabrikasi()()
     c = db.execute(select(Calisma).where(Calisma.kod == "TST-001")).scalar_one()
     db.close()
@@ -139,10 +138,7 @@ def test_api_anahtari_ve_sponsor(istemci):
     assert istemci.get("/api/v1/calismalar", headers={"X-SC-Anahtar": ham}).status_code == 200
     assert istemci.get("/api/v1/calismalar", headers={"X-SC-Anahtar": "sc_yanlis"}).status_code == 401
     _giris(istemci, "admin")
-    assert istemci.get("/sponsor").status_code == 200
     assert istemci.get("/merkezler/endeks").status_code == 200
-    _giris(istemci, "denetci")
-    assert istemci.get("/sponsor").status_code == 403
 
 
 def test_csv_hasta_yukleme(istemci):

@@ -22,12 +22,13 @@
             <input type="date" name="karar_tarihi" style="margin-top:4px"><input type="text" name="notlar" placeholder="not" style="margin-top:4px">
             <button class="btn kucuk" style="margin-top:4px">Kaydet</button></form></details>{% endif %}</td>
       </tr>
-      {% else %}<tr><td colspan="9" class="kucuk">Başvuru kaydı yok.</td></tr>{% endfor %}
+      {% else %}<tr><td colspan="9" class="kucuk">Bu çalışma için henüz etik kurul veya TİTCK başvurusu kaydedilmedi.
+        {% if izinli(kullanici, 'calisma.duzenle') %}<a href="#basvuru-kaydet">Başvuru kaydet</a>{% endif %}</td></tr>{% endfor %}
     </table>
   </div>
   <div>
     {% if izinli(kullanici, 'calisma.duzenle') %}
-    <div class="kart">
+    <div class="kart" id="basvuru-kaydet">
       <h2>Başvuru kaydet</h2>
       <form method="post" action="/calismalar/{{ c.id }}/basvurular">
         <div class="alan"><label>Kurum</label><select name="kurum">{% for k, v in kurumlar.items() %}<option value="{{ k }}">{{ v }}</option>{% endfor %}</select></div>

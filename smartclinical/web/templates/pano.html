@@ -3,75 +3,195 @@
 {% block yol %}Genel Bakış{% endblock %}
 {% block icerik %}
 <div class="baslik-satiri">
-  <div><h1>Genel Bakış</h1><small>{{ bugun()|tarih }} itibarıyla portföy durumu</small></div>
-  <div class="sag">{% if izinli(kullanici, 'calisma.olustur') %}<a class="btn birincil" href="/calismalar/yeni">Yeni çalışma</a>{% endif %}</div>
+  <div><h1>Genel Bakış</h1><small>{{ bugun|tarih }} ·
+    {% if gorunum == 'merkez' %}{{ kullanici.merkez.ad if kullanici.merkez else 'merkez işleri' }}
+    {% elif gorunum == 'izlem' %}izlem ve veri kalitesi
+    {% elif kullanici.rol.value == 'sponsor' %}{{ kullanici.kurum or 'kurum atanmadı' }} · salt okunur özet
+    {% else %}portföy durumu{% endif %}</small></div>
+  <div class="sag">{% if izinli(kullanici, 'calisma.olustur') and not bos %}<a class="btn birincil" href="/calismalar/yeni">Yeni çalışma</a>{% endif %}</div>
 </div>
 
-<div class="izgara k4" style="margin-bottom:16px">
-  <div class="olcum"><div class="etiket">Aktif çalışma</div><div class="deger">{{ sayilar.aktif_calisma }}</div><div class="alt">toplam {{ sayilar.calisma }} çalışma</div></div>
-  <div class="olcum"><div class="etiket">Aktif merkez</div><div class="deger">{{ sayilar.merkez }}</div><div class="alt">kayıt yapabilen</div></div>
-  <div class="olcum"><div class="etiket">Randomize gönüllü</div><div class="deger">{{ sayilar.kayitli }}</div><div class="alt">tüm çalışmalar</div></div>
-  <div class="olcum"><div class="etiket">Açık risk uyarısı</div><div class="deger {{ 'tehlike' if sayilar.aksiyon_uyari else ('uyari' if sayilar.acik_uyari else 'iyi') }}">{{ sayilar.acik_uyari }}</div><div class="alt">{{ sayilar.aksiyon_uyari }} aksiyon seviyesinde</div></div>
-</div>
-<div class="izgara k4" style="margin-bottom:16px">
-  <div class="olcum"><div class="etiket">Açık veri sorgusu</div><div class="deger {{ 'uyari' if sayilar.acik_sorgu > 20 }}">{{ sayilar.acik_sorgu }}</div></div>
-  <div class="olcum"><div class="etiket">Bekleyen etik/TİTCK başvurusu</div><div class="deger">{{ sayilar.bekleyen_basvuru }}</div></div>
-  <div class="olcum"><div class="etiket">İnceleme bekleyen aday hasta</div><div class="deger {{ 'uyari' if sayilar.bekleyen_eslestirme }}">{{ sayilar.bekleyen_eslestirme }}</div><div class="alt">eşleştirme motoru önerisi</div></div>
-  <div class="olcum"><div class="etiket">Hasta verisi</div><div class="deger iyi" style="font-size:16px;padding-top:6px">Hastane içi</div><div class="alt">kurum dışına aktarım yok</div></div>
+{% if bos %}
+<div class="kart" style="max-width:560px;margin:40px auto;text-align:center;padding:32px">
+  {% if bos == 'olustur' %}
+  <h2>İlk çalışmanızı oluşturun</h2>
+  <p>Çalışma sihirbazı protokol bilgileri, kollar, vizit şeması ve eCRF formlarını adım adım tanımlamanızı sağlar.</p>
+  <a class="btn birincil" href="/sihirbaz">Çalışma oluştur</a>
+  {% else %}
+  <h2>Henüz size atanmış çalışma yok</h2>
+  <p>{% if kullanici.rol.value == 'sponsor' and not kullanici.kurum %}Hesabınızda kurum bilgisi tanımlı değil.{% endif %} Proje yöneticinizle görüşün.</p>
+  {% endif %}
 </div>
 
+{% elif gorunum == 'merkez' %}
+<div class="izgara k4" style="margin-bottom:16px">
+  <div class="olcum"><div class="etiket">Önümüzdeki 7 gün vizit</div><div class="deger">{{ sayilar.yakin_vizit }}</div>{% if sayilar.pencere_vizit %}<div class="alt" style="color:var(--kirmizi)">{{ sayilar.pencere_vizit }} vizitin penceresi kapanmak üzere</div>{% endif %}</div>
+  <div class="olcum"><div class="etiket">Tamamlanmamış form</div><div class="deger {{ 'uyari' if sayilar.taslak }}">{{ sayilar.taslak }}</div><div class="alt">taslak kayıt</div></div>
+  <div class="olcum"><div class="etiket">Cevap bekleyen sorgu</div><div class="deger {{ 'uyari' if sayilar.sorgu }}">{{ sayilar.sorgu }}</div></div>
+  <div class="olcum"><div class="etiket">İnceleme bekleyen aday</div><div class="deger {{ 'uyari' if sayilar.eslestirme }}">{{ sayilar.eslestirme }}</div><div class="alt">eşleştirme önerisi</div></div>
+</div>
 <div class="izgara k21">
   <div>
     <div class="kart">
-      <h2>Çalışma portföyü – kayıt ilerlemesi</h2>
+      <h2>Çalışmalarım</h2>
       <table>
-        <tr><th>Protokol</th><th>Tür / Faz</th><th>Aşama</th><th class="sag">Merkez</th><th class="sag">Kayıt / Hedef</th><th style="width:160px">İlerleme</th></tr>
-        {% for s in ilerleme %}
-        <tr>
-          <td><a href="/calismalar/{{ s.c.id }}"><b>{{ s.c.kod }}</b></a><br><small>{{ s.c.kisa_ad }}</small></td>
-          <td>{{ s.c.tur_etiket }}{% if s.c.faz %} · Faz {{ s.c.faz }}{% endif %}</td>
-          <td><span class="rozet mavi">{{ s.c.durum_etiket }}</span></td>
-          <td class="sayi">{{ s.aktif_merkez }}/{{ s.c.merkezler|length }}</td>
-          <td class="sayi">{{ s.kayitli }} / {{ s.c.hedef_hasta }}</td>
-          <td><div class="cubuk"><span class="{{ 'kirmizi' if s.oran < 40 and s.c.durum.value in ('kayit','izlem') else ('sari' if s.oran < 70 and s.c.durum.value in ('kayit','izlem')) }}" style="width:{{ [s.oran, 100]|min }}%"></span></div><small>{{ s.oran|yuzde }}</small></td>
-        </tr>
+        <tr><th>Protokol</th><th>Aşama</th><th class="sag">Randomize / hedef</th><th>Başlangıç</th></tr>
+        {% for c in calismalar %}
+        <tr><td><a href="/calismalar/{{ c.id }}"><b>{{ c.kod }}</b></a><br><small>{{ c.kisa_ad }}</small></td>
+          <td><span class="rozet mavi">{{ c.durum_etiket }}</span></td>
+          <td class="sayi">{{ c.gonulluler|selectattr('randomizasyon_tarihi')|list|length }} / {{ c.hedef_hasta }}</td>
+          <td>{{ c.baslangic|tarih }}</td></tr>
         {% endfor %}
       </table>
     </div>
     <div class="kart">
-      <h2>Kümülatif randomizasyon (son 12 ay, tüm çalışmalar)</h2>
-      <div class="grafik" id="g-kayit"></div>
+      <h2>Planlanan vizitler (7 gün)</h2>
+      {% if yakin_vizit or pencere_vizit %}
+      <table class="sikisik"><tr><th>Gönüllü</th><th>Vizit</th><th>Planlanan</th><th>Pencere</th></tr>
+        {% for v in pencere_vizit %}<tr><td><a href="/gonulluler/{{ v.gonullu_id }}">{{ v.gonullu.gonullu_no }}</a></td><td>{{ v.ad }}</td><td>{{ v.planlanan|tarih }}</td><td><span class="rozet kirmizi">kapanmak üzere</span></td></tr>{% endfor %}
+        {% for v in yakin_vizit %}<tr><td><a href="/gonulluler/{{ v.gonullu_id }}">{{ v.gonullu.gonullu_no }}</a></td><td>{{ v.ad }}</td><td>{{ v.planlanan|tarih }}</td><td>± {{ v.pencere_gun }} gün</td></tr>{% endfor %}
+      </table>
+      {% else %}<p class="kucuk">Önümüzdeki 7 günde planlı vizit yok.</p>{% endif %}
+    </div>
+    <div class="kart">
+      <h2>Tamamlanmamış form kayıtları</h2>
+      {% if taslaklar %}
+      <ul class="liste-sade">{% for fk in taslaklar %}<li><a href="/gonulluler/{{ fk.gonullu_id }}">{{ fk.gonullu.gonullu_no }}</a> · {{ fk.form.ad }}{% if fk.vizit %} · {{ fk.vizit.ad }}{% endif %} <small>{{ fk.guncelleme|tarih }}</small></li>{% endfor %}</ul>
+      {% else %}<p class="kucuk">Taslakta bekleyen form yok.</p>{% endif %}
     </div>
   </div>
   <div>
     <div class="kart">
-      <h2>Bugün sizi bekleyenler</h2>
-      {% if gorevler %}
-      <ul class="liste-sade">
-        {% for g in gorevler %}
-        <li><span class="gorev-tur">{{ g.tur }}</span><a href="{{ g.url }}">{{ g.metin }}</a><br><small style="margin-left:74px">{{ g.tarih|tarih }}</small></li>
-        {% endfor %}
-      </ul>
-      {% else %}<p class="kucuk">Bekleyen görev yok.</p>{% endif %}
+      <h2>Cevap bekleyen sorgular</h2>
+      {% if sorgular %}
+      <ul class="liste-sade">{% for s in sorgular %}<li><a href="/gonulluler/{{ s.form_kaydi.gonullu_id }}">{{ s.form_kaydi.gonullu.gonullu_no }}</a> · {{ s.alan }}<br><small>{{ s.soru }} · {{ s.acik_gun }} gündür açık</small></li>{% endfor %}</ul>
+      {% else %}<p class="kucuk">Açık sorgu yok.</p>{% endif %}
     </div>
     <div class="kart">
-      <h2>Açık risk uyarıları</h2>
-      {% if uyarilar %}
-      <ul class="liste-sade">
-        {% for u in uyarilar %}
-        <li><span class="rozet {{ 'kirmizi' if u.seviye == 'aksiyon' else 'sari' }}">{{ u.kri_kod }}</span>
-          <a href="/calismalar/{{ u.calisma_id }}/rbm">{{ u.calisma.kod }}{% if u.calisma_merkez %} · {{ u.calisma_merkez.merkez.sehir }}{% endif %}</a><br>
-          <small>{{ u.mesaj }}</small></li>
-        {% endfor %}
-      </ul>
-      {% else %}<p class="kucuk">Açık uyarı yok.</p>{% endif %}
+      <h2>Bildirim süresi işleyen SAE</h2>
+      {% if saeler %}
+      <ul class="liste-sade">{% for a in saeler %}<li><a href="/gonulluler/{{ a.gonullu_id }}">{{ a.gonullu.gonullu_no }}</a> · {{ a.terim }}<br><small>{% if a.bildirim_suresi_gun is none %}farkındalık tarihi girilmedi{% elif a.bildirim_suresi_gun < 0 %}<span style="color:var(--kirmizi)">süre {{ -a.bildirim_suresi_gun }} gün aşıldı</span>{% else %}{{ a.bildirim_suresi_gun }} gün kaldı{% endif %}</small></li>{% endfor %}</ul>
+      {% else %}<p class="kucuk">Bildirim bekleyen SAE yok.</p>{% endif %}
+    </div>
+    <div class="kart">
+      <h2>İnceleme bekleyen eşleştirme önerileri</h2>
+      {% if eslestirmeler %}
+      <ul class="liste-sade">{% for e in eslestirmeler %}<li><a href="/calismalar/{{ e.calisma_id }}/eslestirme/{{ e.id }}">{{ e.calisma.kod }} · {{ e.hasta.kayit_no }}</a> <span class="rozet {{ 'yesil' if e.karar == 'uygun' else 'sari' }}">{{ e.karar }}</span></li>{% endfor %}</ul>
+      {% else %}<p class="kucuk">Bekleyen öneri yok.</p>{% endif %}
     </div>
   </div>
 </div>
+
+{% elif gorunum == 'izlem' %}
+<div class="izgara k4" style="margin-bottom:16px">
+  <div class="olcum"><div class="etiket">Açık risk uyarısı</div><div class="deger {{ 'tehlike' if sayilar.aksiyon else ('uyari' if sayilar.uyari else 'iyi') }}">{{ sayilar.uyari }}</div><div class="alt">{{ sayilar.aksiyon }} aksiyon seviyesinde</div></div>
+  <div class="olcum"><div class="etiket">14 günü geçen sorgu</div><div class="deger {{ 'uyari' if sayilar.gecikmis_sorgu }}">{{ sayilar.gecikmis_sorgu }}</div></div>
+  <div class="olcum"><div class="etiket">SDV bekleyen kayıt</div><div class="deger">{{ sayilar.sdv }}</div><div class="alt">tamamlanmış, doğrulanmamış</div></div>
+  <div class="olcum"><div class="etiket">Bildirim süresi işleyen SAE</div><div class="deger {{ 'tehlike' if sayilar.gec_sae else ('uyari' if sayilar.sae) }}">{{ sayilar.sae }}</div><div class="alt">{{ sayilar.gec_sae }} süresi aşılmış</div></div>
+</div>
+<div class="izgara k21">
+  <div>
+    <div class="kart">
+      <h2>Açık risk uyarıları</h2>
+      {% if uyarilar %}
+      <table class="sikisik"><tr><th>Seviye</th><th>Çalışma / merkez</th><th>Mesaj</th><th>Tarih</th></tr>
+        {% for u in uyarilar %}<tr><td><span class="rozet {{ 'kirmizi' if u.seviye == 'aksiyon' else 'sari' }}">{{ u.kri_kod }}</span></td>
+          <td><a href="/calismalar/{{ u.calisma_id }}/rbm">{{ u.calisma.kod }}</a>{% if u.calisma_merkez %} · {{ u.calisma_merkez.merkez.sehir }}{% endif %}</td>
+          <td><small>{{ u.mesaj }}</small></td><td><small>{{ u.olusturma|tarih }}</small></td></tr>{% endfor %}
+      </table>
+      {% else %}<p class="kucuk">Açık uyarı yok.</p>{% endif %}
+    </div>
+    <div class="kart">
+      <h2>14 günü geçen açık sorgular</h2>
+      {% if gecikmis_sorgular %}
+      <table class="sikisik"><tr><th>Gönüllü</th><th>Form / alan</th><th>Sorgu</th><th class="sag">Açık gün</th></tr>
+        {% for s in gecikmis_sorgular %}<tr><td><a href="/gonulluler/{{ s.form_kaydi.gonullu_id }}">{{ s.form_kaydi.gonullu.gonullu_no }}</a></td><td>{{ s.form_kaydi.form.kod }} / {{ s.alan }}</td><td><small>{{ s.soru }}</small></td><td class="sayi">{{ s.acik_gun }}</td></tr>{% endfor %}
+      </table>
+      {% else %}<p class="kucuk">Gecikmiş sorgu yok.</p>{% endif %}
+    </div>
+    <div class="kart">
+      <h2>SDV bekleyen tamamlanmış kayıtlar</h2>
+      {% if sdv_bekleyen %}
+      <ul class="liste-sade">{% for fk in sdv_bekleyen %}<li><a href="/gonulluler/{{ fk.gonullu_id }}">{{ fk.gonullu.gonullu_no }}</a> · {{ fk.form.ad }}{% if fk.vizit %} · {{ fk.vizit.ad }}{% endif %} <small>{{ fk.guncelleme|tarih }}</small></li>{% endfor %}</ul>
+      {% else %}<p class="kucuk">SDV bekleyen kayıt yok.</p>{% endif %}
+    </div>
+  </div>
+  <div>
+    <div class="kart">
+      <h2>Planlanan izlem ziyaretleri</h2>
+      {% if ziyaretler %}
+      <ul class="liste-sade">{% for z in ziyaretler %}<li><a href="/calismalar/{{ z.calisma_merkez.calisma_id }}/izlem">{{ z.calisma_merkez.calisma.kod }} · {{ z.calisma_merkez.merkez.sehir }}</a> <span class="rozet">{{ z.tip }}</span><br><small>{{ z.planlanan|tarih }}{% if z.cra %} · {{ z.cra.ad_soyad }}{% endif %}</small></li>{% endfor %}</ul>
+      {% else %}<p class="kucuk">Planlı ziyaret yok.</p>{% endif %}
+    </div>
+    <div class="kart">
+      <h2>Bildirim süresi işleyen SAE</h2>
+      {% if saeler %}
+      <ul class="liste-sade">{% for a in saeler %}<li><a href="/gonulluler/{{ a.gonullu_id }}">{{ a.gonullu.gonullu_no }}</a> · {{ a.terim }}<br><small>{{ a.gonullu.calisma.kod }} · {% if a.bildirim_suresi_gun is none %}farkındalık tarihi girilmedi{% elif a.bildirim_suresi_gun < 0 %}<span style="color:var(--kirmizi)">süre {{ -a.bildirim_suresi_gun }} gün aşıldı</span>{% else %}{{ a.bildirim_suresi_gun }} gün kaldı{% endif %}</small></li>{% endfor %}</ul>
+      {% else %}<p class="kucuk">Bildirim bekleyen SAE yok.</p>{% endif %}
+    </div>
+    <div class="kart">
+      <h2>Çalışmalar</h2>
+      <ul class="liste-sade">{% for c in calismalar %}<li><a href="/calismalar/{{ c.id }}">{{ c.kod }}</a> <small>{{ c.durum_etiket }}</small></li>{% endfor %}</ul>
+    </div>
+  </div>
+</div>
+
+{% else %}
+<div class="izgara k4" style="margin-bottom:16px">
+  <div class="olcum"><div class="etiket">Aktif çalışma</div><div class="deger">{{ sayilar.aktif }}</div><div class="alt">toplam {{ calismalar|length }} çalışma</div></div>
+  <div class="olcum"><div class="etiket">Randomize gönüllü</div><div class="deger">{{ sayilar.kayitli }}</div><div class="alt">hedef {{ sayilar.hedef }} · {{ sayilar.merkez }} aktif merkez</div></div>
+  <div class="olcum"><div class="etiket">Takvim riski taşıyan</div><div class="deger {{ 'tehlike' if sayilar.takvim_riski else 'iyi' }}">{{ sayilar.takvim_riski }}</div><div class="alt">mevcut hızla hedefe geç kalan</div></div>
+  <div class="olcum"><div class="etiket">Açık risk uyarısı</div><div class="deger {{ 'tehlike' if sayilar.aksiyon else ('uyari' if sayilar.uyari else 'iyi') }}">{{ sayilar.uyari }}</div><div class="alt">{{ sayilar.aksiyon }} aksiyon seviyesinde{% if sayilar.bekleyen_sae %} · {{ sayilar.bekleyen_sae }} SAE bildirimi bekliyor{% endif %}</div></div>
+</div>
+<div class="kart">
+  <div class="baslik-satiri" style="margin-bottom:8px"><h2>Çalışma portföyü</h2><div class="sag"><a class="btn" href="javascript:print()">Yazdır</a></div></div>
+  <table>
+    <tr><th>Protokol</th><th>Aşama</th><th class="sag">Merkez</th><th class="sag">Randomize / hedef</th><th style="width:140px">İlerleme</th><th class="sag">Hız (h/ay)</th><th class="sag">Hedefe kalan</th><th>Takvim</th><th class="sag">Uyarı</th><th class="sag">SAE</th><th>En riskli merkez</th><th></th></tr>
+    {% for s in satirlar %}
+    <tr>
+      <td><a href="/calismalar/{{ s.c.id }}"><b>{{ s.c.kod }}</b></a><br><small>{{ s.c.kisa_ad }}</small></td>
+      <td><span class="rozet mavi">{{ s.c.durum_etiket }}</span></td>
+      <td class="sayi">{{ s.aktif_merkez }}/{{ s.c.merkezler|length }}</td>
+      <td class="sayi">{{ s.kayitli }} / {{ s.c.hedef_hasta }}</td>
+      <td><div class="cubuk"><span class="{{ 'kirmizi' if s.takvim == 'risk' else ('sari' if s.oran < 70 and s.c.durum.value in ('kayit','izlem')) }}" style="width:{{ [s.oran,100]|min }}%"></span></div><small>{{ s.oran|yuzde }}</small></td>
+      <td class="sayi">{{ s.hiz|sayi(2) if s.hiz else '—' }}</td>
+      <td class="sayi">{% if s.tahmini_ay is not none %}{{ s.tahmini_ay|sayi(1) }} ay{% else %}—{% endif %}{% if s.plan_ay is not none %}<br><small>plan {{ s.plan_ay|sayi(1) }} ay</small>{% endif %}</td>
+      <td>{% if s.takvim == 'zamaninda' %}<span class="rozet yesil">zamanında</span>{% elif s.takvim == 'risk' %}<span class="rozet kirmizi">gecikme riski</span>{% else %}<span class="rozet">—</span>{% endif %}</td>
+      <td class="sayi">{% if s.aksiyon %}<span class="rozet kirmizi">{{ s.uyari }}</span>{% elif s.uyari %}<span class="rozet sari">{{ s.uyari }}</span>{% else %}0{% endif %}</td>
+      <td class="sayi">{{ s.sae }}{% if s.bekleyen_sae %} <span class="rozet kirmizi">{{ s.bekleyen_sae }} bildirim</span>{% endif %}</td>
+      <td>{% if s.en_riskli %}{{ s.en_riskli.merkez_no }} – {{ s.en_riskli.merkez.sehir }} <span class="isi {{ 'aksiyon' if (s.en_riskli.risk_puani or 0) >= 60 else ('uyari' if (s.en_riskli.risk_puani or 0) >= 35 else 'normal') }}">{{ (s.en_riskli.risk_puani or 0)|round|int }}</span>{% else %}—{% endif %}</td>
+      <td><a class="btn kucuk" href="/calismalar/{{ s.c.id }}/merkez-zekasi/rapor" target="_blank">Fizibilite raporu</a></td>
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+<div class="izgara k21">
+  <div>
+    {% if grafik %}
+    <div class="kart">
+      <h2>Kümülatif randomizasyon (son 12 ay)</h2>
+      <div class="grafik" id="g-kayit"></div>
+    </div>
+    {% endif %}
+  </div>
+  <div class="kart">
+    <h2>Açık risk uyarıları</h2>
+    {% if uyarilar %}
+    <ul class="liste-sade">
+      {% for u in uyarilar %}
+      <li><span class="rozet {{ 'kirmizi' if u.seviye == 'aksiyon' else 'sari' }}">{{ u.kri_kod }}</span>
+        <a href="/calismalar/{{ u.calisma_id }}/rbm">{{ u.calisma.kod }}{% if u.calisma_merkez %} · {{ u.calisma_merkez.merkez.sehir }}{% endif %}</a><br>
+        <small>{{ u.mesaj }}</small></li>
+      {% endfor %}
+    </ul>
+    {% else %}<p class="kucuk">Açık uyarı yok.</p>{% endif %}
+  </div>
+</div>
+{% if kullanici.rol.value == 'sponsor' %}<div class="not">Bu görünüm hasta kimlik verisi içermez; eşleştirme sonuçları, hasta kayıtları ve kaynak belgeler yalnızca araştırma merkezi tarafından görülebilir.</div>{% endif %}
+{% endif %}
 {% endblock %}
-{% block script %}
+{% block script %}{% if not bos and gorunum == 'portfoy' and grafik %}
 <script>
 SCGrafik.cizgi(document.getElementById("g-kayit"), {{ grafik.etiketler|tojson }},
   [{ad: "Randomize", renk: "#16325c", degerler: {{ grafik.degerler|tojson }}, alan: true}]);
-</script>
-{% endblock %}
+</script>{% endif %}{% endblock %}

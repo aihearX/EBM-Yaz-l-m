@@ -23,7 +23,7 @@ from ..models._ortak import simdi
 from ..services import denetim
 from ..services.yetki import gerekli
 from ._ortak import bilgi, calisma_getir, ip, oturumlu
-from .calismalar import _ozet
+from .calismalar import _ozet, sekme_kontrol
 from .sablon import goster
 
 router = APIRouter(prefix="/calismalar/{calisma_id}")
@@ -34,6 +34,7 @@ router = APIRouter(prefix="/calismalar/{calisma_id}")
 @router.get("/eslestirme")
 def eslestirme(request: Request, c: Calisma = Depends(calisma_getir), k: Kullanici = Depends(oturumlu),
                db: Session = Depends(get_db), karar: str | None = None, merkez: int | None = None):
+    sekme_kontrol(k, "eslestirme")
     sorgu = select(EslestirmeSonucu).where(EslestirmeSonucu.calisma_id == c.id).order_by(EslestirmeSonucu.skor.desc())
     if karar:
         sorgu = sorgu.where(EslestirmeSonucu.karar == karar)
@@ -50,10 +51,11 @@ def eslestirme(request: Request, c: Calisma = Depends(calisma_getir), k: Kullani
     son_tarama = db.scalar(select(EslestirmeSonucu.olusturma).where(EslestirmeSonucu.calisma_id == c.id)
                            .order_by(EslestirmeSonucu.olusturma.desc()).limit(1))
     onaysiz_kriter = sum(1 for kr in c.kriterler if not kr.onaylandi)
+    ilk_merkez = next((m for m in c.merkezler if m.durum == "aktif"), None) or (c.merkezler[0] if c.merkezler else None)
     a = ayarlar()
     return goster(request, "eslestirme/liste.html", c=c, o=_ozet(db, c), sekme="eslestirme", sonuclar=sonuclar,
                   ozet=ozet, hasta_havuzu=hasta_havuzu, son_tarama=son_tarama, karar=karar, merkez=merkez,
-                  onaysiz_kriter=onaysiz_kriter, bdm=a.bdm_saglayici, bdm_model=a.bdm_model)
+                  onaysiz_kriter=onaysiz_kriter, ilk_merkez=ilk_merkez, bdm=a.bdm_saglayici, bdm_model=a.bdm_model)
 
 
 @router.post("/eslestirme/calistir")
@@ -129,8 +131,10 @@ def eslestirme_incele(request: Request, sonuc_id: int, c: Calisma = Depends(cali
 @router.get("/eslestirme-golge")
 def golge_mod(request: Request, c: Calisma = Depends(calisma_getir), k: Kullanici = Depends(oturumlu),
               db: Session = Depends(get_db)):
-    """Golge mod: model onerisi vs arastirmaci karari karsilastirmasi (pilot dogrulama)."""
+    """Golge mod: model onerisi ile arastirmaci kararinin karsilastirmasi."""
     from ..services.eslestirme import golge_mod_karsilastir
+
+    sekme_kontrol(k, "eslestirme")
 
     sonuclar = db.execute(select(EslestirmeSonucu).where(EslestirmeSonucu.calisma_id == c.id,
                           EslestirmeSonucu.inceleme_karari.isnot(None))).scalars().all()
@@ -146,6 +150,8 @@ def golge_mod(request: Request, c: Calisma = Depends(calisma_getir), k: Kullanic
 def merkez_zekasi(request: Request, c: Calisma = Depends(calisma_getir), k: Kullanici = Depends(oturumlu),
                   db: Session = Depends(get_db)):
     from ..services.merkez_zekasi import calisma_kazanim_projeksiyonu, merkez_sirala
+
+    sekme_kontrol(k, "merkez-zekasi")
 
     satirlar = []
     adaylar = []

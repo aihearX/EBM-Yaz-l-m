@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block baslik %}{{ c.kod }} · Tasarım{% endblock %}
+{% block yol %}<a href="/calismalar">Çalışmalar</a> › <a href="/calismalar/{{ c.id }}">{{ c.kod }}</a> › Tasarım{% endblock %}
+{% block icerik %}
+{% include "calismalar/_baslik.html" %}
+{% set duzenle = izinli(kullanici, 'calisma.duzenle') %}
+<div class="baslik-satiri" style="margin-bottom:12px">
+  <div><h2 style="margin:0">Çalışma tasarımı</h2><small>Kollar, vizit şeması ve eCRF formları burada tanımlanır; gönüllü randomize edildiğinde vizitler bu şemadan üretilir.</small></div>
+  {% if duzenle %}<div class="sag"><a class="btn" href="/calismalar/{{ c.id }}/tasarim/protokol-taslak">Protokolden taslak çıkar</a></div>{% endif %}
+</div>
+<div class="izgara k3">
+  <div class="kart">
+    <h2>Kollar <span class="rozet kontur">{{ c.kollar|length }}</span></h2>
+    {% if c.kollar %}
+    <table class="sikisik"><tr><th>Kol</th><th class="sag">Oran</th><th class="sag">Gönüllü</th><th></th></tr>
+      {% for kol in c.kollar %}<tr><td><b>{{ kol.ad }}</b>{% if kol.aciklama %}<br><small>{{ kol.aciklama }}</small>{% endif %}</td><td class="sayi">{{ kol.oran }}</td><td class="sayi">{{ kol_gonullu.get(kol.id, 0) }}</td>
+        <td>{% if duzenle and not kol_gonullu.get(kol.id) %}<form method="post" action="/calismalar/{{ c.id }}/tasarim/kol/{{ kol.id }}/sil" class="inline" data-onay="Kol silinsin mi?"><button class="btn kucuk tehlike">Sil</button></form>{% endif %}</td></tr>{% endfor %}
+    </table>
+    {% else %}<p class="kucuk">Henüz kol yok. Tek kollu çalışmada da bir kol tanımlayın; randomizasyonda gönüllü bu kola atanır.</p>{% endif %}
+    {% if duzenle %}
+    <details style="margin-top:10px"{% if not c.kollar %} open{% endif %}><summary>Kol ekle</summary>
+    <form method="post" action="/calismalar/{{ c.id }}/tasarim/kol" style="margin-top:8px">
+      <div class="alan"><label>Ad</label><input type="text" name="ad" required placeholder="Kol A: Araştırma ürünü"></div>
+      <div class="ikili"><div class="alan"><label>Açıklama</label><input type="text" name="aciklama"></div><div class="alan"><label>Randomizasyon oranı</label><input type="number" name="oran" value="1" min="1" style="width:80px"></div></div>
+      <button class="btn birincil">Ekle</button>
+    </form></details>
+    {% endif %}
+  </div>
+  <div class="kart">
+    <h2>Vizit şeması <span class="rozet kontur">{{ c.vizit_tanimlari|length }}</span></h2>
+    {% if c.vizit_tanimlari %}
+    <table class="sikisik"><tr><th>#</th><th>Vizit</th><th class="sag">Gün</th><th class="sag">Pencere</th><th></th></tr>
+      {% for t in c.vizit_tanimlari %}<tr><td>{{ loop.index }}</td><td>{{ t.ad }}</td><td class="sayi">{{ t.gun }}</td><td class="sayi">±{{ t.pencere_gun }}</td>
+        <td>{% if duzenle and sema_degisir %}<form method="post" action="/calismalar/{{ c.id }}/tasarim/vizit/{{ t.id }}/sil" class="inline"><button class="btn kucuk tehlike">Sil</button></form>{% endif %}</td></tr>{% endfor %}
+    </table>
+    {% if not sema_degisir %}<p class="kucuk">Vizit kaydı oluşturulmuş gönüllüler olduğundan şema değiştirilemez.</p>{% endif %}
+    {% else %}<p class="kucuk">Vizit şeması tanımlı değil. Bir şablon seçin ya da vizitleri tek tek ekleyin; gün değeri randomizasyon gününe göredir (tarama için negatif).</p>{% endif %}
+    {% if duzenle and sema_degisir %}
+    <details style="margin-top:10px"{% if not c.vizit_tanimlari %} open{% endif %}><summary>Şablon uygula</summary>
+    <form method="post" action="/calismalar/{{ c.id }}/tasarim/vizit/sablon" class="satir" style="margin-top:8px" {% if c.vizit_tanimlari %}data-onay="Mevcut vizit şeması silinip şablon uygulanacak. Devam edilsin mi?"{% endif %}>
+      <select name="sablon">{% for kod, etiket in sablonlar.items() %}<option value="{{ kod }}">{{ etiket }}</option>{% endfor %}</select>
+      <button class="btn birincil">Uygula</button>
+    </form>
+    <ul class="liste-sade kucuk" style="margin-top:6px">{% for kod, satirlar in sablon_satirlar.items() %}<li><b>{{ sablonlar[kod] }}:</b> {% for ad, gun, p in satirlar %}{{ ad }} ({{ gun }}){% if not loop.last %}, {% endif %}{% endfor %}</li>{% endfor %}</ul>
+    </details>
+    <details style="margin-top:6px"><summary>Vizit ekle</summary>
+    <form method="post" action="/calismalar/{{ c.id }}/tasarim/vizit" class="satir" style="margin-top:8px">
+      <div class="alan"><label>Ad</label><input type="text" name="ad" required placeholder="V3" style="width:120px"></div>
+      <div class="alan"><label>Gün</label><input type="number" name="gun" required value="0" style="width:70px"></div>
+      <div class="alan"><label>Pencere (±)</label><input type="number" name="pencere_gun" value="3" min="0" style="width:70px"></div>
+      <button class="btn">Ekle</button>
+    </form></details>
+    {% endif %}
+  </div>
+  <div class="kart">
+    <h2>eCRF formları <span class="rozet kontur">{{ formlar|length }}</span></h2>
+    {% if formlar %}
+    <table class="sikisik"><tr><th>Kod</th><th>Form</th><th>Vizitler</th><th class="sag">Alan</th><th>Sürüm</th><th>Durum</th></tr>
+      {% for f in formlar %}<tr><td>{% if duzenle %}<a href="/calismalar/{{ c.id }}/tasarim/form/{{ f.id }}">{{ f.kod }}</a>{% else %}{{ f.kod }}{% endif %}</td><td>{{ f.ad }}</td>
+        <td><small>{{ f.vizit_listesi|join(', ') or 'Her vizit' }}</small></td><td class="sayi">{{ f.alanlar|length }}</td><td>{{ f.versiyon }}{% if f.id in kayitli_formlar %} <span class="rozet kontur" title="Veri kaydı var; alan silme ve tip değişikliği kapalı">kayıtlı</span>{% endif %}</td>
+        <td><span class="rozet {{ 'yesil' if f.durum == 'yayinda' else 'sari' }}">{{ FORM_DURUMLARI.get(f.durum, f.durum) }}</span></td></tr>{% endfor %}
+    </table>
+    {% else %}<p class="kucuk">Henüz form yok. Standart formlardan seçin ya da tasarımcıda sıfırdan oluşturun; yalnızca "Yayında" formlar veri girişinde görünür.</p>{% endif %}
+    {% if duzenle %}
+    <div style="margin-top:10px"><a class="btn birincil" href="/calismalar/{{ c.id }}/tasarim/form/yeni">Yeni form tasarla</a></div>
+    {% if standart %}
+    <details style="margin-top:8px"{% if not formlar %} open{% endif %}><summary>Standart formlardan ekle (CDASH)</summary>
+    <form method="post" action="/calismalar/{{ c.id }}/tasarim/form/standart" style="margin-top:8px">
+      {% for kod, ad in standart %}<label style="display:block;font-weight:400"><input type="checkbox" name="kodlar" value="{{ kod }}"> {{ kod }} – {{ ad }}</label>{% endfor %}
+      <button class="btn" style="margin-top:6px">Seçilenleri ekle</button>
+    </form></details>
+    {% endif %}
+    {% endif %}
+  </div>
+</div>
+<div class="not">Tasarım değişiklikleri denetim izine yazılır. Veri kaydı olan formlarda alan silinemez ve tip değiştirilemez; diğer değişiklikler form sürümünü artırır.</div>
+{% endblock %}

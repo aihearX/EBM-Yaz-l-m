@@ -67,3 +67,18 @@ Yalnızca şu JSON'u döndür:
 
 def parcalari_bicimle(parcalar: list[str]) -> str:
     return "\n".join(f"[{i}] {p.strip()}" for i, p in enumerate(parcalar))
+
+PROTOKOL_TASLAK = """Aşağıdaki klinik araştırma protokolü metninden çalışma tasarımı taslağı çıkar.
+Yalnızca metinde açıkça yazanı kullan; tahmin etme. Her kriteri tek cümle olarak, metindeki ifadeye sadık yaz.
+
+Vizitler için "gun" başlangıç (randomizasyon) gününe göre gün sayısıdır; tarama vizitleri negatif olur.
+"pencere" vizit penceresi (± gün). Formlar için yalnızca şu kodları kullan:
+DM (demografi), IE (uygunluk), VS (vital bulgular), LB (laboratuvar), EX (araştırma ürünü), CM (eşlik eden ilaçlar),
+QS (ECOG / performans), ANKET (anket, ölçek).
+
+Metin:
+{metin}
+
+Yalnızca şu JSON'u döndür:
+{{"dahil": ["..."], "haric": ["..."], "kollar": ["..."], "vizitler": [{{"ad": "...", "gun": 0, "pencere": 0}}],
+  "formlar": ["VS"], "guven": 0.0}}"""

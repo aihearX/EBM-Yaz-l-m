@@ -21,7 +21,8 @@
       <td class="sayi">{% if v is none %}<span class="isi yok">—</span>{% else %}<span class="isi {{ seviye(kr, v) }}">{{ v|sayi(1) }}</span>{% endif %}</td>{% endfor %}
       <td><small>{{ oneriler[cm.id] }}</small></td>
     </tr>
-    {% else %}<tr><td colspan="{{ kriler|length + 3 }}" class="kucuk">Aktif merkez yok.</td></tr>{% endfor %}
+    {% else %}<tr><td colspan="{{ kriler|length + 3 }}" class="kucuk">Bu çalışmada henüz merkez yok; göstergeler merkez eklendikten sonra hesaplanır.
+      {% if izinli(kullanici, 'merkez.yonet') %}<a href="/calismalar/{{ c.id }}/merkezler">Merkez ekle</a>{% endif %}</td></tr>{% endfor %}
   </table>
   </div>
   <div class="grafik-aciklama" style="margin-top:6px"><span><i style="background:#e4f3ea"></i>normal</span><span><i style="background:#fdf3e0"></i>uyarı eşiği</span><span><i style="background:#f9e5e5"></i>aksiyon eşiği</span></div>
@@ -43,7 +44,7 @@
         <td>{% if u.durum in ('acik','inceleniyor') and izinli(kullanici, 'rbm.yonet') %}
           <form method="post" action="/calismalar/{{ c.id }}/rbm/uyari/{{ u.id }}" class="satir"><select name="durum" style="width:120px"><option value="inceleniyor">İnceleniyor</option><option value="kapandi">Kapat</option><option value="yanlis_alarm">Yanlış alarm</option></select><input type="text" name="kapanis_notu" placeholder="not" style="width:130px"><button class="btn kucuk">Kaydet</button></form>{% endif %}</td>
       </tr>
-      {% else %}<tr><td colspan="8" class="kucuk">Uyarı yok.</td></tr>{% endfor %}
+      {% else %}<tr><td colspan="8" class="kucuk">Açık risk uyarısı yok.{% if izinli(kullanici, 'rbm.yonet') and c.merkezler %} "Göstergeleri hesapla" ile güncel değerler üretilir.{% endif %}</td></tr>{% endfor %}
     </table>
   </div>
   <div>

@@ -16,8 +16,8 @@
     <table class="sikisik"><tr><th></th><th>Araştırmacı: uygun</th><th>Araştırmacı: uygun değil</th></tr>
       <tr><th>Model: uygun/olası</th><td class="sayi">{{ metrikler.karisiklik.tp }}</td><td class="sayi">{{ metrikler.karisiklik.fp }}</td></tr>
       <tr><th>Model: uygun değil/belirsiz</th><td class="sayi">{{ metrikler.karisiklik.fn }}</td><td class="sayi">{{ metrikler.karisiklik.tn }}</td></tr></table>
-    {% else %}<p class="kucuk">Henüz araştırmacı kararı girilmiş eşleştirme sonucu yok.</p>{% endif %}
+    {% else %}<p class="kucuk">Henüz araştırmacı kararı girilmiş eşleştirme sonucu yok. {% if izinli(kullanici, 'eslestirme.incele') %}<a href="/calismalar/{{ c.id }}/eslestirme">Aday hastaları inceleyin</a>{% endif %}</p>{% endif %}
   </div>
-  <div class="not">Gölge mod, pilot doğrulama protokolünün (PQ-001) bir parçasıdır: motor önerileri manuel ön tarama sonuçlarıyla eşzamanlı olarak karşılaştırılır; duyarlılık ve ön tarama süresindeki değişim merkez bazında raporlanır.</div>
+  <div class="not">Model önerileri araştırmacı kararıyla karşılaştırılır; duyarlılık ve özgüllük çalışma bazında raporlanır.</div>
 </div>
 {% endblock %}

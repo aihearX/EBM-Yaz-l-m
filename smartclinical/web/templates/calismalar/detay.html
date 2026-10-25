@@ -39,12 +39,17 @@
   <div>
     <div class="kart">
       <h2>Aşama kontrol listesi – {{ c.durum_etiket }}</h2>
-      <ul class="liste-sade">{% for k in kontrol %}<li>▢ {{ k }}</li>{% endfor %}</ul>
+      <ul class="liste-sade">
+        {% for m in kontrol %}
+        <li>{% if m.tamam %}<span class="rozet yesil" style="min-width:52px;text-align:center">tamam</span> {{ m.etiket }}{% else %}<span class="rozet sari" style="min-width:52px;text-align:center">eksik</span> {{ m.etiket }} · <a href="{{ m.url }}">tamamla</a>{% endif %}</li>
+        {% else %}<li class="kucuk">Bu aşama için kontrol maddesi yok.</li>{% endfor %}
+      </ul>
+      <small>Maddeler çalışma verisinden hesaplanır; aşama kararı proje yöneticisinindir.</small>
       {% if izinli(kullanici, 'calisma.duzenle') %}
       <div class="ayrac"></div>
       <form method="post" action="/calismalar/{{ c.id }}/durum" data-onay="Çalışma aşamasını değiştirmek istediğinize emin misiniz? İşlem denetim izine yazılır.">
         <div class="alan"><label>Aşamayı güncelle</label><select name="durum">{% for d in DURUM_SIRASI %}<option value="{{ d.value }}" {{ 'selected' if d == c.durum }}>{{ DURUM_ETIKET[d] }}</option>{% endfor %}</select></div>
-        <div class="alan"><label>Gerekçe</label><input type="text" name="gerekce" placeholder="ör. Tüm merkezlerde etik onay alındı"></div>
+        <div class="alan"><label>Gerekçe (zorunlu)</label><input type="text" name="gerekce" required placeholder="ör. Tüm merkezlerde etik onay alındı"></div>
         <button class="btn">Güncelle</button>
       </form>
       {% endif %}

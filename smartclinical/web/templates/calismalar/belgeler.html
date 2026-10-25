@@ -14,13 +14,13 @@
           <td><span class="rozet {{ 'yesil' if b.durum == 'onayli' else ('sari' if b.durum == 'taslak' else '') }}">{{ b.durum }}</span></td><td>{{ b.yukleyen.kullanici_adi if b.yukleyen else '—' }}</td><td>{{ b.yukleme|tarih }}</td><td><code>{{ b.sha256[:12] if b.sha256 else '—' }}</code></td>
           <td>{% if b.durum == 'taslak' and izinli(kullanici, 'belge.yukle') %}<details><summary class="kucuk">e-imza ile onayla</summary><form method="post" action="/calismalar/{{ c.id }}/belgeler/{{ b.id }}/onayla" class="satir" style="margin-top:4px"><input type="password" name="parola" placeholder="parolanızı girin" required style="width:150px"><button class="btn kucuk">İmzala</button></form></details>{% endif %}</td></tr>{% endfor %}
       </table>
-      {% else %}<small>Belge yok.</small>{% endif %}
+      {% else %}<small>Bu bölümde belge yok.{% if izinli(kullanici, 'belge.yukle') %} <a href="#belge-yukle">Belge yükle</a>{% endif %}</small>{% endif %}
     </div>
     {% endfor %}
   </div>
   <div>
     {% if izinli(kullanici, 'belge.yukle') %}
-    <div class="kart">
+    <div class="kart" id="belge-yukle">
       <h2>Belge yükle</h2>
       <form method="post" action="/calismalar/{{ c.id }}/belgeler" enctype="multipart/form-data">
         <div class="alan"><label>TMF bölgesi</label><select name="tmf_bolge">{% for kod, ad in TMF_BOLGELER.items() %}<option value="{{ kod }}">{{ kod }} – {{ ad }}</option>{% endfor %}</select></div>

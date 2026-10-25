@@ -90,6 +90,35 @@ def sema_dogrula(veri: dict | None, zorunlu: dict[str, type | tuple]) -> bool:
     return True
 
 
+def json_sema(veri: dict | None, sema: dict) -> bool:
+    """Ic ice sema dogrulama. Sema degeri tip/tip demeti, [tip] (liste elemani tipi) veya alt sema (dict) olabilir.
+
+    Ornek: {"vizitler": [{"ad": str, "gun": (int, float)}], "formlar": [str], "guven": (int, float)}
+    """
+    if not isinstance(veri, dict):
+        return False
+    for alan, tip in sema.items():
+        if alan not in veri:
+            return False
+        v = veri[alan]
+        if isinstance(tip, dict):
+            if not json_sema(v, tip):
+                return False
+        elif isinstance(tip, list):
+            if not isinstance(v, list):
+                return False
+            eleman = tip[0] if tip else object
+            for x in v:
+                if isinstance(eleman, dict):
+                    if not json_sema(x, eleman):
+                        return False
+                elif not isinstance(x, eleman):
+                    return False
+        elif not isinstance(v, tip):
+            return False
+    return True
+
+
 def belirsizlik_uygula(sonuc: str, guven: float, esik: float = GUVEN_ESIGI) -> tuple[str, float]:
     """Dusuk guvenli kararlari 'belirsiz'e ceker; arastirmaci incelemesine duser."""
     try:

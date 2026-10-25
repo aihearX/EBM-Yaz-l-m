@@ -14,13 +14,15 @@
   <div class="kart">
     <h2>Merkez bazında veri durumu</h2>
     <table class="sikisik"><tr><th>Merkez</th><th class="sag">Kayıt</th><th class="sag">Tamamlanan</th><th class="sag">SDV</th><th class="sag">Açık sorgu</th></tr>
-      {% for s in merkez_satir %}<tr><td>{{ s.cm.merkez_no }} – {{ s.cm.merkez.sehir }}</td><td class="sayi">{{ s.toplam }}</td><td class="sayi">{{ s.tamamlanan }}</td><td class="sayi">{{ s.sdv }}</td><td class="sayi">{{ s.acik_sorgu }}</td></tr>{% endfor %}
+      {% for s in merkez_satir %}<tr><td>{{ s.cm.merkez_no }} – {{ s.cm.merkez.sehir }}</td><td class="sayi">{{ s.toplam }}</td><td class="sayi">{{ s.tamamlanan }}</td><td class="sayi">{{ s.sdv }}</td><td class="sayi">{{ s.acik_sorgu }}</td></tr>
+      {% else %}<tr><td colspan="5" class="kucuk">Henüz merkez yok; veri girişi merkez eklendikten sonra başlar.</td></tr>{% endfor %}
     </table>
   </div>
   <div class="kart">
     <h2>eCRF tanımları (CDASH uyumlu)</h2>
     <table class="sikisik"><tr><th>Kod</th><th>Form</th><th>Vizit</th><th class="sag">Alan</th><th>Sürüm</th></tr>
-      {% for f in formlar %}<tr><td>{{ f.kod }}</td><td>{{ f.ad }}</td><td>{{ f.vizit_adi or 'Her vizit' }}</td><td class="sayi">{{ f.alanlar|length }}</td><td>{{ f.versiyon }}</td></tr>{% else %}<tr><td colspan="5" class="kucuk">Form tanımı yok.</td></tr>{% endfor %}
+      {% for f in formlar %}<tr><td>{{ f.kod }}</td><td>{{ f.ad }}</td><td>{{ f.vizit_adi or 'Her vizit' }}</td><td class="sayi">{{ f.alanlar|length }}</td><td>{{ f.versiyon }}</td></tr>{% else %}<tr><td colspan="5" class="kucuk">Bu çalışmada eCRF formu tanımlı değil.
+        {% if izinli(kullanici, 'calisma.duzenle') %}<a href="/calismalar/{{ c.id }}/tasarim">Form tanımla</a>{% else %}Form tanımını proje yöneticisi yapar.{% endif %}</td></tr>{% endfor %}
     </table>
   </div>
 </div>
@@ -31,7 +33,7 @@
     <tr><td><a href="/gonulluler/{{ s.form_kaydi.gonullu_id }}">{{ s.form_kaydi.gonullu.gonullu_no }}</a></td><td>{{ s.form_kaydi.form.kod }}</td><td>{{ s.alan }}</td><td>{{ s.soru }}</td>
       <td><span class="rozet {{ 'turkuaz' if s.kaynak == 'otomatik' else '' }}">{{ s.kaynak }}</span></td><td>{{ s.acan.kullanici_adi if s.acan else 'sistem' }}</td>
       <td class="sayi">{{ s.acik_gun }}{% if s.acik_gun > 14 %} <span class="rozet sari">gecikmiş</span>{% endif %}</td></tr>
-    {% else %}<tr><td colspan="7" class="kucuk">Açık sorgu yok.</td></tr>{% endfor %}
+    {% else %}<tr><td colspan="7" class="kucuk">Açık veri sorgusu yok.</td></tr>{% endfor %}
   </table>
 </div>
 {% endblock %}

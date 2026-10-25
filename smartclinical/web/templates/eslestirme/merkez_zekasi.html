@@ -5,7 +5,7 @@
 {% include "calismalar/_baslik.html" %}
 <div class="baslik-satiri">
   <div><h2 style="margin:0">Kazanım tahmini ve aktivasyon gecikme riski</h2><small>Hiyerarşik Bayesçi model (Gamma-Poisson) ve Weibull sağkalım modeli · son güncelleme {{ son_guncelleme|tarih if son_guncelleme else '—' }}</small></div>
-  <div class="sag">{% if izinli(kullanici, 'rbm.goruntule') %}<a class="btn" href="/calismalar/{{ c.id }}/merkez-zekasi/rapor" target="_blank">Sponsor fizibilite raporu</a>{% endif %}
+  <div class="sag">{% if izinli(kullanici, 'rbm.goruntule') %}<a class="btn" href="/calismalar/{{ c.id }}/merkez-zekasi/rapor" target="_blank">Fizibilite raporu</a>{% endif %}
   {% if izinli(kullanici, 'merkez.yonet') %}<form method="post" action="/calismalar/{{ c.id }}/merkez-zekasi/guncelle"><button class="btn birincil">Tahminleri güncelle</button></form>{% endif %}</div>
 </div>
 {% if projeksiyon %}
@@ -32,7 +32,8 @@
           <td class="sayi">{% if s.cm.gecikme_riski is not none %}<span class="rozet {{ 'kirmizi' if s.cm.gecikme_riski > 0.6 else ('sari' if s.cm.gecikme_riski > 0.35 else 'yesil') }}">{{ (s.cm.gecikme_riski*100)|round|int }}%</span>{% else %}—{% endif %}</td>
           <td class="sayi">{{ s.cm.hedef_hasta }}</td><td class="sayi">{{ s.kayitli }}</td>
         </tr>
-        {% endfor %}
+        {% else %}<tr><td colspan="8" class="kucuk">Bu çalışmaya henüz merkez eklenmedi; tahmin merkez eklendikten sonra hesaplanır.
+          {% if izinli(kullanici, 'merkez.yonet') %}<a href="/calismalar/{{ c.id }}/merkezler">Merkez ekle</a>{% endif %}</td></tr>{% endfor %}
       </table>
     </div>
     {% if projeksiyon and projeksiyon.egri %}
@@ -52,7 +53,7 @@
         <li style="margin-bottom:8px"><b>{{ m.ad }}</b> <span class="rozet mavi">{{ m.puan|round|int }}</span>
           <details><summary class="kucuk">gerekçe</summary><small>{{ m.gerekce }}</small>
             <table class="sikisik" style="margin-top:4px">{% for k, v in m.katkilar.items() %}<tr><td>{{ k }}</td><td class="sayi">{{ v|sayi(1) }}</td></tr>{% endfor %}</table></details></li>
-        {% else %}<li class="kucuk">Merkez yok.</li>{% endfor %}
+        {% else %}<li class="kucuk">Sıralanacak merkez yok.</li>{% endfor %}
       </ol>
     </div>
     <div class="not">Az veri olan merkezlerde tahmin, benzer terapötik alandaki merkez havuzuna doğru büzülür (shrinkage); aralık genişliği bu belirsizliği yansıtır. Model çıktıları karar desteği amaçlıdır; merkez seçimi proje yöneticisinin sorumluluğundadır.</div>
