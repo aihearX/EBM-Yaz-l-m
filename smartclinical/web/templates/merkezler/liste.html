@@ -48,6 +48,7 @@
   <form class="satir" method="get">
     <select name="bolum" style="width:220px"><option value="">Tüm bölümler</option>{% for b in bolumler %}<option value="{{ b }}" {{ 'selected' if b == bolum }}>{{ b }}</option>{% endfor %}</select>
     <button class="btn">Süz</button>
+    {% if izinli(kullanici, 'rbm.goruntule') %}<a class="btn" href="/merkezler/endeks">Merkez Performans Endeksi</a>{% endif %}
   </form>
 </div>
 <div class="izgara k21">
@@ -91,7 +92,8 @@
 {% else %}
 <div class="baslik-satiri">
   <div><h1>Merkez kayıt defteri</h1><small>{{ satirlar|length }} merkez · geçmiş performans verileri Merkez Zekâsı modelini besler</small></div>
-  <form class="satir" method="get"><input type="text" name="q" value="{{ q }}" placeholder="Merkez veya şehir" style="width:220px"><button class="btn">Ara</button></form>
+  <form class="satir" method="get"><input type="text" name="q" value="{{ q }}" placeholder="Merkez veya şehir" style="width:220px"><button class="btn">Ara</button>
+    {% if izinli(kullanici, 'rbm.goruntule') %}<a class="btn" href="/merkezler/endeks">Merkez Performans Endeksi</a>{% endif %}</form>
 </div>
 <div class="izgara k21">
   <div class="kart">

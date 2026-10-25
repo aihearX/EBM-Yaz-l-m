@@ -23,7 +23,7 @@ from ..models import (
     Sorgu,
     Vizit,
 )
-from ..services.yetki import izinli
+from ..services.yetki import calisma_filtresi, izinli
 from ._ortak import oturumlu
 from .sablon import goster
 
@@ -46,12 +46,7 @@ def gorunum(k: Kullanici) -> str:
 
 
 def _calismalar(db: Session, k: Kullanici) -> list[Calisma]:
-    sorgu = select(Calisma)
-    if k.rol in (Rol.ARASTIRMACI, Rol.KOORDINATOR) and k.merkez_id:
-        sorgu = sorgu.join(Calisma.merkezler).where(CalismaMerkez.merkez_id == k.merkez_id)
-    if k.rol == Rol.SPONSOR:
-        # kurum bossa hicbir calisma gorunmez; yonetici kurum alanini doldurana kadar
-        sorgu = sorgu.where(Calisma.sponsor == (k.kurum or ""))
+    sorgu = calisma_filtresi(db, k, select(Calisma))
     liste = db.execute(sorgu).scalars().unique().all()
     return sorted(liste, key=lambda c: (_SIRA.get(c.durum, 5), c.kod))
 

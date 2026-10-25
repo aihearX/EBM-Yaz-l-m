@@ -11,16 +11,18 @@ from ..models._ortak import simdi
 from ..models.guvenlik import CIDDIYET_OLCUTU, NEDENSELLIK, SIDDET
 from ..models.hasta import GD_ETIKET
 from ..services import denetim, ecrf
-from ..services.yetki import gerekli
+from ..services.yetki import calisma_erisimi, gerekli, izinli
 from ._ortak import bilgi, ip, oturumlu
 from .sablon import goster
 
 router = APIRouter(prefix="/gonulluler")
 
-def _gonullu(db: Session, gid: int) -> Gonullu:
+def _gonullu(db: Session, gid: int, k: Kullanici) -> Gonullu:
     g = db.get(Gonullu, gid)
     if not g:
         raise HTTPException(404, "Gönüllü bulunamadı")
+    if not calisma_erisimi(db, k, g.calisma):
+        raise HTTPException(403, "Bu çalışmaya erişiminiz yok")
     return g
 
 
@@ -47,7 +49,7 @@ def yeni(request: Request, k: Kullanici = Depends(gerekli("veri.gir")), db: Sess
 
 @router.get("/{gid}")
 def detay(request: Request, gid: int, k: Kullanici = Depends(oturumlu), db: Session = Depends(get_db)):
-    g = _gonullu(db, gid)
+    g = _gonullu(db, gid, k)
     # yalnizca yayindaki formlar veri girisinde gorunur; taslaklar tasarimcida kalir
     tum_formlar = sorted(g.calisma.formlar, key=lambda f: f.sira)
     formlar = [f for f in tum_formlar if f.durum != "taslak"]
@@ -72,7 +74,7 @@ def detay(request: Request, gid: int, k: Kullanici = Depends(oturumlu), db: Sess
 @router.post("/{gid}/durum")
 def durum(request: Request, gid: int, k: Kullanici = Depends(gerekli("veri.gir")), db: Session = Depends(get_db),
           durum: str = Form(...), tarih: str = Form(""), neden: str = Form(""), kol_id: str = Form("")):
-    g = _gonullu(db, gid)
+    g = _gonullu(db, gid, k)
     eski = g.durum.value
     yeni_durum = GonulluDurumu(durum)
     t = date.fromisoformat(tarih) if tarih else date.today()
@@ -106,7 +108,7 @@ def durum(request: Request, gid: int, k: Kullanici = Depends(gerekli("veri.gir")
 @router.post("/{gid}/vizit/{vid}")
 def vizit_kaydet(request: Request, gid: int, vid: int, k: Kullanici = Depends(gerekli("veri.gir")),
                  db: Session = Depends(get_db), gerceklesen: str = Form(""), durum: str = Form("yapildi")):
-    g = _gonullu(db, gid)
+    g = _gonullu(db, gid, k)
     v = db.get(Vizit, vid)
     if not v or v.gonullu_id != g.id:
         raise HTTPException(404)
@@ -123,7 +125,7 @@ def vizit_kaydet(request: Request, gid: int, vid: int, k: Kullanici = Depends(ge
 @router.get("/{gid}/form/{form_id}")
 def form_goster(request: Request, gid: int, form_id: int, k: Kullanici = Depends(oturumlu),
                 db: Session = Depends(get_db), vizit_id: int | None = None):
-    g = _gonullu(db, gid)
+    g = _gonullu(db, gid, k)
     f = db.get(CRF, form_id)
     if not f or f.calisma_id != g.calisma_id:
         raise HTTPException(404)
@@ -136,7 +138,7 @@ def form_goster(request: Request, gid: int, form_id: int, k: Kullanici = Depends
 @router.post("/{gid}/form/{form_id}")
 async def form_kaydet(request: Request, gid: int, form_id: int, k: Kullanici = Depends(gerekli("veri.gir")),
                       db: Session = Depends(get_db)):
-    g = _gonullu(db, gid)
+    g = _gonullu(db, gid, k)
     f = db.get(CRF, form_id)
     if not f or f.calisma_id != g.calisma_id:
         raise HTTPException(404)
@@ -183,6 +185,7 @@ async def form_kaydet(request: Request, gid: int, form_id: int, k: Kullanici = D
 
 @router.post("/{gid}/form-kaydi/{fk_id}/sdv")
 def sdv(request: Request, gid: int, fk_id: int, k: Kullanici = Depends(gerekli("veri.sdv")), db: Session = Depends(get_db)):
+    _gonullu(db, gid, k)
     fk = db.get(FormKaydi, fk_id)
     if not fk or fk.gonullu_id != gid:
         raise HTTPException(404)
@@ -199,6 +202,7 @@ def kilitle(request: Request, gid: int, fk_id: int, k: Kullanici = Depends(gerek
             db: Session = Depends(get_db), parola: str = Form(...)):
     from ..services.yetki import parola_dogrula
 
+    _gonullu(db, gid, k)
     fk = db.get(FormKaydi, fk_id)
     if not fk or fk.gonullu_id != gid:
         raise HTTPException(404)
@@ -218,6 +222,7 @@ def kilitle(request: Request, gid: int, fk_id: int, k: Kullanici = Depends(gerek
 @router.post("/{gid}/sorgu")
 def sorgu_ac(request: Request, gid: int, k: Kullanici = Depends(gerekli("sorgu.ac")), db: Session = Depends(get_db),
              form_kaydi_id: int = Form(...), alan: str = Form(...), soru: str = Form(...)):
+    _gonullu(db, gid, k)
     s = Sorgu(form_kaydi_id=form_kaydi_id, alan=alan, soru=soru, acan_id=k.id, kaynak="manuel")
     db.add(s)
     db.flush()
@@ -229,8 +234,7 @@ def sorgu_ac(request: Request, gid: int, k: Kullanici = Depends(gerekli("sorgu.a
 @router.post("/{gid}/sorgu/{sid}")
 def sorgu_islem(request: Request, gid: int, sid: int, k: Kullanici = Depends(oturumlu), db: Session = Depends(get_db),
                 islem: str = Form(...), cevap: str = Form("")):
-    from ..services.yetki import izinli
-
+    _gonullu(db, gid, k)
     s = db.get(Sorgu, sid)
     if not s or s.form_kaydi.gonullu_id != gid:
         raise HTTPException(404)
@@ -252,7 +256,7 @@ def advers_olay(request: Request, gid: int, k: Kullanici = Depends(gerekli("guve
                 terim: str = Form(...), baslangic: str = Form(...), bitis: str = Form(""), siddet: str = Form("1"),
                 nedensellik: str = Form("olasi_degil"), beklenen: str = Form("1"), ciddi: str = Form("0"),
                 ciddiyet_olcutu: str = Form(""), sonuc: str = Form(""), alinan_onlem: str = Form(""), anlatim: str = Form("")):
-    g = _gonullu(db, gid)
+    g = _gonullu(db, gid, k)
     a = AdversOlay(gonullu_id=g.id, terim=terim, baslangic=date.fromisoformat(baslangic),
                    bitis=date.fromisoformat(bitis) if bitis else None, siddet=siddet, nedensellik=nedensellik,
                    beklenen=beklenen == "1", ciddi=ciddi == "1", ciddiyet_olcutu=ciddiyet_olcutu or None,
@@ -271,6 +275,7 @@ def advers_olay(request: Request, gid: int, k: Kullanici = Depends(gerekli("guve
 @router.post("/{gid}/advers-olay/{aid}/bildirim")
 def sae_bildirim(request: Request, gid: int, aid: int, k: Kullanici = Depends(gerekli("guvenlik.bildir")),
                  db: Session = Depends(get_db), hedef: str = Form(...), tarih: str = Form("")):
+    _gonullu(db, gid, k)
     a = db.get(AdversOlay, aid)
     if not a or a.gonullu_id != gid:
         raise HTTPException(404)

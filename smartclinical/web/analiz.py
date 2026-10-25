@@ -2,29 +2,25 @@
 import csv
 import io
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
 from ..db import get_db
-from ..models import Calisma, Kullanici, Rol
+from ..models import Calisma, Kullanici
 from ..services import analiz, denetim
-from ..services.yetki import mevcut_kullanici
+from ..services.yetki import gerekli
 from ._ortak import calisma_getir, ip
 from .calismalar import _ozet
 from .sablon import goster
 
 router = APIRouter(prefix="/calismalar/{calisma_id}/analiz")
 
-# TODO(mert): yetki.IZINLER'e 'analiz.goruntule' olarak tasinacak; o zaman gerekli("analiz.goruntule") kullanilir
-ROLLER = {Rol.YONETICI, Rol.PROJE_YONETICISI, Rol.ARASTIRMACI, Rol.VERI_YONETICISI, Rol.ISTATISTIKCI}
-
 ON_ANALIZ_NOTU = "Bu sayfa ön analiz içindir; nihai analiz istatistiksel analiz planına göre yapılır."
 
 
-def yetkili(request: Request, k: Kullanici = Depends(mevcut_kullanici)) -> Kullanici:
-    if k.rol not in ROLLER:
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "Analiz sayfaları rolünüze açık değil")
+def yetkili(request: Request, k: Kullanici = Depends(gerekli("analiz.goruntule"))) -> Kullanici:
+    """Erisim kurali yetki.IZINLER['analiz.goruntule']; sekme gorunurlugu de ayni izne bakar."""
     request.state.kullanici = k
     return k
 

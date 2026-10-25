@@ -26,7 +26,6 @@ Tüm yazma işlemleri denetim izine `"api": true` işaretiyle kaydedilir.
 | GET | `/yz/bdm/durum` | BDM sunucu durumu | oturum |
 | POST | `/yz/icd-kodla` | Serbest metindeki tanı ifadelerini ICD-10 ile eşle | bdm.kullan |
 | POST | `/yz/ozet` | Klinik metni çalışma odaklı özetle (girdi önce kimliksizleştirilir) | bdm.kullan |
-| POST | `/yz/soru-cevap` | Bağlam üzerinden soru-cevap | bdm.kullan |
 | GET | `/fhir/ResearchStudy/{id}` | Çalışma, FHIR ResearchStudy olarak | disa_aktar |
 | GET | `/fhir/ResearchSubject/{id}` | Gönüllü, FHIR ResearchSubject olarak | disa_aktar |
 | POST | `/fhir/Bundle?merkez_id=` | HBYS Bundle'ını kimliksizleştirip hasta havuzuna yaz | hasta.goruntule |

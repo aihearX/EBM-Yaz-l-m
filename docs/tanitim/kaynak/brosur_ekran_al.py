@@ -22,7 +22,7 @@ sayfalar = [
     ("merkez_zekasi", "/calismalar/1/merkez-zekasi", 1150), ("rbm", "/calismalar/2/rbm", 1000),
     ("gonullu", "/gonulluler/5", 1000), ("form", form_url, 1000), ("guvenlik", "/calismalar/1/guvenlik", 1000),
     ("tmf", "/calismalar/1/belgeler", 1000), ("denetim", "/yonetim/denetim", 1000),
-    ("bdm", "/araclar/bdm", 1000), ("deid", "/araclar/kimliksizlestirme", 1000), ("arge", "/arge", 1150),
+    ("tasarim", "/calismalar/1/tasarim", 1150), ("deid", "/araclar/kimliksizlestirme", 1000), ("analiz", "/calismalar/1/analiz", 1150),
     ("endeks", "/merkezler/endeks", 1100), ("fizibilite", "/calismalar/1/merkez-zekasi/rapor", 1150),
 ]
 exe = sys.argv[1] if len(sys.argv) > 1 else None
@@ -40,7 +40,7 @@ with sync_playwright() as p:
         pg.goto(B + url)
         pg.wait_for_load_state("networkidle")
         pg.add_style_tag(content=GIZLE)
-        if ad in ("bdm", "deid"):
+        if ad == "deid":
             pg.click("button.btn.birincil")
             pg.wait_for_load_state("networkidle")
             pg.add_style_tag(content=GIZLE)
@@ -52,7 +52,7 @@ with sync_playwright() as p:
     pg.fill("input[name=parola]", "Demo2026!sc")
     pg.click("button[type=submit]")
     pg.wait_for_load_state("networkidle")
-    pg.goto(B + "/sponsor")
+    pg.goto(B + "/")
     pg.wait_for_load_state("networkidle")
     pg.add_style_tag(content=GIZLE)
     pg.screenshot(path=f"{HEDEF}/sponsor.png", full_page=False)

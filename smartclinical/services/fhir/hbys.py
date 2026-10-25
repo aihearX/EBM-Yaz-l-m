@@ -1,6 +1,6 @@
 """HBYS FHIR adaptoru.
 
-Pilot merkezlerde HBYS saglayicilarinin FHIR R4 arayuzu uzerinden Patient + Condition +
+Merkezlerde HBYS saglayicilarinin FHIR R4 arayuzu uzerinden Patient + Condition +
 MedicationStatement + Observation + DocumentReference cekiyoruz. Her saglayicinin arama
 parametreleri biraz farkli; simdilik _has:Condition sorgusu + Patient/$everything ile gidiyoruz.
 Sorgu desteklenmezse Condition uzerinden hasta listesi toplanip tek tek $everything cagriliyor.

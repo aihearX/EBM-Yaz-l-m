@@ -13,8 +13,8 @@ fids = re.findall(r"/gonulluler/5/form/(\d+)\?vizit_id=(\d+)", r.text)
 form_url = f"/gonulluler/5/form/{fids[2][0]}?vizit_id={fids[2][1]}" if len(fids) > 2 else "/gonulluler/5"
 tam = [("04_calisma_ozet", "/calismalar/1"), ("05_protokol_kriterler", "/calismalar/1/protokol"), ("07_basvurular", "/calismalar/1/basvurular"),
        ("09_eslestirme_detay", f"/calismalar/1/eslestirme/{detay_id}"), ("10_merkez_zekasi", "/calismalar/1/merkez-zekasi"), ("14_ecrf_form", form_url),
-       ("15_veri", "/calismalar/2/veri"), ("17_izlem", "/calismalar/2/izlem"), ("19_bdm_konsol", "/araclar/bdm"), ("20_kimliksizlestirme", "/araclar/kimliksizlestirme"),
-       ("22_golge_mod", "/calismalar/1/eslestirme-golge"), ("23_merkez_kayit", "/merkezler"), ("24_sistem", "/yonetim/sistem"), ("25_arge_gostergeleri", "/arge"),
+       ("15_veri", "/calismalar/2/veri"), ("17_izlem", "/calismalar/2/izlem"), ("19_tasarim", "/calismalar/1/tasarim"), ("20_kimliksizlestirme", "/araclar/kimliksizlestirme"),
+       ("22_golge_mod", "/calismalar/1/eslestirme-golge"), ("23_merkez_kayit", "/merkezler"), ("24_sistem", "/yonetim/sistem"), ("25_analiz", "/calismalar/1/analiz"),
        ("26_fizibilite_raporu", "/calismalar/1/merkez-zekasi/rapor"), ("29_merkez_endeksi", "/merkezler/endeks")]
 gorunum = [("02_pano", "/"), ("03_calismalar", "/calismalar"), ("06_merkezler", "/calismalar/1/merkezler"), ("08_eslestirme", "/calismalar/1/eslestirme"),
            ("11_rbm", "/calismalar/2/rbm"), ("12_gonulluler", "/calismalar/1/gonulluler"), ("13_gonullu_detay", "/gonulluler/5"), ("16_guvenlik", "/calismalar/1/guvenlik"),
@@ -32,7 +32,7 @@ with sync_playwright() as p:
     for ad, url in tam + gorunum:
         pg.goto(B + url)
         pg.wait_for_load_state("networkidle")
-        if ad in ("20_kimliksizlestirme", "19_bdm_konsol"):
+        if ad == "20_kimliksizlestirme":
             pg.click("button.btn.birincil")
             pg.wait_for_load_state("networkidle")
         pg.screenshot(path=f"docs/tanitim/ekran/{ad}.png", full_page=(ad, url) in tam)
@@ -43,9 +43,9 @@ with sync_playwright() as p:
     pg.fill("input[name=parola]", "Demo2026!sc")
     pg.click("button[type=submit]")
     pg.wait_for_load_state("networkidle")
-    pg.goto(B + "/sponsor")
+    pg.goto(B + "/")
     pg.wait_for_load_state("networkidle")
-    pg.screenshot(path="docs/tanitim/ekran/27_sponsor_portali.png", full_page=False)
+    pg.screenshot(path="docs/tanitim/ekran/27_sponsor_gorunumu.png", full_page=False)
     pg.goto(B + "/merkezler/endeks")
     pg.wait_for_load_state("networkidle")
     pg.screenshot(path="docs/tanitim/ekran/28_merkez_endeksi_anonim.png", full_page=True)

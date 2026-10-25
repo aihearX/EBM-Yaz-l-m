@@ -11,7 +11,7 @@
       <select name="durum" style="width:170px"><option value="">Tüm aşamalar</option>{% for d in durumlar %}<option value="{{ d.value }}" {{ 'selected' if durum == d.value }}>{{ DURUM_ETIKET[d] }}</option>{% endfor %}</select>
       <button class="btn">Filtrele</button>
     </form>
-    {% if izinli(kullanici, 'calisma.olustur') %}<a class="btn birincil" href="/calismalar/yeni">Yeni çalışma</a>{% endif %}
+    {% if izinli(kullanici, 'calisma.olustur') %}<a class="btn birincil" href="/sihirbaz">Yeni çalışma</a>{% endif %}
   </div>
 </div>
 <div class="kart">

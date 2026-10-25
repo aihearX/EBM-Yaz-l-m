@@ -2,6 +2,27 @@
 
 Biçim: Keep a Changelog. Sürümleme: anlamsal (major.minor.patch).
 
+## Yayınlanmamış
+### Eklendi
+- Kullanım modu (tekil araştırmacı / üniversite-hastane / CRO), ilk kurulum ekranı ve mod bazlı menü, varsayılan merkez ve sponsor.
+- Dört adımlı çalışma sihirbazı; `GET /calismalar/yeni` sihirbaza yönlendirir, hızlı oluşturma için `POST /calismalar/yeni` korundu.
+- Çalışma tasarımı sekmesi: kollar, çalışma bazlı vizit şeması (`VizitTanimi`), kodsuz eCRF tasarımcısı (koşullu alanlar, bölüm başlıkları, çoklu seçim), kaydı olan formda sürümleme ve denetim izi, protokol metninden kural tabanlı/BDM destekli taslak (yalnızca öneri, uygulama insan onayıyla).
+- Analiz sekmesi: değişken bazlı betimleyici özet, otomatik test seçimi (Welch t / Mann-Whitney / ANOVA / Kruskal-Wallis / ki-kare / Fisher), gönüllü akışı, kol × SOC advers olay özeti, analiz veri seti CSV (denetim izine yazılır).
+- Çalışma ekibi sekmesi: kullanıcı × çalışma ataması; atama yapıldığında proje ekibi yalnızca atandığı çalışmaları görür. Yeni izinler: `ekip.yonet`, `analiz.goruntule`.
+- Bölüm bazlı araştırmacı listesi (üniversite modu), merkez düzenleme, `Arastirmaci.bolum` alanı.
+- Rol bazlı sekme görünürlüğü tek noktadan (`sekme_gorunur`); rotalarda aynı kural 403 üretir. Rol senaryo testleri.
+### Değiştirildi
+- Genel bakış role göre üç görünüme ayrıldı (merkez, izlem, portföy); sponsor portföy özeti (takvim riski, en riskli merkez, fizibilite raporu) buraya taşındı. Boş kurulumda ilk çalışma kartı.
+- Aşama kontrol listesi statik metin yerine veriden hesaplanır; aşama değişikliğinde gerekçe zorunlu.
+- Vizit şeması ve edit-check iş mantığı `services/ecrf.py` altına taşındı; veri girişinde yalnızca yayındaki formlar görünür.
+- Gönüllü sayfaları, çalışma listesi ve API uçları çalışma erişim kuralına (`yetki.calisma_erisimi`) bağlandı.
+- Veri giriş formunda CDASH değişken adı ve ham durum değerleri gösterilmez.
+### Kaldırıldı
+- Ar-Ge göstergeleri sayfası ve servisi; model değerlendirme `ml/degerlendirme` altında komut satırından yapılır.
+- Türkçe Klinik BDM Konsolu sayfası ve `POST /yz/soru-cevap` ucu (ICD kodlama ve özet uçları kalır).
+- Ayrı Sponsor Portalı sayfası; menüden "Yapay Zekâ Araçları" grubu ve üst düzey "Merkez Performans Endeksi" maddesi (endeks Merkezler sayfasından açılır); API belgeleri bağlantısı yalnızca yöneticide.
+- Tek sayfalık "Yeni çalışma" formu.
+
 ## [1.5.0] - 2026-10-22
 ### Eklendi
 - Sponsor portalı: kurum bazlı salt okunur portföy görünümü, takvim riski, en riskli merkez, fizibilite raporu bağlantısı.

@@ -33,14 +33,14 @@ from ..models.calisma import TUR_ETIKET
 from ..models.izlem import SAPMA_KATEGORI
 from ..models.merkez import CM_DURUMLAR
 from ..services import denetim
-from ..services.yetki import gerekli, izinli
+from ..services.yetki import calisma_filtresi, gerekli, izinli
 from ._ortak import bilgi, calisma_getir, ip, oturumlu
 from .sablon import goster, sablonlar
 
 router = APIRouter(prefix="/calismalar")
 
 # Sekme gorunurlugu rol izinlerine baglidir; ayni kurallar rotalarda 403 icin kullanilir.
-# TODO(mert): calisma bazli ekip atamasi gelince (#142) buradaki rol listeleri ekip uyeligiyle daraltilacak.
+# Calisma bazli gorunurluk (ekip uyeligi, merkez, sponsor kurumu) calisma_getir icinde yetki.calisma_erisimi ile uygulanir.
 _SEKMELER = [
     ("ozet", "Özet", ""),
     ("tasarim", "Tasarım", "/tasarim"),
@@ -56,9 +56,9 @@ _SEKMELER = [
     ("izlem", "Ziyaret ve Sapmalar", "/izlem"),
     ("belgeler", "TMF", "/belgeler"),
     ("analiz", "Analiz", "/analiz"),
+    ("ekip", "Ekip", "/ekip"),
     ("denetim", "Denetim İzi", "/denetim"),
 ]
-_ANALIZ_ROLLERI = (Rol.YONETICI, Rol.PROJE_YONETICISI, Rol.ARASTIRMACI, Rol.VERI_YONETICISI, Rol.ISTATISTIKCI)
 
 
 def sekme_gorunur(k: Kullanici, anahtar: str) -> bool:
@@ -83,7 +83,9 @@ def sekme_gorunur(k: Kullanici, anahtar: str) -> bool:
     if anahtar == "belgeler":
         return izinli(k, "belge.yukle") or rol in (Rol.DENETCI, Rol.SPONSOR)
     if anahtar == "analiz":
-        return rol in _ANALIZ_ROLLERI
+        return izinli(k, "analiz.goruntule")
+    if anahtar == "ekip":
+        return izinli(k, "ekip.yonet")
     if anahtar == "denetim":
         return izinli(k, "denetim.goruntule")
     return False
@@ -127,7 +129,6 @@ def kontrol_listesi(db: Session, c: Calisma) -> dict[CalismaDurumu, list[dict]]:
     """Her asama icin veriden hesaplanan kontrol maddeleri: etiket, tamam, baglanti.
 
     Zorlayici degil; eksikler detay sayfasinda baglantiyla gosterilir, asama kararini PY verir.
-    TODO(mert): vizit semasi (VizitTanimi) tanimlaninca Tasarim asamasina "vizit semasi tanimli" maddesi eklenecek.
     """
     b = f"/calismalar/{c.id}"
 
@@ -161,6 +162,7 @@ def kontrol_listesi(db: Session, c: Calisma) -> dict[CalismaDurumu, list[dict]]:
             m("Protokol sürümü kayıtlı", c.versiyonlar, f"{b}/protokol"),
             m("Dahil/hariç kriterleri tanımlı ve tümü onaylı", kriterler and all(x.onaylandi for x in kriterler), f"{b}/protokol"),
             m("En az bir çalışma kolu tanımlı", c.kollar, f"{b}/tasarim"),
+            m("Vizit şeması tanımlı", c.vizit_tanimlari, f"{b}/tasarim"),
             m("En az bir eCRF formu tanımlı", c.formlar, f"{b}/tasarim"),
         ],
         CalismaDurumu.FIZIBILITE: [
@@ -236,11 +238,7 @@ def liste(request: Request, k: Kullanici = Depends(oturumlu), db: Session = Depe
         sorgu = sorgu.where(Calisma.tur == CalismaTuru(tur))
     if q:
         sorgu = sorgu.where((Calisma.kod.ilike(f"%{q}%")) | (Calisma.kisa_ad.ilike(f"%{q}%")) | (Calisma.sponsor.ilike(f"%{q}%")))
-    if k.rol in (Rol.ARASTIRMACI, Rol.KOORDINATOR) and k.merkez_id:
-        sorgu = sorgu.join(Calisma.merkezler).where(CalismaMerkez.merkez_id == k.merkez_id)
-    if k.rol == Rol.SPONSOR:
-        # sponsor yalnizca kendi kurumunun calismalarini gorur; kurum bossa hicbirini
-        sorgu = sorgu.where(Calisma.sponsor == (k.kurum or ""))
+    sorgu = calisma_filtresi(db, k, sorgu)
     calismalar = db.execute(sorgu).scalars().unique().all()
     satirlar = [{"c": c, "o": _ozet(db, c)} for c in calismalar]
     sade = k.rol in (Rol.ARASTIRMACI, Rol.KOORDINATOR)
@@ -250,8 +248,8 @@ def liste(request: Request, k: Kullanici = Depends(oturumlu), db: Session = Depe
 
 @router.get("/yeni")
 def yeni_form(request: Request, k: Kullanici = Depends(gerekli("calisma.olustur"))):
-    request.state.kullanici = k
-    return goster(request, "calismalar/yeni.html", turler=TUR_ETIKET, hata=None)
+    """Tek sayfalik form kaldirildi; calisma sihirbazla kurulur. POST /calismalar/yeni hizli olusturma icin kalir."""
+    return RedirectResponse("/sihirbaz", status_code=303)
 
 
 @router.post("/yeni")
@@ -262,7 +260,8 @@ def yeni(request: Request, k: Kullanici = Depends(gerekli("calisma.olustur")), d
          baslangic: str = Form(""), planlanan_bitis: str = Form("")):
     request.state.kullanici = k
     if db.execute(select(Calisma).where(Calisma.kod == kod.strip().upper())).scalar_one_or_none():
-        return goster(request, "calismalar/yeni.html", turler=TUR_ETIKET, hata="Bu protokol kodu zaten kayıtlı.")
+        bilgi(request, "UYARI: Bu protokol kodu zaten kayıtlı; çalışma oluşturulmadı.")
+        return RedirectResponse("/sihirbaz", status_code=303)
     c = Calisma(kod=kod.strip().upper(), baslik=baslik.strip(), kisa_ad=kisa_ad.strip(), tur=CalismaTuru(tur),
                 faz=faz or None, sponsor=sponsor, terapotik_alan=terapotik_alan, endikasyon=endikasyon or None,
                 hedef_hasta=hedef_hasta, hedef_merkez=hedef_merkez, tasarim=tasarim or None,

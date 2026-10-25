@@ -27,7 +27,7 @@ from ..kriter.degerlendirici import Degerlendirme
 
 log = logging.getLogger(__name__)
 
-# Karar esikleri. Pilot (golge mod) sonuclarina gore ayarlanacak; su an muhafazakar.
+# Karar esikleri. Golge mod karsilastirmalarina gore ayarlanir; su an muhafazakar.
 UYGUN_ESIK = 0.85           # skor >= -> uygun
 OLASI_ESIK = 0.55           # skor >= -> olasi
 BELIRSIZ_ORAN_ESIGI = 0.5   # dahil kriterlerin yarisindan fazlasi belirsizse karar 'belirsiz'
@@ -230,7 +230,7 @@ class Eslestirici:
 
 
 def golge_mod_karsilastir(sonuclar, manuel: dict[int, bool]) -> dict:
-    """Platform onerilerini manuel on tarama kararlariyla karsilastirir (pilot dogrulama, IP5).
+    """Platform onerilerini arastirmacinin on tarama kararlariyla karsilastirir (golge mod).
 
     Pozitif = platform 'uygun' veya 'olasi' dedi. 'belirsiz' arastirmaciya gittigi icin pozitif sayilir
     (duyarlilik oncelikli; kacirilan hasta, fazladan incelenen hastadan pahali).

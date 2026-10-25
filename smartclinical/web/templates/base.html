@@ -10,33 +10,38 @@
 <body data-oturum-dk="30">
 <div class="kabuk">
   <aside class="yan">
-    <div class="logo"><b>EBM SmartClinical</b><span>Klinik Araştırma Yönetim ve Karar Destek Platformu</span></div>
+    <div class="logo"><b>EBM SmartClinical</b><span>{{ kurulum.kurum_adi or 'Klinik Araştırma Yönetim ve Karar Destek Platformu' }}</span></div>
     <nav>
       {% set yol = request.url.path %}
       <a href="/" class="{{ 'aktif' if yol == '/' }}">Genel Bakış</a>
-      <div class="grup">Operasyon</div>
-      <a href="/calismalar" class="{{ 'aktif' if yol.startswith('/calismalar') }}">Çalışmalar</a>
-      <a href="/merkezler" class="{{ 'aktif' if yol.startswith('/merkezler') and not yol.startswith('/merkezler/endeks') }}">Merkezler ve Araştırmacılar</a>
-      <a href="/merkezler/endeks" class="{{ 'aktif' if yol.startswith('/merkezler/endeks') }}">Merkez Performans Endeksi</a>
-      {% if kullanici and kullanici.rol.value in ('sponsor', 'yonetici', 'proje_yoneticisi') %}<a href="/sponsor" class="{{ 'aktif' if yol.startswith('/sponsor') }}">Sponsor Portalı</a>{% endif %}
-      <div class="grup">Yapay Zekâ Araçları</div>
-      <a href="/araclar/bdm" class="{{ 'aktif' if yol.startswith('/araclar/bdm') }}">Türkçe Klinik BDM Konsolu</a>
+      <a href="/calismalar" class="{{ 'aktif' if yol.startswith('/calismalar') or yol.startswith('/sihirbaz') }}">Çalışmalar</a>
+      {% if kullanici and (izinli(kullanici, 'merkez.yonet') or izinli(kullanici, 'rbm.goruntule') or kurulum.mod == 'tekil') %}
+      {% if kurulum.mod == 'universite' %}
+      <a href="/merkezler" class="{{ 'aktif' if yol.startswith('/merkezler') }}">Bölümler ve Araştırmacılar</a>
+      {% elif kurulum.mod == 'tekil' %}
+      <a href="/merkezler" class="{{ 'aktif' if yol.startswith('/merkezler') }}">Merkezim</a>
+      {% else %}
+      <a href="/merkezler" class="{{ 'aktif' if yol.startswith('/merkezler') }}">Merkezler ve Araştırmacılar</a>
+      {% endif %}
+      {% endif %}
+      {% if kullanici and izinli(kullanici, 'hasta.goruntule') %}
+      <div class="grup">Araçlar</div>
       <a href="/araclar/kimliksizlestirme" class="{{ 'aktif' if yol.startswith('/araclar/kimliksiz') }}">Kimliksizleştirme</a>
-      <a href="/arge" class="{{ 'aktif' if yol.startswith('/arge') }}">Ar-Ge Göstergeleri</a>
-      {% if kullanici and izinli(kullanici, 'denetim.goruntule') %}
-      <div class="grup">Kalite ve Yönetim</div>
-      <a href="/yonetim/denetim" class="{{ 'aktif' if yol.startswith('/yonetim/denetim') }}">Denetim İzi</a>
       {% endif %}
-      {% if kullanici and izinli(kullanici, 'kullanici.yonet') %}
-      <a href="/yonetim/kullanicilar" class="{{ 'aktif' if yol.startswith('/yonetim/kullanicilar') }}">Kullanıcılar ve Roller</a>
+      {% if kullanici and (izinli(kullanici, 'denetim.goruntule') or izinli(kullanici, 'kullanici.yonet')) %}
+      <div class="grup">Yönetim</div>
+      {% if izinli(kullanici, 'denetim.goruntule') %}<a href="/yonetim/denetim" class="{{ 'aktif' if yol.startswith('/yonetim/denetim') }}">Denetim İzi</a>{% endif %}
+      {% if izinli(kullanici, 'kullanici.yonet') %}
+      <a href="/yonetim/kullanicilar" class="{{ 'aktif' if yol.startswith('/yonetim/kullanicilar') }}">Kullanıcılar</a>
       <a href="/yonetim/api-anahtarlari" class="{{ 'aktif' if yol.startswith('/yonetim/api') }}">API Anahtarları</a>
-      <a href="/yonetim/sistem" class="{{ 'aktif' if yol.startswith('/yonetim/sistem') }}">Sistem Durumu</a>
-      {% endif %}
       <a href="/api/belgeler" target="_blank">API Belgeleri</a>
+      <a href="/yonetim/sistem" class="{{ 'aktif' if yol.startswith('/yonetim/sistem') }}">Ayarlar</a>
+      {% endif %}
+      {% endif %}
     </nav>
     <div class="alt">
       {% if kullanici %}<b>{{ kullanici.ad_soyad }}</b>{{ kullanici.rol_etiket }}{% if kullanici.merkez %}<br>{{ kullanici.merkez.ad }}{% endif %}<br><a href="/cikis" style="color:#9fb0cc">Çıkış</a>{% endif %}
-      <div style="margin-top:8px">v{{ surum }}</div>
+      <div style="margin-top:8px">{{ kurulum.mod_etiket }} modu · v{{ surum }}</div>
     </div>
   </aside>
   <div class="ana">

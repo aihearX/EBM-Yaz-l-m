@@ -142,7 +142,7 @@ class EslestirmeSonucu(Taban):
     inceleme_karari: Mapped[str | None] = mapped_column(String(16), nullable=True)  # onay | red | beklet
     inceleme_notu: Mapped[str | None] = mapped_column(Text, nullable=True)
     inceleme_zamani: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
-    golge_mod: Mapped[bool] = mapped_column(Boolean, default=False)  # pilot: manuel taramayla karsilastirma
+    golge_mod: Mapped[bool] = mapped_column(Boolean, default=False)  # model onerisi ile arastirmaci kararinin karsilastirmasi
 
     calisma = relationship("Calisma")
     hasta = relationship("Hasta")

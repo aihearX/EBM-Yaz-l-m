@@ -41,7 +41,10 @@ tarayıcı ──HTTPS──▶ nginx ──▶ uvicorn/FastAPI ──▶ Postgr
 | Merkez zekâsı | `services/merkez_zekasi/` | Gamma-Poisson, Weibull AFT, sıralama |
 | RBM | `services/rbm/` | KRI hesaplama, anomali, uyarı, QTL |
 | Kıyaslama | `services/kiyaslama.py` | Merkez performans endeksi; çalışmalar arası yüzdelik dilimler |
-| Ar-Ge göstergeleri | `services/arge.py` | Altın standart, gölge mod, MAPE/AUC, ön tarama süresi ölçümleri |
+| eCRF ve vizit şeması | `services/ecrf.py` | Standart form kütüphanesi, vizit şablonları, form doğrulama ve sürümleme, edit-check |
+| Protokol taslağı | `services/protokol.py` | Protokol metninden kriter/vizit/form önerisi; kural tabanlı, BDM varsa BDM |
+| Ön analiz | `services/analiz.py` | Betimleyici istatistik, kural tabanlı test seçimi; nihai analiz SAP'a göre |
+| Kurulum ve mod | `services/kurulum.py` | Kullanım modu, mod varsayılanları, protokol kodu önerisi |
 | Kimliksizleştirme | `services/kimliksizlestirme/` | Regex + sözlük; maske / takma ad / tarih kaydırma |
 
 Karar ilkesi: hiçbir model çıktısı tek başına işlem yapmaz. Eşleştirme önerileri araştırmacı
@@ -64,10 +67,12 @@ kullanıcısının `denetim_kaydi` ve `e_imza` tablolarında UPDATE/DELETE yetki
 
 ## Bilinen sınırlar / yol haritası
 
-- Çalışma bazlı kullanıcı ataması (kullanıcı × çalışma × rol) henüz yok; rol globaldir,
-  araştırmacı/koordinatör merkezine, sponsor kurumuna göre kısıtlanır. (#142, 1.6)
-- Vizit takvimi varsayılan şablondan üretilir; protokol bazlı vizit tasarımı eCRF tasarımcısına
-  taşınacak.
+- Çalışma görünürlüğü üyelik tabanlıdır (`yetki.calisma_erisimi`): yönetici ve denetçi her
+  çalışmayı, sponsor kurumunun, araştırmacı/koordinatör merkezinin çalışmalarını görür; proje
+  ekibi rolleri atama yapıldıysa yalnızca atandıkları çalışmaları görür. Rol globaldir;
+  çalışma bazlı rol (kullanıcı × çalışma × rol) yoktur.
+- Var olan gönüllülerin vizitleri şema değişince güncellenmez; şema yalnızca vizit kaydı olmayan
+  çalışmalarda değiştirilebilir.
 - Randomizasyon (IWRS) dış sistemdir; kol ataması elle girilir.
 - Kural tabanlı metin değerlendirme, BDM olmayan kurulumlar için güvenli bir taban sağlar ama
   BDM'nin yerini tutmaz; serbest metin kriterlerinde "belirsiz" oranı yüksektir.

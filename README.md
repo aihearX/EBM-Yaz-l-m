@@ -22,7 +22,11 @@ bileşenler hastane ağı içinde (on-premise) çalışır.
 
 | Modül | Kapsam |
 |---|---|
-| Çalışma yönetimi | Protokol sürümleri, kollar, aşama kontrol listeleri, kayıt eğrisi |
+| Kullanım modu ve kurulum | Tekil araştırmacı, üniversite/hastane ve CRO modları; ilk açılışta kurulum ekranı; mod bazlı menü ve varsayılanlar |
+| Çalışma sihirbazı | Dört adımda çalışma kurulumu: protokol bilgileri, kollar ve vizit şeması, merkez ve ekip, eCRF formları ve başvurular |
+| Çalışma yönetimi | Protokol sürümleri, veriden hesaplanan aşama kontrol listesi, gerekçeli aşama geçişi, kayıt eğrisi |
+| Çalışma tasarımı | Kollar, çalışma bazlı vizit şeması, kodsuz eCRF tasarımcısı (koşullu alanlar, bölüm başlıkları, çoklu seçim), kaydı olan formda sürümleme ve denetim izi, protokol metninden kural tabanlı/BDM destekli taslak (yalnızca öneri, uygulama insan onayıyla) |
+| Çalışma ekibi | Kullanıcı × çalışma ataması; proje ekibi yalnızca atandığı çalışmaları görür, rol globaldir |
 | Merkez ve araştırmacı | Merkez kayıt defteri, geçmiş performans, GCP eğitim takibi |
 | Etik / TİTCK / KVKK | Başvuru ve karar takibi, süre analizi, merkez bazlı kurum izinleri |
 | Hasta eşleştirme | Kriter yapılandırma, ICD ön filtre, yapısal + RAG değerlendirme, gölge mod |
@@ -32,10 +36,10 @@ bileşenler hastane ağı içinde (on-premise) çalışır.
 | Ziyaret ve sapmalar | SIV/IMV/COV/uzaktan ziyaret planı, bulgu takibi, protokol sapmaları |
 | TMF | DIA TMF referans modeli bölgeleri, SHA-256 özet, e-imza ile onay, tamlık kontrolü |
 | Kalite | Hash zincirli denetim izi, elektronik imza, rol bazlı erişim, hesap kilitleme |
-| Sponsor portalı | Kurum bazlı salt okunur portföy görünümü, takvim riski, fizibilite raporu |
+| Genel bakış | Role göre üç görünüm: merkez (vizit, taslak form, sorgu, SAE), izlem (uyarı, geciken sorgu, SDV, ziyaret), portföy (takvim riski, en riskli merkez, fizibilite raporu; sponsor için kurum bazlı salt okunur) |
 | Merkez performans endeksi | Çalışmalar arası anonim kıyaslama, yüzdelik dilimler, kurum tipi medyanları |
-| Ar-Ge göstergeleri | Altın standart ve gölge mod metrikleri, MAPE/AUC, ön tarama süresi, etki hesaplayıcı |
-| Entegrasyon | FHIR R4, CSV hasta havuzu yükleme, CDISC ODM/CSV ve OMOP dışa aktarım, REST API + API anahtarı, klinik NLP servis uçları |
+| Analiz | Değişken bazlı betimleyici özet, kural tabanlı test seçimi (Welch t / Mann-Whitney / ANOVA / Kruskal-Wallis / ki-kare / Fisher), gönüllü akışı, kol × SOC advers olay özeti, analiz veri seti CSV (denetim izine yazılır) |
+| Entegrasyon | FHIR R4, CSV hasta havuzu yükleme, CDISC ODM/CSV ve OMOP dışa aktarım, REST API + API anahtarı, ICD-10 kodlama ve klinik özet uçları |
 
 ## Hızlı başlangıç
 
@@ -49,7 +53,20 @@ uvicorn smartclinical.main:app --reload
 
 Tarayıcıda `http://localhost:8000` adresine gidin. Demo hesapları `admin / Demo2026!sc`
 (diğer roller için `smartclinical/scripts/demo_veri.py` içindeki listeye bakın). API belgeleri
-`/api/belgeler` altındadır.
+`/api/belgeler` altındadır. Demo verisi CRO modunda yüklenir.
+
+## İlk kurulum
+
+Boş veritabanında `/giris` sayfası otomatik olarak `/kurulum` ekranına yönlendirir: kullanım
+modu (tekil araştırmacı, üniversite/hastane, CRO), kurum adı ve yönetici hesabı burada
+tanımlanır. Komut satırı eşdeğeri:
+
+```bash
+python -m smartclinical.scripts.yonetici_olustur --kullanici admin --ad "Ad Soyad" --eposta a@b.c --mod tekil --kurum "Kurum Adı"
+```
+
+Mod sonradan Ayarlar (`/yonetim/sistem`) sayfasından değiştirilir; mod yalnızca menüyü,
+sihirbaz varsayılanlarını ve yeni kayıtları etkiler.
 
 Demo verisi tamamen sentetiktir; merkez adları kurgusaldır, gerçek hasta verisi içermez.
 
@@ -66,7 +83,7 @@ yazar. Model eğitim ve değerlendirme altyapısı `ml/` dizinindedir.
 ```
 smartclinical/        uygulama (FastAPI)
   models/             SQLAlchemy veri modeli
-  services/           alan servisleri (bdm, kriter, eslestirme, merkez_zekasi, rbm, fhir, kimliksizlestirme, denetim, yetki)
+  services/           alan servisleri (bdm, kriter, eslestirme, merkez_zekasi, rbm, ecrf, protokol, analiz, kurulum, fhir, kimliksizlestirme, denetim, yetki)
   web/                Jinja2 şablonları ve sayfa rotaları
   api/                REST API v1
   scripts/            yönetim betikleri (demo veri, yönetici oluşturma, denetim doğrulama, OMOP aktarım)

@@ -21,7 +21,7 @@ from ..models import (
     CalismaDurumu,
     CalismaMerkez,
     CalismaTuru,
-    Form,
+    CalismaUyesi,
     FormKaydi,
     Gonullu,
     GonulluDurumu,
@@ -39,7 +39,8 @@ from ..models import (
     Vizit,
 )
 from ..models._ortak import simdi
-from ..services import denetim, yetki
+from ..services import denetim, ecrf, yetki
+from ..services import kurulum as kurulum_svc
 
 R = random.Random(20260421)
 BUGUN = date.today()
@@ -180,54 +181,6 @@ CALISMALAR = [
          sponsor="Uluslararası sponsor (CRO: EBM)", terapotik_alan="Kardiyoloji", endikasyon="HFrEF", durum=CalismaDurumu.ARSIV,
          hedef_hasta=140, hedef_merkez=5, baslangic=g(820), bitis=g(120), risk="orta",
          merkezler=["IST-02", "IZM-03", "BUR-05", "ANT-07", "ERZ-10"], kollar=[], dahil=[], haric=[], indikasyon="ky", gecmis=True),
-]
-
-# ---------------------------------------------------------------------------
-# eCRF sablonlari (CDASH)
-# ---------------------------------------------------------------------------
-FORMLAR = [
-    ("DM", "Demografi", "Tarama", [
-        {"kod": "BRTHYR", "etiket": "Doğum yılı", "tip": "sayi", "zorunlu": True, "min": 1930, "max": 2008, "cdash": "DM.BRTHDTC"},
-        {"kod": "SEX", "etiket": "Cinsiyet", "tip": "secim", "secenekler": ["Kadın", "Erkek"], "zorunlu": True, "cdash": "DM.SEX"},
-        {"kod": "HEIGHT", "etiket": "Boy", "tip": "sayi", "birim": "cm", "min": 130, "max": 210, "cdash": "VS.VSORRES"},
-        {"kod": "WEIGHT", "etiket": "Kilo", "tip": "sayi", "birim": "kg", "min": 35, "max": 200, "cdash": "VS.VSORRES"},
-    ]),
-    ("IE", "Uygunluk Kontrolü", "Tarama", [
-        {"kod": "IEYN", "etiket": "Tüm dahil etme kriterleri karşılandı mı?", "tip": "secim", "secenekler": ["Evet", "Hayır"], "zorunlu": True, "cdash": "IE.IEORRES"},
-        {"kod": "IEEXCL", "etiket": "Herhangi bir hariç tutma kriteri var mı?", "tip": "secim", "secenekler": ["Evet", "Hayır"], "zorunlu": True, "cdash": "IE.IEORRES"},
-        {"kod": "IECOM", "etiket": "Açıklama", "tip": "metin_uzun"},
-    ]),
-    ("VS", "Vital Bulgular", None, [
-        {"kod": "VSDAT", "etiket": "Ölçüm tarihi", "tip": "tarih", "zorunlu": True, "cdash": "VS.VSDTC"},
-        {"kod": "SYSBP", "etiket": "Sistolik kan basıncı", "tip": "sayi", "birim": "mmHg", "min": 70, "max": 220, "zorunlu": True, "cdash": "VS.VSORRES"},
-        {"kod": "DIABP", "etiket": "Diyastolik kan basıncı", "tip": "sayi", "birim": "mmHg", "min": 40, "max": 130, "zorunlu": True, "cdash": "VS.VSORRES"},
-        {"kod": "PULSE", "etiket": "Nabız", "tip": "sayi", "birim": "/dk", "min": 35, "max": 160, "cdash": "VS.VSORRES"},
-        {"kod": "TEMP", "etiket": "Vücut sıcaklığı", "tip": "sayi", "birim": "°C", "min": 35, "max": 41, "cdash": "VS.VSORRES"},
-    ]),
-    ("LB", "Laboratuvar", None, [
-        {"kod": "LBDAT", "etiket": "Örnek tarihi", "tip": "tarih", "zorunlu": True, "cdash": "LB.LBDTC"},
-        {"kod": "HGB", "etiket": "Hemoglobin", "tip": "sayi", "birim": "g/dL", "min": 5, "max": 20, "cdash": "LB.LBORRES"},
-        {"kod": "ANC", "etiket": "Mutlak nötrofil", "tip": "sayi", "birim": "x10⁹/L", "min": 0.1, "max": 30, "cdash": "LB.LBORRES"},
-        {"kod": "PLT", "etiket": "Trombosit", "tip": "sayi", "birim": "x10⁹/L", "min": 10, "max": 900, "cdash": "LB.LBORRES"},
-        {"kod": "CREAT", "etiket": "Kreatinin", "tip": "sayi", "birim": "mg/dL", "min": 0.2, "max": 10, "cdash": "LB.LBORRES"},
-        {"kod": "ALT", "etiket": "ALT", "tip": "sayi", "birim": "U/L", "min": 2, "max": 1000, "cdash": "LB.LBORRES"},
-        {"kod": "HBA1C", "etiket": "HbA1c", "tip": "sayi", "birim": "%", "min": 4, "max": 15, "cdash": "LB.LBORRES"},
-    ]),
-    ("EX", "Araştırma Ürünü Uygulaması", None, [
-        {"kod": "EXDAT", "etiket": "Uygulama tarihi", "tip": "tarih", "zorunlu": True, "cdash": "EX.EXSTDTC"},
-        {"kod": "EXDOSE", "etiket": "Doz", "tip": "sayi", "zorunlu": True, "cdash": "EX.EXDOSE"},
-        {"kod": "EXDOSU", "etiket": "Doz birimi", "tip": "secim", "secenekler": ["mg", "U", "mL"], "cdash": "EX.EXDOSU"},
-        {"kod": "EXADJ", "etiket": "Doz değişikliği nedeni", "tip": "metin"},
-    ]),
-    ("CM", "Eşlik Eden İlaçlar", None, [
-        {"kod": "CMTRT", "etiket": "İlaç adı", "tip": "metin", "zorunlu": True, "cdash": "CM.CMTRT"},
-        {"kod": "CMINDC", "etiket": "Endikasyon", "tip": "metin", "cdash": "CM.CMINDC"},
-        {"kod": "CMSTDAT", "etiket": "Başlangıç", "tip": "tarih", "cdash": "CM.CMSTDTC"},
-        {"kod": "CMONGO", "etiket": "Devam ediyor", "tip": "secim", "secenekler": ["Evet", "Hayır"]},
-    ]),
-    ("QS", "ECOG Performans", None, [
-        {"kod": "ECOG", "etiket": "ECOG skoru", "tip": "secim", "secenekler": ["0", "1", "2", "3", "4"], "zorunlu": True, "cdash": "QS.QSORRES"},
-    ]),
 ]
 
 # ---------------------------------------------------------------------------
@@ -396,6 +349,7 @@ def yukle(db):
         kullanicilar[kadi] = k
     kullanicilar["sponsor.gorunum"].kurum = "Anadolu Biyofarma A.Ş."
     db.flush()
+    kurulum_svc.ayar_yaz(db, "cro", "EBM Klinik Araştırma", None, "EBM CRO")
     admin, py, cra1, cra2 = kullanicilar["admin"], kullanicilar["pelin.aydin"], kullanicilar["burak.sen"], kullanicilar["elif.kara"]
     from ..models import ApiAnahtari
 
@@ -453,12 +407,17 @@ def yukle(db):
                               onaylandi=(y.guven or 0) >= 0.6 or c.durum.value in ("kayit", "izlem"),
                               onaylayan_id=ara1.id if (y.guven or 0) >= 0.6 else None))
                 sira += 1
-        for i, (kod, ad, vizit, alanlar) in enumerate(FORMLAR):
-            if c.tur == CalismaTuru.KAYIT and kod in ("EX", "IE"):
-                continue
-            if c.tur != CalismaTuru.ILAC and kod == "QS":
-                continue
-            db.add(Form(calisma_id=c.id, kod=kod, ad=ad, vizit_adi=vizit, sira=i, alanlar=alanlar, versiyon="1.1" if c.durum.value in ("kayit", "izlem") else "1.0"))
+        # eCRF formlari standart kutuphaneden (durum="yayinda"); vizit semasi calisma bazli
+        kodlar = [kod for kod in ecrf.STANDART_FORMLAR if kod != "ANKET"
+                  and not (c.tur == CalismaTuru.KAYIT and kod in ("EX", "IE"))
+                  and not (c.tur != CalismaTuru.ILAC and kod == "QS")]
+        for f in ecrf.standart_formlari_ekle(db, c, kodlar):
+            f.versiyon = "1.1" if c.durum.value in ("kayit", "izlem") else "1.0"
+        ecrf.vizit_semasi_uygula(db, c, "standart")
+        # calisma ekibi: CRO senaryosunda proje ekibi calismaya atanir (gorunurluk kisiti etkin)
+        cra = cra1 if c.terapotik_alan in ("Onkoloji", "Endokrinoloji") else cra2
+        for uye in (py, cra, kullanicilar["veri.ekibi"], kullanicilar["fv.ekibi"]):
+            db.add(CalismaUyesi(calisma_id=c.id, kullanici_id=uye.id, ekleyen_id=admin.id))
         db.flush()
 
         # merkezler ve kilometre taslari
@@ -600,15 +559,15 @@ def t_list(h):
 
 
 def _vizit_ve_formlar(db, c, gn, cm, r, son_gun, kullanicilar):
-    from ..web.gonulluler import VARSAYILAN_VIZITLER
-
     formlar = {f.kod: f for f in c.formlar}
+    tanimlar = {t.ad: t for t in c.vizit_tanimlari}
     koord = kullanicilar["hemsire.demir"]
     cra = kullanicilar["burak.sen"]
     gecikmeli_merkez = cm.merkez_no == "03"
-    for i, (ad, gun, pencere) in enumerate(VARSAYILAN_VIZITLER):
+    for i, (ad, gun, pencere) in enumerate(ecrf.VIZIT_SABLONLARI["standart"]):
         plan = gn.randomizasyon_tarihi + timedelta(days=gun)
-        v = Vizit(gonullu_id=gn.id, ad=ad, sira=i, planlanan=plan, pencere_gun=pencere, durum="planli")
+        v = Vizit(gonullu_id=gn.id, vizit_tanimi_id=tanimlar[ad].id if ad in tanimlar else None, ad=ad, sira=i,
+                  planlanan=plan, pencere_gun=pencere, durum="planli")
         if plan <= son_gun:
             kayma = int(r.gauss(0, 1.4 if not gecikmeli_merkez else 4))
             v.gerceklesen = plan + timedelta(days=kayma)
@@ -619,7 +578,7 @@ def _vizit_ve_formlar(db, c, gn, cm, r, son_gun, kullanicilar):
         db.flush()
         if v.gerceklesen:
             for kod, f in formlar.items():
-                if f.vizit_adi and f.vizit_adi != ad:
+                if not f.vizitte_var(ad):
                     continue
                 if kod in ("CM",) and r.random() < 0.5:
                     continue

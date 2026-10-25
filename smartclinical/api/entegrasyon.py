@@ -9,7 +9,7 @@ from ..db import get_db
 from ..models import Calisma, Gonullu, Hasta, Kullanici, Merkez
 from ..models._ortak import simdi
 from ..services import denetim
-from ..services.yetki import gerekli
+from ..services.yetki import calisma_erisimi, gerekli
 
 router = APIRouter()
 
@@ -21,6 +21,8 @@ def research_study(cid: int, db: Session = Depends(get_db), k: Kullanici = Depen
     c = db.get(Calisma, cid)
     if not c:
         raise HTTPException(404)
+    if not calisma_erisimi(db, k, c):
+        raise HTTPException(403, "Bu çalışmaya erişiminiz yok")
     return calisma_to_research_study(c)
 
 
@@ -31,6 +33,8 @@ def research_subject(gid: int, db: Session = Depends(get_db), k: Kullanici = Dep
     g = db.get(Gonullu, gid)
     if not g:
         raise HTTPException(404)
+    if not calisma_erisimi(db, k, g.calisma):
+        raise HTTPException(403, "Bu çalışmaya erişiminiz yok")
     return gonullu_to_research_subject(g)
 
 
