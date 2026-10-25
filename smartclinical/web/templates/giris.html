@@ -20,6 +20,7 @@
     <div class="giris-dip">
       Bu sistem yalnızca yetkili kullanıcılar içindir. Tüm işlemler kullanıcı kimliği, tarih ve saat ile denetim izine kaydedilir (21 CFR Part 11, EU Annex 11).
       Hasta verileri kurum dışına aktarılmaz; sistem hastane ağı içinde çalışır.<br>
+      {% if kurulum and kurulum.kurum_adi %}<span style="color:#9aa">{{ kurulum.kurum_adi }} · {{ kurulum.mod_etiket }}</span><br>{% endif %}
       <span style="color:#9aa">Sürüm {{ surum }} · Destek: destek@ebm-cro.com</span>
     </div>
   </div>

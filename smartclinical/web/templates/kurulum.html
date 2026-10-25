@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>İlk kurulum · EBM SmartClinical</title>
+<link rel="stylesheet" href="/static/css/uygulama.css">
+<style>
+.giris-kutu.genis { width: 640px; max-width: 96vw; }
+.mod-kartlar { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
+.mod-kartlar label { display: block; border: 1px solid var(--gri-300); border-radius: var(--yaricap); padding: 10px; cursor: pointer; font-weight: 400; color: var(--metin); }
+.mod-kartlar label:has(input:checked) { border-color: var(--turkuaz); background: var(--turkuaz-acik); }
+.mod-kartlar input { margin-right: 4px; }
+.mod-kartlar b { display: block; font-size: 13px; margin-bottom: 2px; }
+.mod-kartlar small { font-size: 11.5px; color: var(--gri-500); line-height: 1.35; display: block; }
+</style>
+</head>
+<body>
+<div class="giris-kabuk">
+  <div class="giris-kutu genis">
+    <h1>EBM SmartClinical – ilk kurulum</h1>
+    <div class="alt-yazi">Kullanım modunu seçin, kurumunuzu ve yönetici hesabını tanımlayın. Hepsi sonradan Ayarlar'dan değiştirilebilir.</div>
+    {% if hata %}<div class="mesaj hata">{{ hata }}</div>{% endif %}
+    <form method="post" action="/kurulum">
+      <label>Kullanım modu</label>
+      <div class="mod-kartlar">
+        <label><input type="radio" name="mod" value="tekil" {{ 'checked' if (veri.get('mod') or 'tekil') == 'tekil' }}><b>Tekil araştırmacı</b><small>Tek merkezde kendi çalışmanızı yürütüyorsunuz; menü ve sihirbaz en sade halinde.</small></label>
+        <label><input type="radio" name="mod" value="universite" {{ 'checked' if veri.get('mod') == 'universite' }}><b>Üniversite / hastane</b><small>Bölümler ve araştırmacılar bir kurum çatısı altında; kurum izni ve etik kurul takibi.</small></label>
+        <label><input type="radio" name="mod" value="cro" {{ 'checked' if veri.get('mod') == 'cro' }}><b>CRO / sponsor</b><small>Çok merkezli, sponsorlu çalışmalar; tam menü, TİTCK ve KVKK başvuruları.</small></label>
+      </div>
+      <div class="alan"><label>Kurum adı</label><input type="text" name="kurum_adi" value="{{ veri.get('kurum_adi', '') }}" required placeholder="ör. Mustafa Kemal Üniversitesi Tıp Fakültesi"><div class="yardim">Protokol kodu önerisi bu addan türetilir (MKU-2026-001).</div></div>
+      <div id="merkez-alanlari">
+        <div class="ikili">
+          <div class="alan"><label>Merkez (hastane) adı</label><input type="text" name="merkez_adi" value="{{ veri.get('merkez_adi', '') }}" placeholder="Boş bırakılırsa kurum adı kullanılır"></div>
+          <div class="alan"><label>Şehir</label><input type="text" name="merkez_sehir" value="{{ veri.get('merkez_sehir', '') }}"></div>
+        </div>
+      </div>
+      <div class="ayrac"></div>
+      <div class="ikili">
+        <div class="alan"><label>Yönetici kullanıcı adı</label><input type="text" name="kullanici_adi" value="{{ veri.get('kullanici_adi', '') }}" autocomplete="username" required></div>
+        <div class="alan"><label>Ad Soyad</label><input type="text" name="ad_soyad" value="{{ veri.get('ad_soyad', '') }}" required></div>
+      </div>
+      <div class="ikili">
+        <div class="alan"><label>E-posta</label><input type="email" name="eposta" value="{{ veri.get('eposta', '') }}" required></div>
+        <div class="alan"><label>Parola</label><input type="password" name="parola" autocomplete="new-password" required><div class="yardim">En az 10 karakter, harf ve rakam.</div></div>
+      </div>
+      <button class="btn birincil" type="submit" style="width:100%;padding:8px">Kurulumu tamamla</button>
+    </form>
+    <div class="giris-dip">Kurulum işlemi denetim izine yazılır. Mod yalnızca menüyü, varsayılanları ve çalışma sihirbazını sadeleştirir; yetkiler rol bazlıdır.</div>
+  </div>
+</div>
+<script>
+(function () {
+  var radyolar = document.querySelectorAll('input[name=mod]');
+  var alanlar = document.getElementById('merkez-alanlari');
+  var sehir = alanlar.querySelector('input[name=merkez_sehir]');
+  function guncelle() {
+    var mod = document.querySelector('input[name=mod]:checked').value;
+    var goster = mod !== 'cro';
+    alanlar.hidden = !goster;
+    sehir.required = goster;
+  }
+  radyolar.forEach(function (r) { r.addEventListener('change', guncelle); });
+  guncelle();
+})();
+</script>
+</body>
+</html>

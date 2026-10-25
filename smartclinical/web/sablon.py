@@ -6,6 +6,7 @@ from fastapi.templating import Jinja2Templates
 from .. import __version__
 from ..models.calisma import DURUM_ETIKET, DURUM_SIRASI, TUR_ETIKET
 from ..models.kullanici import ROL_ETIKET
+from ..models.kurulum import MOD_ETIKET, KurulumAyari
 from ..services.yetki import izinli
 
 sablonlar = Jinja2Templates(directory=Path(__file__).parent / "templates")
@@ -56,11 +57,31 @@ sablonlar.env.globals.update({
     "DURUM_SIRASI": DURUM_SIRASI,
     "TUR_ETIKET": TUR_ETIKET,
     "ROL_ETIKET": ROL_ETIKET,
+    "MOD_ETIKET": MOD_ETIKET,
     "bugun": date.today,
+    # goster() disinda render edilen sayfalar (hata.html) icin gecici varsayilan; goster istek basina gercegini koyar
+    "kurulum": KurulumAyari(id=1, mod="tekil", kurum_adi=""),
 })
+
+
+def kurulum_ayari(request) -> KurulumAyari:
+    """Istek basina bir sorgu: mod ve kurum varsayilanlari request.state'te saklanir."""
+    a = getattr(request.state, "kurulum", None)
+    if a is None:
+        from ..db import oturum_fabrikasi
+        from ..services.kurulum import ayar_getir
+
+        db = oturum_fabrikasi()()
+        try:
+            a = ayar_getir(db)
+        finally:
+            db.close()
+        request.state.kurulum = a
+    return a
 
 
 def goster(request, ad: str, **baglam):
     baglam.setdefault("kullanici", getattr(request.state, "kullanici", None))
     baglam.setdefault("mesaj", request.session.pop("mesaj", None) if hasattr(request, "session") else None)
+    baglam.setdefault("kurulum", kurulum_ayari(request))
     return sablonlar.TemplateResponse(request, ad, baglam)
