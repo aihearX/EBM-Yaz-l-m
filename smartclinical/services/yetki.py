@@ -4,12 +4,13 @@ import hmac
 import os
 
 from fastapi import Depends, HTTPException, Request, status
-from sqlalchemy import select
+from sqlalchemy import false, func, select
 from sqlalchemy.orm import Session
 
 from ..db import get_db
-from ..models import Kullanici, Rol
+from ..models import Calisma, CalismaMerkez, Kullanici, Rol
 from ..models._ortak import simdi
+from ..models.ekip import CalismaUyesi
 
 ITERASYON = 200_000
 MAKS_HATALI_GIRIS = 5
@@ -99,8 +100,7 @@ def mevcut_kullanici_opsiyonel(request: Request, db: Session = Depends(get_db)) 
     return db.get(Kullanici, kid) if kid else None
 
 
-# Rol -> izin verilen islemler. Ince taneli yetkiler icin yeterli; ileride
-# calisma bazli atama (kullanici x calisma x rol) eklenecek. TODO(mert): bkz. #142
+# Rol -> izin verilen islemler. Rol globaldir; calisma bazli gorunurluk icin bkz. calisma_erisimi (#142)
 IZINLER: dict[str, set[Rol]] = {
     "calisma.olustur": {Rol.YONETICI, Rol.SPONSOR, Rol.PROJE_YONETICISI},
     "calisma.duzenle": {Rol.YONETICI, Rol.SPONSOR, Rol.PROJE_YONETICISI},
@@ -122,7 +122,14 @@ IZINLER: dict[str, set[Rol]] = {
     "kullanici.yonet": {Rol.YONETICI},
     "bdm.kullan": {Rol.YONETICI, Rol.ARASTIRMACI, Rol.KOORDINATOR, Rol.PROJE_YONETICISI, Rol.CRA},
     "disa_aktar": {Rol.YONETICI, Rol.VERI_YONETICISI, Rol.ISTATISTIKCI},
+    "ekip.yonet": {Rol.YONETICI, Rol.PROJE_YONETICISI},
+    "analiz.goruntule": {Rol.YONETICI, Rol.PROJE_YONETICISI, Rol.ARASTIRMACI, Rol.VERI_YONETICISI, Rol.ISTATISTIKCI},
 }
+
+# Calisma ekibine atanabilen roller. Diger roller baska bir yoldan erisir:
+# yonetici/denetci her calismaya, sponsor kurumuna, arastirmaci/koordinator merkezine gore.
+ATANABILIR_ROLLER = {Rol.PROJE_YONETICISI, Rol.CRA, Rol.VERI_YONETICISI, Rol.ISTATISTIKCI, Rol.FARMAKOVIJILANS}
+MERKEZ_ROLLERI = (Rol.ARASTIRMACI, Rol.KOORDINATOR)
 
 
 def izinli(kullanici: Kullanici, izin: str) -> bool:
@@ -139,3 +146,47 @@ def gerekli(izin: str):
         return k
 
     return _bagimlilik
+
+
+# --- Calisma bazli gorunurluk -----------------------------------------------
+
+def kisit_aktif(db: Session) -> bool:
+    """Herhangi bir calismada atama varsa True. Tek count sorgusu; tablo bosken (tekil kurulum) kisit yok."""
+    return (db.scalar(select(func.count(CalismaUyesi.id))) or 0) > 0
+
+
+def calisma_erisimi(db: Session, k: Kullanici, c: Calisma) -> bool:
+    if k.rol in (Rol.YONETICI, Rol.DENETCI):
+        return True
+    if k.rol == Rol.SPONSOR:
+        return c.sponsor == (k.kurum or "")
+    if k.rol in MERKEZ_ROLLERI:
+        # merkezi tanimsiz arastirmaci/koordinator icin mevcut davranis korunur (kisit yok)
+        return not k.merkez_id or any(cm.merkez_id == k.merkez_id for cm in c.merkezler)
+    if k.rol in ATANABILIR_ROLLER:
+        if not kisit_aktif(db):
+            return True
+        return db.scalar(select(CalismaUyesi.id).where(CalismaUyesi.calisma_id == c.id,
+                                                       CalismaUyesi.kullanici_id == k.id).limit(1)) is not None
+    return False
+
+
+def calisma_filtresi(db: Session, k: Kullanici, sorgu):
+    """select(Calisma) sorgusunu calisma_erisimi ile ayni kurallarla daraltir.
+
+    Merkez join'i satir cogaltabilir; cagiran .unique() kullanmali.
+    """
+    if k.rol in (Rol.YONETICI, Rol.DENETCI):
+        return sorgu
+    if k.rol == Rol.SPONSOR:
+        return sorgu.where(Calisma.sponsor == (k.kurum or ""))
+    if k.rol in MERKEZ_ROLLERI:
+        if not k.merkez_id:
+            return sorgu
+        return sorgu.join(Calisma.merkezler).where(CalismaMerkez.merkez_id == k.merkez_id)
+    if k.rol in ATANABILIR_ROLLER:
+        if not kisit_aktif(db):
+            return sorgu
+        uyelik = select(CalismaUyesi.calisma_id).where(CalismaUyesi.kullanici_id == k.id)
+        return sorgu.where(Calisma.id.in_(uyelik))
+    return sorgu.where(false())

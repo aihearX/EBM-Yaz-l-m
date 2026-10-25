@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block baslik %}{{ c.kod }} · Ekip{% endblock %}
+{% block yol %}<a href="/calismalar">Çalışmalar</a> › <a href="/calismalar/{{ c.id }}">{{ c.kod }}</a> › Ekip{% endblock %}
+{% block icerik %}
+{% include "calismalar/_baslik.html" %}
+{% set yonetir = izinli(kullanici, 'ekip.yonet') %}
+<div class="mesaj {{ 'bilgi' if kisit else 'uyari' }}">
+  {% if kisit %}Atama kısıtı etkin: proje yöneticisi, CRA, veri yöneticisi, istatistikçi ve farmakovijilans kullanıcıları yalnızca atandıkları çalışmaları görür.
+  {% else %}Henüz hiçbir çalışmada atama yok; tüm ekip üyeleri tüm çalışmaları görür. İlk atamayla birlikte atanabilir roller yalnızca atandıkları çalışmaları görmeye başlar.{% endif %}
+</div>
+<div class="izgara {{ 'k21' if yonetir }}">
+  <div>
+    <div class="kart">
+      <h2>Çalışma ekibi</h2>
+      {% if uyeler %}
+      <table>
+        <tr><th>Ad Soyad</th><th>Rol</th><th>Merkez / kurum</th><th>Eklenme</th>{% if yonetir %}<th></th>{% endif %}</tr>
+        {% for u in uyeler %}
+        <tr>
+          <td><b>{{ u.kullanici.ad_soyad }}</b><br><small>{{ u.kullanici.kullanici_adi }}</small></td>
+          <td>{{ u.kullanici.rol_etiket }}</td>
+          <td>{{ u.kullanici.merkez.ad if u.kullanici.merkez else (u.kullanici.kurum or '—') }}</td>
+          <td>{{ u.olusturma|tarih }}{% if u.ekleyen %}<br><small>{{ u.ekleyen.ad_soyad }}</small>{% endif %}</td>
+          {% if yonetir %}<td class="sag">{% if u.kullanici_id != kullanici.id %}<form method="post" action="/calismalar/{{ c.id }}/ekip/{{ u.id }}/cikar" class="inline"><button class="btn kucuk">Çıkar</button></form>{% else %}<small>siz</small>{% endif %}</td>{% endif %}
+        </tr>
+        {% endfor %}
+      </table>
+      {% else %}
+      <p class="not">Bu çalışmaya atanmış ekip üyesi yok.</p>
+      {% endif %}
+    </div>
+    <div class="kart">
+      <h2>Merkez üzerinden erişenler</h2>
+      {% if merkezden %}
+      <table>
+        <tr><th>Ad Soyad</th><th>Rol</th><th>Merkez</th><th></th></tr>
+        {% for u in merkezden %}
+        <tr><td><b>{{ u.ad_soyad }}</b></td><td>{{ u.rol_etiket }}</td><td>{{ u.merkez.ad if u.merkez else '—' }}</td><td><small>merkez üzerinden erişir</small></td></tr>
+        {% endfor %}
+      </table>
+      {% else %}
+      <p class="not">Araştırmacı ve koordinatörler ekibe eklenmez; çalışmanın merkezlerinden birine bağlıysa kendiliğinden erişir.</p>
+      {% endif %}
+    </div>
+  </div>
+  {% if yonetir %}
+  <div class="kart">
+    <h2>Ekibe ekle</h2>
+    <form method="get" class="satir" style="margin-bottom:10px">
+      <input type="text" name="q" value="{{ q }}" placeholder="Ad veya kullanıcı adı" style="flex:1">
+      <button class="btn">Ara</button>
+    </form>
+    {% if adaylar %}
+    <table>
+      <tr><th>Ad Soyad</th><th>Rol</th><th></th></tr>
+      {% for u in adaylar %}
+      <tr>
+        <td><b>{{ u.ad_soyad }}</b><br><small>{{ u.kullanici_adi }}{% if u.kurum %} · {{ u.kurum }}{% endif %}</small></td>
+        <td>{{ u.rol_etiket }}</td>
+        <td class="sag"><form method="post" action="/calismalar/{{ c.id }}/ekip/ekle" class="inline"><input type="hidden" name="kullanici_id" value="{{ u.id }}"><button class="btn kucuk birincil">Ekle</button></form></td>
+      </tr>
+      {% endfor %}
+    </table>
+    {% else %}
+    <p class="not">{% if q %}Aramaya uyan eklenebilir kullanıcı yok.{% else %}Eklenebilir kullanıcı kalmadı. Yeni kullanıcıyı <a href="/yonetim/kullanicilar">Kullanıcılar</a> sayfasından açın.{% endif %}</p>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
