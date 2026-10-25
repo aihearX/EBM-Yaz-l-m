@@ -13,13 +13,14 @@
 <div class="izgara k2">
   <div class="kart">
     <h2>Araştırmacılar</h2>
-    <table class="sikisik"><tr><th>Ad Soyad</th><th>Unvan</th><th>Uzmanlık</th><th>GCP eğitimi</th><th class="sag">Tamamlanan çalışma</th></tr>
-      {% for a in m.arastirmacilar %}<tr><td>{{ a.ad_soyad }}</td><td>{{ a.unvan or '—' }}</td><td>{{ a.uzmanlik or '—' }}</td><td>{{ a.gcp_egitim_tarihi|tarih }}{% if a.gcp_egitim_tarihi and (a.gcp_egitim_tarihi|gun_farki) > 730 %} <span class="rozet sari">yenilenmeli</span>{% endif %}</td><td class="sayi">{{ a.tamamlanan_calisma }}</td></tr>{% else %}<tr><td colspan="5" class="kucuk">Kayıt yok.</td></tr>{% endfor %}
+    <table class="sikisik"><tr><th>Ad Soyad</th><th>Unvan</th><th>{{ 'Bölüm' if kurulum.mod == 'universite' else 'Uzmanlık' }}</th><th>GCP eğitimi</th><th class="sag">Tamamlanan çalışma</th></tr>
+      {% for a in m.arastirmacilar %}<tr><td>{{ a.ad_soyad }}</td><td>{{ a.unvan or '—' }}</td><td>{{ (a.bolum if kurulum.mod == 'universite' else a.uzmanlik) or '—' }}</td><td>{{ a.gcp_egitim_tarihi|tarih }}{% if a.gcp_egitim_tarihi and (a.gcp_egitim_tarihi|gun_farki) > 730 %} <span class="rozet sari">yenilenmeli</span>{% endif %}</td><td class="sayi">{{ a.tamamlanan_calisma }}</td></tr>{% else %}<tr><td colspan="5" class="kucuk">Kayıt yok.</td></tr>{% endfor %}
     </table>
     {% if izinli(kullanici, 'merkez.yonet') %}<details style="margin-top:8px"><summary>Araştırmacı ekle</summary>
     <form method="post" action="/merkezler/{{ m.id }}/arastirmaci" style="margin-top:6px">
       <div class="ikili"><div class="alan"><label>Ad Soyad</label><input type="text" name="ad_soyad" required></div><div class="alan"><label>Unvan</label><input type="text" name="unvan"></div></div>
-      <div class="ikili"><div class="alan"><label>Uzmanlık</label><input type="text" name="uzmanlik"></div><div class="alan"><label>GCP eğitim tarihi</label><input type="date" name="gcp_egitim_tarihi"></div></div>
+      <div class="ikili"><div class="alan"><label>Uzmanlık</label><input type="text" name="uzmanlik"></div><div class="alan"><label>Bölüm (anabilim dalı)</label><input type="text" name="bolum"></div></div>
+      <div class="alan"><label>GCP eğitim tarihi</label><input type="date" name="gcp_egitim_tarihi"></div>
       <button class="btn">Ekle</button></form></details>{% endif %}
   </div>
   <div class="kart">

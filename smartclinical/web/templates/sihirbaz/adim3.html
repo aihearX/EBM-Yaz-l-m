@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block baslik %}Yeni çalışma · Merkez ve ekip{% endblock %}
+{% block yol %}<a href="/calismalar">Çalışmalar</a> › Yeni çalışma{% endblock %}
+{% block icerik %}
+{% include "sihirbaz/_adimlar.html" %}
+<form method="post" action="/sihirbaz/3" class="kart" style="max-width:860px">
+{% if mod == 'tekil' %}
+  {% if ayar.varsayilan_merkez %}
+  <input type="hidden" name="merkez_id" value="{{ ayar.varsayilan_merkez_id }}">
+  <table class="sikisik" style="max-width:520px"><tr><th>Merkez</th><td>{{ ayar.varsayilan_merkez.ad }} ({{ ayar.varsayilan_merkez.sehir }})</td></tr>
+    <tr><th>Baş araştırmacı</th><td>{{ k.ad_soyad }} <span class="rozet">siz</span></td></tr></table>
+  {% else %}
+  <div class="mesaj uyari">Varsayılan merkez tanımlı değil. Ayarlar'dan bir merkez seçin ya da aşağıdan seçin.</div>
+  <div class="alan"><label>Merkez</label><select name="merkez_id">{% for m in merkezler %}<option value="{{ m.id }}" {{ 'selected' if veri.merkez_id == m.id }}>{{ m.ad }} ({{ m.sehir }})</option>{% endfor %}</select></div>
+  {% endif %}
+  <div class="ayrac"></div>
+  <details {{ 'open' if veri.koordinator }}><summary>Koordinatör hesabı oluştur (isteğe bağlı)</summary>
+    <div class="yardim" style="margin:4px 0 8px">Çalışma koordinatörü veri girişi ve gönüllü takibi yapabilir; hesap merkezinize bağlanır. Geçici parolayı kendisine iletin.</div>
+    <div class="ikili"><div class="alan"><label>Kullanıcı adı</label><input type="text" name="koord_kullanici_adi" value="{{ veri.koordinator.kullanici_adi if veri.koordinator else '' }}"></div>
+      <div class="alan"><label>Ad Soyad</label><input type="text" name="koord_ad_soyad" value="{{ veri.koordinator.ad_soyad if veri.koordinator else '' }}"></div></div>
+    <div class="ikili"><div class="alan"><label>E-posta</label><input type="email" name="koord_eposta" value="{{ veri.koordinator.eposta if veri.koordinator else '' }}"></div>
+      <div class="alan"><label>Geçici parola</label><input type="password" name="koord_parola" autocomplete="new-password"><div class="yardim">En az 10 karakter, harf ve rakam.</div></div></div>
+  </details>
+{% elif mod == 'universite' %}
+  <div class="izgara k2">
+    <div class="alan"><label>Merkez</label><select name="merkez_id">{% for m in merkezler %}<option value="{{ m.id }}" {{ 'selected' if veri.merkez_id == m.id }}>{{ m.ad }} ({{ m.sehir }})</option>{% endfor %}</select></div>
+    <div class="alan"><label>Bölüm (anabilim dalı)</label><input type="text" name="bolum" list="bolum-liste" value="{{ veri.bolum }}"><datalist id="bolum-liste">{% for b in bolumler %}<option value="{{ b }}">{% endfor %}</datalist></div>
+  </div>
+  <div class="izgara k2">
+    <div class="alan"><label>Baş araştırmacı</label><select name="bas_arastirmaci_id"><option value="">Yeni ekle (adı sağda)</option>{% for a in arastirmacilar %}<option value="{{ a.id }}" {{ 'selected' if veri.bas_arastirmaci_id == a.id }}>{{ a.ad_soyad }}{% if a.bolum %} · {{ a.bolum }}{% endif %}</option>{% endfor %}</select></div>
+    <div class="alan"><label>Yeni baş araştırmacı adı</label><input type="text" name="bas_arastirmaci_ad" value="{{ veri.bas_arastirmaci_ad or '' if not veri.bas_arastirmaci_id else '' }}" placeholder="Prof. Dr. ..."></div>
+  </div>
+  <div class="yardim">Merkez listesi başka bir merkezden araştırmacı seçmek için sayfayı yeniden yüklemez; önce merkezi seçip Devam'a basın, Geri ile dönünce liste güncellenir.</div>
+{% else %}
+  <h2>Merkezler</h2>
+  <div class="yardim" style="margin-bottom:8px">Çalışmaya eklenecek merkezleri işaretleyin ve hedef gönüllü sayısını girin. Sonradan Merkezler sekmesinden de eklenebilir.</div>
+  <table class="sikisik"><tr><th></th><th>Merkez</th><th>Şehir</th><th style="width:140px">Hedef gönüllü</th></tr>
+    {% for m in merkezler %}<tr><td><input type="checkbox" name="merkez_id" value="{{ m.id }}" {{ 'checked' if m.id in secili }}></td><td>{{ m.ad }}</td><td>{{ m.sehir }}</td>
+      <td><input type="number" name="hedef_{{ m.id }}" min="0" value="{{ secili.get(m.id, 0) }}"></td></tr>{% else %}<tr><td colspan="4" class="kucuk">Henüz merkez kaydı yok.</td></tr>{% endfor %}
+  </table>
+  <label style="font-weight:400;margin-top:8px"><input type="checkbox" name="sonra" value="1" {{ 'checked' if veri.sonra }}> Merkezleri sonra ekle</label>
+{% endif %}
+  <div style="margin-top:14px"><a class="btn" href="/sihirbaz/2">Geri</a> <button class="btn birincil">Devam</button></div>
+</form>
+{% endblock %}

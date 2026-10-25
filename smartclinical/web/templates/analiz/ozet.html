@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block baslik %}{{ c.kod }} · Analiz{% endblock %}
+{% block yol %}<a href="/calismalar">Çalışmalar</a> › <a href="/calismalar/{{ c.id }}">{{ c.kod }}</a> › Analiz{% endblock %}
+{% block icerik %}
+{% include "calismalar/_baslik.html" %}
+{% include "analiz/_stil.html" %}
+<div class="izgara k4" style="margin-bottom:16px">
+  <div class="olcum"><div class="etiket">Analize giren kayıt</div><div class="deger">{{ durum.analiz }}</div><div class="alt">{{ durum.taslak }} taslak hariç tutuldu</div></div>
+  <div class="olcum"><div class="etiket">Kilitli oranı</div><div class="deger {{ 'iyi' if not durum.on_analiz else 'uyari' }}">{{ durum.kilitli_oran|yuzde }}</div><div class="alt">{{ durum.kilitli }} kilitli kayıt</div></div>
+  <div class="olcum"><div class="etiket">Gönüllü</div><div class="deger">{{ akis.toplam_gonullu }}</div><div class="alt">{{ akis.kollar|length }} kol sütunu</div></div>
+  <div class="olcum"><div class="etiket">Değişken</div><div class="deger">{{ degisken_sayisi }}</div><div class="alt">sayısal ve seçim alanları</div></div>
+</div>
+<div class="analiz-ust">
+  {% if durum.on_analiz %}<span class="rozet sari">Ön analiz: kilitlenmemiş veri içerir</span>{% else %}<span class="rozet yesil">Tüm kayıtlar kilitli</span>{% endif %}
+  <a class="btn" href="/calismalar/{{ c.id }}/analiz/advers-olaylar">Advers olay özeti</a>
+  <a class="btn" href="/calismalar/{{ c.id }}/analiz/veri-seti.csv">Analiz veri setini indir (CSV)</a>
+  <small>İndirme denetim izine yazılır; noktalı virgül ayraçlı, ondalık ayracı virgül.</small>
+</div>
+
+<div class="kart">
+  <h2>Gönüllü akışı</h2>
+  <table class="sikisik">
+    <tr><th></th>{% for k in akis.kollar %}<th class="sag">{{ k }}</th>{% endfor %}<th class="sag">Toplam</th></tr>
+    {% for s in akis.satirlar %}
+    <tr><td>{{ s.etiket }}{% if s.nedenler %}<div class="analiz-neden">{% for neden, n in s.nedenler %}{{ neden }}: {{ n }}{{ ' · ' if not loop.last }}{% endfor %}</div>{% endif %}</td>
+      {% for k in akis.kollar %}<td class="sayi">{{ s.kollar[k] }}</td>{% endfor %}<td class="sayi"><b>{{ s.toplam }}</b></td></tr>
+    {% endfor %}
+  </table>
+  <small>Tarama öncesi ve tarandı satırlarının toplamı çalışmadaki gönüllü sayısına ({{ akis.toplam_gonullu }}) eşittir. {% if kol_yok in akis.kollar %} Kol ataması randomizasyonda yapılır; önceki aşamalar "{{ kol_yok }}" sütununda görünür.{% endif %}</small>
+</div>
+
+<div class="kart">
+  <h2>Değişken özeti ve kol karşılaştırması</h2>
+  {% if degisken_sayisi %}
+  <form method="get" class="analiz-sec">
+    <div class="alan"><label for="degisken">Değişken</label>
+      <select name="degisken" id="degisken">
+        <option value="">Seçin</option>
+        {% for form_ad, liste in formlar.items() %}<optgroup label="{{ form_ad }}">
+          {% for d in liste %}<option value="{{ d.kod }}" {{ 'selected' if d.kod == degisken }}>{{ d.kod }} – {{ d.etiket }}</option>{% endfor %}
+        </optgroup>{% endfor %}
+      </select></div>
+    <div class="alan"><label for="vizit">Vizit</label>
+      <select name="vizit" id="vizit">
+        <option value="">Tüm vizitler</option>
+        {% if secili %}{% for v in secili.degisken.vizitler %}<option value="{{ v }}" {{ 'selected' if v == vizit }}>{{ v }}</option>{% endfor %}{% endif %}
+      </select></div>
+    <div class="alan"><button class="btn birincil" type="submit">Göster</button></div>
+  </form>
+  {% if secili %}{% include "analiz/degisken.html" %}{% else %}<p class="kucuk" style="margin-top:10px">Bir değişken seçin; kol bazında özet, uygun test ve grafik gösterilir. Vizit seçimi değişken seçildikten sonra daralır.</p>{% endif %}
+  {% else %}<p class="kucuk">Analiz edilebilir değişken yok: eCRF formlarında sayı veya seçim alanı tanımlı değil ya da henüz tamamlanmış kayıt yok.</p>{% endif %}
+</div>
+<div class="analiz-dip">{{ on_analiz_notu }}</div>
+{% endblock %}
+{% block script %}{% if secili %}<script>
+{% if secili.degisken.tip == 'sayisal' %}
+SCGrafik.kutu(document.getElementById("g-degisken"), {{ secili.grafik|tojson }});
+{% else %}
+SCGrafik.cubuk(document.getElementById("g-degisken"), {{ secili.grafik.etiketler|tojson }}, {{ secili.grafik.seriler|tojson }}, {yigili: true});
+{% endif %}
+</script>{% endif %}{% endblock %}

@@ -1,7 +1,94 @@
 {% extends "base.html" %}
-{% block baslik %}Merkezler{% endblock %}
-{% block yol %}Merkezler ve Araştırmacılar{% endblock %}
+{% block baslik %}{{ 'Bölümler ve Araştırmacılar' if ayar.mod == 'universite' else 'Merkezler' }}{% endblock %}
+{% block yol %}{{ 'Bölümler ve Araştırmacılar' if ayar.mod == 'universite' else 'Merkezler ve Araştırmacılar' }}{% endblock %}
 {% block icerik %}
+{% macro merkez_formu(m) %}
+  <div class="ikili">{% if not m %}<div class="alan"><label>Kod</label><input type="text" name="kod" required placeholder="IST-04"></div>{% endif %}<div class="alan"><label>Şehir</label><input type="text" name="sehir" value="{{ m.sehir if m else '' }}" required></div></div>
+  <div class="alan"><label>Kurum adı</label><input type="text" name="ad" value="{{ m.ad if m else '' }}" required></div>
+  <div class="alan"><label>Kurum türü</label><select name="kurum_tipi">{% for kod, etiket in kurum_tipleri %}<option value="{{ kod }}" {{ 'selected' if m and m.kurum_tipi == kod }}>{{ etiket }}</option>{% endfor %}</select></div>
+  <details {{ 'open' if m and (m.yatak_sayisi or m.hbys or m.terapotik_alanlar) }}><summary>Ayrıntılar</summary>
+    <div class="ikili" style="margin-top:6px"><div class="alan"><label>Yatak</label><input type="number" name="yatak_sayisi" value="{{ m.yatak_sayisi or '' if m else '' }}"></div>
+      <div class="alan"><label>HBYS</label><input type="text" name="hbys" value="{{ m.hbys or '' if m else '' }}" placeholder="ör. Nucleus, Probel, Sisoft"></div></div>
+    <div class="alan"><label>Terapötik alanlar (virgülle)</label><input type="text" name="terapotik_alanlar" value="{{ (m.terapotik_alanlar or [])|join(', ') if m else '' }}" placeholder="Onkoloji, Kardiyoloji"></div>
+    {% if m %}<div class="alan"><label>FHIR uç noktası</label><input type="text" name="fhir_uc_noktasi" value="{{ m.fhir_uc_noktasi or '' }}"></div>
+    <div class="alan"><label>Notlar</label><textarea name="notlar" style="min-height:50px">{{ m.notlar or '' }}</textarea></div>{% endif %}
+  </details>
+{% endmacro %}
+
+{% if ayar.mod == 'tekil' %}
+<div class="baslik-satiri"><div><h1>Merkezim</h1><small>Tekil araştırmacı modunda tek merkez kullanılır; çok merkezli çalışma için modu Ayarlar'dan değiştirin.</small></div></div>
+{% if tek %}
+<div class="izgara k2">
+  <div class="kart">
+    <h2><a href="/merkezler/{{ tek.m.id }}">{{ tek.m.ad }}</a></h2>
+    <div class="kucuk" style="color:var(--gri-500)">{{ tek.m.kod }} · {{ tek.m.sehir }} · {{ tek.m.kurum_tipi|replace('_', ' ') }}</div>
+    <div class="izgara k3" style="margin-top:12px">
+      <div class="olcum"><div class="etiket">Çalışma</div><div class="deger">{{ tek.p.calisma }}</div></div>
+      <div class="olcum"><div class="etiket">Randomize</div><div class="deger">{{ tek.p.kayit }}</div></div>
+      <div class="olcum"><div class="etiket">Araştırmacı</div><div class="deger">{{ tek.m.arastirmacilar|length }}</div></div>
+    </div>
+    <div class="ayrac"></div>
+    <table class="sikisik"><tr><th>HBYS</th><td>{{ tek.m.hbys or '—' }}</td></tr><tr><th>Veri bağlantısı</th><td>{% if tek.hasta %}<span class="rozet yesil">FHIR senkron</span>{% else %}<span class="rozet">yok</span>{% endif %}</td></tr></table>
+    <div style="margin-top:8px"><a class="btn" href="/merkezler/{{ tek.m.id }}">Araştırmacılar ve çalışma geçmişi</a></div>
+  </div>
+  {% if izinli(kullanici, 'merkez.yonet') %}
+  <div class="kart"><h2>Merkez bilgilerini düzenle</h2>
+    <form method="post" action="/merkezler/{{ tek.m.id }}/duzenle">{{ merkez_formu(tek.m) }}<button class="btn birincil">Kaydet</button></form>
+  </div>
+  {% endif %}
+</div>
+{% else %}
+<div class="kart"><p>Henüz merkez tanımlı değil.</p>
+  {% if izinli(kullanici, 'merkez.yonet') %}<form method="post" action="/merkezler">{{ merkez_formu(none) }}<button class="btn birincil">Ekle</button></form>{% endif %}</div>
+{% endif %}
+
+{% elif ayar.mod == 'universite' %}
+<div class="baslik-satiri">
+  <div><h1>Bölümler ve araştırmacılar</h1><small>{{ satirlar|length }} merkez · araştırmacılar anabilim dalına göre gruplanır</small></div>
+  <form class="satir" method="get">
+    <select name="bolum" style="width:220px"><option value="">Tüm bölümler</option>{% for b in bolumler %}<option value="{{ b }}" {{ 'selected' if b == bolum }}>{{ b }}</option>{% endfor %}</select>
+    <button class="btn">Süz</button>
+  </form>
+</div>
+<div class="izgara k21">
+  <div>
+    {% for ad, liste in gruplar %}
+    <div class="kart">
+      <h2>{{ ad or 'Bölümü belirtilmemiş' }} <span class="rozet">{{ liste|length }}</span></h2>
+      <table class="sikisik"><tr><th>Ad Soyad</th><th>Unvan</th><th>Uzmanlık</th><th>Merkez</th><th>GCP eğitimi</th></tr>
+        {% for a in liste %}<tr><td>{{ a.ad_soyad }}</td><td>{{ a.unvan or '—' }}</td><td>{{ a.uzmanlik or '—' }}</td><td><a href="/merkezler/{{ a.merkez_id }}">{{ a.merkez.ad }}</a></td><td>{{ a.gcp_egitim_tarihi|tarih }}</td></tr>{% endfor %}
+      </table>
+    </div>
+    {% else %}
+    <div class="kart"><p>Henüz araştırmacı kaydı yok. Merkez sayfasından veya aşağıdaki formla ekleyin.</p></div>
+    {% endfor %}
+    <div class="kart">
+      <h2>Merkezler</h2>
+      <table class="sikisik"><tr><th>Kod</th><th>Merkez</th><th>Şehir</th><th class="sag">Araştırmacı</th><th class="sag">Çalışma</th></tr>
+        {% for s in satirlar %}<tr><td>{{ s.m.kod }}</td><td><a href="/merkezler/{{ s.m.id }}"><b>{{ s.m.ad }}</b></a></td><td>{{ s.m.sehir }}</td><td class="sayi">{{ s.m.arastirmacilar|length }}</td><td class="sayi">{{ s.p.calisma }}</td></tr>{% endfor %}
+      </table>
+    </div>
+  </div>
+  <div>
+    {% if izinli(kullanici, 'merkez.yonet') and satirlar %}
+    <div class="kart">
+      <h2>Araştırmacı ekle</h2>
+      <form method="post" action="/merkezler/{{ (ayar.varsayilan_merkez_id or satirlar[0].m.id) }}/arastirmaci">
+        <div class="alan"><label>Ad Soyad</label><input type="text" name="ad_soyad" required></div>
+        <div class="alan"><label>Bölüm (anabilim dalı)</label><input type="text" name="bolum" list="bolum-liste" required><datalist id="bolum-liste">{% for b in bolumler %}<option value="{{ b }}">{% endfor %}</datalist></div>
+        <div class="ikili"><div class="alan"><label>Unvan</label><input type="text" name="unvan"></div><div class="alan"><label>Uzmanlık</label><input type="text" name="uzmanlik"></div></div>
+        <div class="alan"><label>GCP eğitim tarihi</label><input type="date" name="gcp_egitim_tarihi"></div>
+        <button class="btn">Ekle</button>
+      </form>
+    </div>
+    {% endif %}
+    {% if izinli(kullanici, 'merkez.yonet') %}
+    <div class="kart"><h2>Merkez ekle</h2><form method="post" action="/merkezler">{{ merkez_formu(none) }}<button class="btn birincil">Ekle</button></form></div>
+    {% endif %}
+  </div>
+</div>
+
+{% else %}
 <div class="baslik-satiri">
   <div><h1>Merkez kayıt defteri</h1><small>{{ satirlar|length }} merkez · geçmiş performans verileri Merkez Zekâsı modelini besler</small></div>
   <form class="satir" method="get"><input type="text" name="q" value="{{ q }}" placeholder="Merkez veya şehir" style="width:220px"><button class="btn">Ara</button></form>
@@ -21,19 +108,9 @@
   </div>
   <div>
     {% if izinli(kullanici, 'merkez.yonet') %}
-    <div class="kart">
-      <h2>Merkez ekle</h2>
-      <form method="post" action="/merkezler">
-        <div class="ikili"><div class="alan"><label>Kod</label><input type="text" name="kod" required placeholder="IST-04"></div><div class="alan"><label>Şehir</label><input type="text" name="sehir" required></div></div>
-        <div class="alan"><label>Kurum adı</label><input type="text" name="ad" required></div>
-        <div class="ikili"><div class="alan"><label>Kurum türü</label><select name="kurum_tipi"><option value="universite">Üniversite</option><option value="egitim_arastirma">Eğitim ve Araştırma</option><option value="sehir">Şehir Hastanesi</option><option value="ozel">Özel</option></select></div>
-          <div class="alan"><label>Yatak</label><input type="number" name="yatak_sayisi"></div></div>
-        <div class="alan"><label>HBYS</label><input type="text" name="hbys" placeholder="ör. Nucleus, Probel, Sisoft"></div>
-        <div class="alan"><label>Terapötik alanlar (virgülle)</label><input type="text" name="terapotik_alanlar" placeholder="Onkoloji, Kardiyoloji"></div>
-        <button class="btn birincil">Ekle</button>
-      </form>
-    </div>
+    <div class="kart"><h2>Merkez ekle</h2><form method="post" action="/merkezler">{{ merkez_formu(none) }}<button class="btn birincil">Ekle</button></form></div>
     {% endif %}
   </div>
 </div>
+{% endif %}
 {% endblock %}

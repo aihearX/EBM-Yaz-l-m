@@ -1,19 +1,34 @@
 {% extends "base.html" %}
-{% block baslik %}Sistem{% endblock %}
-{% block yol %}Yönetim › Sistem Durumu{% endblock %}
+{% block baslik %}Ayarlar{% endblock %}
+{% block yol %}Yönetim › Ayarlar{% endblock %}
 {% block icerik %}
-<div class="baslik-satiri"><div><h1>Sistem durumu</h1><small>EBM SmartClinical v{{ surum }}</small></div></div>
+<div class="baslik-satiri"><div><h1>Ayarlar</h1><small>Kullanım modu, kurum varsayılanları ve sistem bilgileri</small></div></div>
 <div class="izgara k2">
   <div class="kart">
-    <h2>Uygulama</h2>
+    <h2>Kullanım modu ve kurum</h2>
+    <form method="post" action="/yonetim/ayarlar">
+      <div class="alan"><label>Kullanım modu</label>
+        <select name="mod">{% for kod, etiket in modlar %}<option value="{{ kod }}" {{ 'selected' if ayar.mod == kod }}>{{ etiket }}</option>{% endfor %}</select>
+        <div class="yardim">Tekil: tek merkez, sade menü. Üniversite: bölümler ve araştırmacılar, kurum izni. CRO: çok merkez, tam menü.</div></div>
+      <div class="alan"><label>Kurum adı</label><input type="text" name="kurum_adi" value="{{ ayar.kurum_adi }}" required><div class="yardim">Yan menüde görünür; protokol kodu önerisi bu addan türetilir.</div></div>
+      <div class="ikili">
+        <div class="alan"><label>Varsayılan merkez</label>
+          <select name="varsayilan_merkez_id"><option value="">—</option>{% for m in merkezler %}<option value="{{ m.id }}" {{ 'selected' if ayar.varsayilan_merkez_id == m.id }}>{{ m.ad }} ({{ m.sehir }})</option>{% endfor %}</select></div>
+        <div class="alan"><label>Varsayılan sponsor</label><input type="text" name="varsayilan_sponsor" list="sponsorlar" value="{{ ayar.varsayilan_sponsor or '' }}">
+          <datalist id="sponsorlar">{% for s in sponsorlar %}<option value="{{ s }}">{% endfor %}</datalist></div>
+      </div>
+      <button class="btn birincil">Kaydet</button>
+    </form>
+  </div>
+  <div class="kart">
+    <h2>Sistem bilgileri</h2>
     <table class="sikisik">
       <tr><th>Sürüm</th><td>{{ surum }}</td></tr><tr><th>Ortam</th><td>{{ a.ortam }}</td></tr><tr><th>Veritabanı</th><td>{{ db_tur }}</td></tr>
       <tr><th>Python</th><td>{{ python }}</td></tr><tr><th>Platform</th><td>{{ platform }}</td></tr>
       <tr><th>Oturum süresi</th><td>{{ a.oturum_suresi_dk }} dk</td></tr><tr><th>Dosya dizini</th><td>{{ a.dosya_dizini }}</td></tr>
       <tr><th>HBYS FHIR sunucusu</th><td>{{ a.fhir_sunucu_url or 'merkez bazında tanımlı' }}</td></tr>
     </table>
-  </div>
-  <div class="kart">
+    <div class="ayrac"></div>
     <h2>Türkçe Klinik BDM</h2>
     <table class="sikisik">{% for k, v in bdm_durum.items() %}<tr><th>{{ k }}</th><td>{{ v }}</td></tr>{% endfor %}</table>
     <div class="not" style="margin-top:8px">Model hastane içindeki GPU sunucusunda (vLLM/llama.cpp) çalışır. Sunucuya erişilemediğinde sistem otomatik olarak kural tabanlı ayrıştırıcıya düşer ve bunu denetim izine yazar.</div>

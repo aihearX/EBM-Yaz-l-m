@@ -1,0 +1,6 @@
+<div class="baslik-satiri"><div><h1>Yeni çalışma</h1><small>{{ adim }}. adım: {{ adimlar[adim - 1][1] }} · {{ ayar.mod_etiket }} modu</small></div>
+  <div class="sag"><a class="btn kucuk" href="/sihirbaz/iptal">Vazgeç</a></div></div>
+<div class="adimlar" style="max-width:860px">
+  {% for n, etiket in adimlar %}<div class="adim {{ 'tamam' if n < adim else ('simdi' if n == adim) }}">{{ n }}. {{ etiket }}</div>{% endfor %}
+</div>
+{% if hata %}<div class="mesaj hata">{{ hata }}</div>{% endif %}

@@ -27,7 +27,7 @@
         <label><input type="radio" name="mod" value="universite" {{ 'checked' if veri.get('mod') == 'universite' }}><b>Üniversite / hastane</b><small>Bölümler ve araştırmacılar bir kurum çatısı altında; kurum izni ve etik kurul takibi.</small></label>
         <label><input type="radio" name="mod" value="cro" {{ 'checked' if veri.get('mod') == 'cro' }}><b>CRO / sponsor</b><small>Çok merkezli, sponsorlu çalışmalar; tam menü, TİTCK ve KVKK başvuruları.</small></label>
       </div>
-      <div class="alan"><label>Kurum adı</label><input type="text" name="kurum_adi" value="{{ veri.get('kurum_adi', '') }}" required placeholder="ör. Mustafa Kemal Üniversitesi Tıp Fakültesi"><div class="yardim">Protokol kodu önerisi bu addan türetilir (MKU-2026-001).</div></div>
+      <div class="alan"><label>Kurum adı</label><input type="text" name="kurum_adi" value="{{ veri.get('kurum_adi', '') }}" required placeholder="ör. Mustafa Kemal Üniversitesi Tıp Fakültesi"><div class="yardim">Protokol kodu önerisi bu addan türetilir (kısaltma-yıl-sıra, ör. MKU-yıl-001).</div></div>
       <div id="merkez-alanlari">
         <div class="ikili">
           <div class="alan"><label>Merkez (hastane) adı</label><input type="text" name="merkez_adi" value="{{ veri.get('merkez_adi', '') }}" placeholder="Boş bırakılırsa kurum adı kullanılır"></div>

@@ -9,9 +9,10 @@ from sqlalchemy.orm import Session
 from .. import __version__
 from ..config import ayarlar
 from ..db import get_db
-from ..models import DenetimKaydi, EImza, Kullanici, Merkez, Rol
+from ..models import Calisma, DenetimKaydi, EImza, Kullanici, Merkez, Rol
 from ..models._ortak import simdi
 from ..services import denetim, yetki
+from ..services import kurulum as kurulum_svc
 from ..services.yetki import gerekli
 from ._ortak import bilgi, ip
 from .sablon import goster
@@ -24,7 +25,10 @@ def kullanicilar(request: Request, k: Kullanici = Depends(gerekli("kullanici.yon
     request.state.kullanici = k
     liste = db.execute(select(Kullanici).order_by(Kullanici.rol, Kullanici.ad_soyad)).scalars().all()
     merkezler = db.execute(select(Merkez).order_by(Merkez.ad)).scalars().all()
-    return goster(request, "yonetim/kullanicilar.html", liste=liste, roller=Rol, merkezler=merkezler, hata=None)
+    ayar = kurulum_svc.ayar_getir(db)
+    # tekil modda merkez secimi gizlenir ve varsayilan merkez atanir; roller moda gore daralir
+    return goster(request, "yonetim/kullanicilar.html", liste=liste, roller=kurulum_svc.mod_rolleri(ayar.mod),
+                  merkezler=merkezler, hata=None, ayar=ayar)
 
 
 @router.post("/kullanicilar")
@@ -36,8 +40,15 @@ def kullanici_ekle(request: Request, k: Kullanici = Depends(gerekli("kullanici.y
     if hata:
         bilgi(request, hata)
         return RedirectResponse("/yonetim/kullanicilar", status_code=303)
+    ayar = kurulum_svc.ayar_getir(db)
+    if Rol(rol) not in kurulum_svc.mod_rolleri(ayar.mod):
+        bilgi(request, "Bu rol seçili kullanım modunda sunulmuyor; modu Ayarlar'dan değiştirin.")
+        return RedirectResponse("/yonetim/kullanicilar", status_code=303)
+    mid = int(merkez_id) if merkez_id else None
+    if ayar.mod == "tekil" and ayar.varsayilan_merkez_id:
+        mid = ayar.varsayilan_merkez_id
     y = Kullanici(kullanici_adi=kullanici_adi.strip().lower(), ad_soyad=ad_soyad, eposta=eposta,
-                  parola_hash=yetki.parola_hashle(parola), rol=Rol(rol), merkez_id=int(merkez_id) if merkez_id else None,
+                  parola_hash=yetki.parola_hashle(parola), rol=Rol(rol), merkez_id=mid,
                   parola_degisim=simdi())
     db.add(y)
     db.flush()
@@ -99,6 +110,7 @@ def denetim_dogrula(request: Request, k: Kullanici = Depends(gerekli("denetim.go
 
 @router.get("/sistem")
 def sistem(request: Request, k: Kullanici = Depends(gerekli("kullanici.yonet")), db: Session = Depends(get_db)):
+    """Ayarlar: kurulum modu ve kurum varsayilanlari ust kartta, sistem bilgileri ikinci kartta."""
     from ..services.bdm import BDMIstemci
 
     request.state.kullanici = k
@@ -107,9 +119,35 @@ def sistem(request: Request, k: Kullanici = Depends(gerekli("kullanici.yonet")),
     bdm_durum = istemci.durum()
     sayilar = {t.name: db.scalar(select(func.count()).select_from(t)) for t in
                __import__("smartclinical.db", fromlist=["Taban"]).Taban.metadata.sorted_tables}
+    merkezler = db.execute(select(Merkez).order_by(Merkez.ad)).scalars().all()
+    sponsorlar = [x for (x,) in db.execute(select(Calisma.sponsor).distinct().order_by(Calisma.sponsor)).all() if x]
     return goster(request, "yonetim/sistem.html", a=a, surum=__version__, python=sys.version.split()[0],
                   platform=platform.platform(), bdm_durum=bdm_durum, sayilar=sayilar,
-                  db_tur=a.db_url.split(":")[0])
+                  db_tur=a.db_url.split(":")[0], ayar=kurulum_svc.ayar_getir(db), modlar=kurulum_svc.MODLAR,
+                  merkezler=merkezler, sponsorlar=sponsorlar)
+
+
+@router.post("/ayarlar")
+def ayarlar_kaydet(request: Request, k: Kullanici = Depends(gerekli("kullanici.yonet")), db: Session = Depends(get_db),
+                   mod: str = Form(...), kurum_adi: str = Form(...), varsayilan_sponsor: str = Form(""),
+                   varsayilan_merkez_id: str = Form("")):
+    request.state.kullanici = k
+    if mod not in kurulum_svc.MOD_ETIKET:
+        bilgi(request, "Geçersiz kullanım modu.")
+        return RedirectResponse("/yonetim/sistem", status_code=303)
+    mid = int(varsayilan_merkez_id) if varsayilan_merkez_id else None
+    if mid and not db.get(Merkez, mid):
+        bilgi(request, "Seçilen merkez bulunamadı.")
+        return RedirectResponse("/yonetim/sistem", status_code=303)
+    if mod != "cro" and not mid:
+        bilgi(request, "Tekil ve üniversite modlarında bir varsayılan merkez seçilmeli; önce Merkezler sayfasından ekleyin.")
+        return RedirectResponse("/yonetim/sistem", status_code=303)
+    eski = denetim.varlik_sozluk(db.get(kurulum_svc.KurulumAyari, 1))
+    ayar = kurulum_svc.ayar_yaz(db, mod, kurum_adi, mid, varsayilan_sponsor)
+    denetim.kaydet(db, k, "guncelle", "kurulum_ayari", ayar.id, eski=eski, yeni=denetim.varlik_sozluk(ayar), ip=ip(request))
+    db.commit()
+    bilgi(request, f"Ayarlar kaydedildi. Kullanım modu: {ayar.mod_etiket}.")
+    return RedirectResponse("/yonetim/sistem", status_code=303)
 
 
 # --- API anahtarlari -------------------------------------------------------

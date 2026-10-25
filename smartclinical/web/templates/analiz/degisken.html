@@ -1,0 +1,37 @@
+{# ozet.html icine dahil edilir: secili degiskenin kol bazinda ozeti, test sonucu ve grafik #}
+{% set d = secili.degisken %}
+<div class="izgara k21" style="margin-top:14px">
+  <div>
+    <h3 style="margin:0 0 6px">{{ d.kod }} – {{ d.etiket }} <small>· {{ d.form }}{% if secili.vizit %} · {{ secili.vizit }}{% else %} · tüm vizitler{% endif %}</small></h3>
+    {% if d.tip == 'sayisal' %}
+    <table class="sikisik">
+      <tr><th></th>{% for k in secili.kollar %}<th class="sag">{{ k.ad }}</th>{% endfor %}<th class="sag">Toplam</th></tr>
+      {% for anahtar, etiket, basamak in [('n', 'n', 0), ('eksik', 'Eksik', 0), ('ortalama', 'Ortalama', 1), ('ss', 'SS', 1), ('medyan', 'Medyan', 1), ('caa', 'ÇAA', 1), ('min', 'En küçük', 1), ('maks', 'En büyük', 1)] %}
+      <tr><td>{{ etiket }}</td>{% for k in secili.kollar %}<td class="sayi">{{ k.ozet[anahtar]|sayi(basamak) }}</td>{% endfor %}<td class="sayi">{{ secili.toplam[anahtar]|sayi(basamak) }}</td></tr>
+      {% endfor %}
+    </table>
+    {% else %}
+    <table class="sikisik">
+      <tr><th>Düzey</th>{% for k in secili.kollar %}<th class="sag">{{ k.ad }}</th>{% endfor %}<th class="sag">Toplam</th></tr>
+      {% for dz in secili.toplam.duzeyler %}{% set i = loop.index0 %}
+      <tr><td>{{ dz.deger }}</td>{% for k in secili.kollar %}{% set h = k.ozet.duzeyler[i] %}<td class="sayi">{{ h.n }}{% if h.yuzde is not none %} <span class="kucuk">({{ h.yuzde|yuzde(1) }})</span>{% endif %}</td>{% endfor %}
+        <td class="sayi">{{ dz.n }}{% if dz.yuzde is not none %} <span class="kucuk">({{ dz.yuzde|yuzde(1) }})</span>{% endif %}</td></tr>
+      {% endfor %}
+      <tr><td>n</td>{% for k in secili.kollar %}<td class="sayi">{{ k.ozet.n }}</td>{% endfor %}<td class="sayi">{{ secili.toplam.n }}</td></tr>
+      <tr><td>Eksik</td>{% for k in secili.kollar %}<td class="sayi">{{ k.ozet.eksik }}</td>{% endfor %}<td class="sayi">{{ secili.toplam.eksik }}</td></tr>
+    </table>
+    {% endif %}
+    {% set t = secili.test %}
+    <div class="analiz-gerekce">
+      {% if t.test %}<b>{{ t.test }}</b>{% if t.istatistik is not none %} · istatistik {{ t.istatistik|sayi(3) }}{% endif %} · p = {{ t.p|sayi(4) }}
+      {% if t.p < 0.05 %}<span class="rozet turkuaz">p &lt; 0,05</span>{% endif %}
+      {% else %}<b>Test yapılmadı.</b>{% endif %}
+      <div>Gerekçe: {{ t.gerekce }}</div>
+      <div class="kucuk">Tek değişken için iki yönlü test; seçilen her değişken için ayrı test yapıldığından çoklu karşılaştırma düzeltmesi uygulanmamıştır.</div>
+    </div>
+  </div>
+  <div>
+    <div class="analiz-grafik" id="g-degisken"></div>
+    <small>{% if d.tip == 'sayisal' %}Kutu: Ç1–Ç3, kalın çizgi medyan, bıyıklar 1,5 × ÇAA içindeki en uç değerler, noktalar aykırı değerler.{% else %}Yığılmış çubuk: kol bazında düzey sayıları.{% endif %}</small>
+  </div>
+</div>

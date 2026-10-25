@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block baslik %}Yeni çalışma · Tasarım{% endblock %}
+{% block yol %}<a href="/calismalar">Çalışmalar</a> › Yeni çalışma{% endblock %}
+{% block icerik %}
+{% include "sihirbaz/_adimlar.html" %}
+<form method="post" action="/sihirbaz/2" class="kart" style="max-width:860px">
+  <h2>Kollar</h2>
+  <div id="kollar">
+    {% for kol in veri.kollar %}
+    <div class="ikili kol-satir"><div class="alan"><label>Kol adı</label><input type="text" name="kol_ad" value="{{ kol.ad }}" required></div>
+      <div class="alan" style="max-width:120px"><label>Randomizasyon oranı</label><input type="number" name="kol_oran" min="1" value="{{ kol.oran }}"></div></div>
+    {% endfor %}
+  </div>
+  <button type="button" class="btn kucuk" id="kol-ekle">Kol ekle</button> <span class="yardim" style="font-size:11.5px;color:var(--gri-500)">En çok {{ maks_kol }} kol. Tek kollu çalışmada olduğu gibi bırakın.</span>
+  <div class="ayrac"></div>
+  <h2>Vizit şablonu</h2>
+  {% for kod, etiket in sablonlar.items() %}
+  <label style="font-weight:400;margin-bottom:6px"><input type="radio" name="vizit_sablonu" value="{{ kod }}" {{ 'checked' if veri.vizit_sablonu == kod }}> {{ etiket }}
+    <span style="color:var(--gri-500)">— {% for ad, gun, pencere in sablon_satirlar[kod] %}{{ ad }} (g{{ gun }}){{ ', ' if not loop.last }}{% endfor %}</span></label>
+  {% endfor %}
+  <div class="yardim" style="margin-bottom:10px">Şablon sonradan tasarım sayfasında vizit ekleyerek/çıkararak uyarlanabilir.</div>
+  <div class="ayrac"></div>
+  <h2>Dahil etme ve hariç tutma kriterleri <small style="font-weight:400;color:var(--gri-500)">(isteğe bağlı, her satır bir kriter)</small></h2>
+  <div class="ikili">
+    <div class="alan"><label>Dahil etme</label><textarea name="dahil" placeholder="18 yaş ve üzeri&#10;Hemoglobin ≥ 9 g/dL">{{ veri.dahil }}</textarea></div>
+    <div class="alan"><label>Hariç tutma</label><textarea name="haric" placeholder="Gebe veya emziren kadınlar">{{ veri.haric }}</textarea></div>
+  </div>
+  <div class="yardim" style="margin-bottom:8px">Kriterler otomatik yapılandırılır ve onay bekler. </div>
+  <label style="font-weight:400"><input type="checkbox" name="protokol_var" value="1" {{ 'checked' if veri.protokol_var }}> Protokol metnim var: çalışma oluşunca protokolden taslak çıkarma sayfasına git (kriter, kol ve vizitler metinden önerilir).</label>
+  <div style="margin-top:14px"><a class="btn" href="/sihirbaz/1">Geri</a> <button class="btn birincil">Devam</button></div>
+</form>
+{% endblock %}
+{% block script %}
+<script>
+(function () {
+  var kap = document.getElementById('kollar'), maks = {{ maks_kol }};
+  document.getElementById('kol-ekle').addEventListener('click', function () {
+    var satirlar = kap.querySelectorAll('.kol-satir');
+    if (satirlar.length >= maks) return;
+    var yeni = satirlar[0].cloneNode(true);
+    yeni.querySelector('input[name=kol_ad]').value = 'Kol ' + String.fromCharCode(65 + satirlar.length);
+    yeni.querySelector('input[name=kol_oran]').value = 1;
+    kap.appendChild(yeni);
+    if (satirlar.length === 1 && satirlar[0].querySelector('input[name=kol_ad]').value === 'Tek kol')
+      satirlar[0].querySelector('input[name=kol_ad]').value = 'Kol A';
+  });
+})();
+</script>
+{% endblock %}

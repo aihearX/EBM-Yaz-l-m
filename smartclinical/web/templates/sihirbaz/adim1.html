@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block baslik %}Yeni çalışma · Temel bilgiler{% endblock %}
+{% block yol %}<a href="/calismalar">Çalışmalar</a> › Yeni çalışma{% endblock %}
+{% block icerik %}
+{% include "sihirbaz/_adimlar.html" %}
+<form method="post" action="/sihirbaz/1" class="kart" style="max-width:860px">
+  <div class="izgara k2">
+    <div class="alan"><label>Protokol kodu</label><input type="text" name="kod" value="{{ veri.kod }}" required><div class="yardim">Otomatik öneri: kurum kısaltması-yıl-sıra. Düzenleyebilirsiniz; benzersiz olmalı.</div></div>
+    <div class="alan"><label>Kısa ad</label><input type="text" name="kisa_ad" value="{{ veri.kisa_ad or '' }}" required placeholder="ör. HER2- meme Ca neoadjuvan"></div>
+  </div>
+  <div class="alan"><label>Tam başlık</label><input type="text" name="baslik" value="{{ veri.baslik or '' }}" required></div>
+  <div class="izgara k2">
+    <div class="alan"><label>Çalışma türü</label>
+      <select name="tur" id="tur">
+        <optgroup label="Sık kullanılan">{% for kod, etiket in sik_turler %}<option value="{{ kod }}" {{ 'selected' if veri.tur == kod }}>{{ etiket }}</option>{% endfor %}</optgroup>
+        <optgroup label="Diğer">{% for kod, etiket in diger_turler %}<option value="{{ kod }}" {{ 'selected' if veri.tur == kod }}>{{ etiket }}</option>{% endfor %}</optgroup>
+      </select></div>
+    <div class="alan" id="faz-alani" {{ 'hidden' if veri.tur not in faz_turleri }}><label>Faz</label>
+      <select name="faz"><option value="">—</option>{% for f in fazlar %}<option value="{{ f }}" {{ 'selected' if veri.faz == f }}>{{ f }}</option>{% endfor %}</select></div>
+  </div>
+  {% if mod == 'tekil' %}
+  <input type="hidden" name="sponsor" value="{{ veri.sponsor }}">
+  <div class="izgara k3">
+  {% else %}
+  <div class="izgara k2">
+    <div class="alan"><label>Sponsor</label><input type="text" name="sponsor" value="{{ veri.sponsor or '' }}" required {% if mod == 'cro' %}list="sponsor-liste"{% endif %}>
+      {% if mod == 'cro' %}<datalist id="sponsor-liste">{% for s in sponsorlar %}<option value="{{ s }}">{% endfor %}</datalist>{% endif %}</div>
+  {% endif %}
+    <div class="alan"><label>Terapötik alan</label><input type="text" name="terapotik_alan" value="{{ veri.terapotik_alan or '' }}" required placeholder="Onkoloji"></div>
+  {% if mod != 'tekil' %}</div><div class="izgara k2">{% endif %}
+    <div class="alan"><label>Hedef gönüllü</label><input type="number" name="hedef_hasta" min="0" value="{{ veri.hedef_hasta or 0 }}"></div>
+    <div class="alan"><label>Planlanan başlangıç</label><input type="date" name="baslangic" value="{{ veri.baslangic or '' }}"></div>
+  </div>
+  <button class="btn birincil">Devam</button> <a class="btn" href="/calismalar">Vazgeç</a>
+</form>
+{% endblock %}
+{% block script %}
+<script>
+(function () {
+  var fazli = {{ faz_turleri|tojson }};
+  var tur = document.getElementById('tur'), faz = document.getElementById('faz-alani');
+  function guncelle() { faz.hidden = fazli.indexOf(tur.value) < 0; }
+  tur.addEventListener('change', guncelle);
+  guncelle();
+})();
+</script>
+{% endblock %}

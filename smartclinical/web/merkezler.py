@@ -8,8 +8,9 @@ from sqlalchemy.orm import Session
 from ..db import get_db
 from ..models import Arastirmaci, Hasta, Kullanici, Merkez
 from ..services import denetim
+from ..services import kurulum as kurulum_svc
 from ..services.yetki import gerekli
-from ._ortak import ip, oturumlu
+from ._ortak import bilgi, ip, oturumlu
 from .sablon import goster
 
 router = APIRouter(prefix="/merkezler")
@@ -36,15 +37,36 @@ def _performans(m: Merkez) -> dict:
     }
 
 
+KURUM_TIPLERI = [("universite", "Üniversite"), ("egitim_arastirma", "Eğitim ve Araştırma"),
+                 ("sehir", "Şehir Hastanesi"), ("ozel", "Özel")]
+
+
 @router.get("")
-def liste(request: Request, k: Kullanici = Depends(oturumlu), db: Session = Depends(get_db), q: str = ""):
+def liste(request: Request, k: Kullanici = Depends(oturumlu), db: Session = Depends(get_db), q: str = "", bolum: str = ""):
+    """Mod bazli gorunum: tekil -> tek merkez karti; universite -> bolum bazinda arastirmacilar; cro -> tablo."""
+    ayar = kurulum_svc.ayar_getir(db)
     sorgu = select(Merkez).order_by(Merkez.ad)
     if q:
         sorgu = sorgu.where(Merkez.ad.ilike(f"%{q}%") | Merkez.sehir.ilike(f"%{q}%"))
     merkezler = db.execute(sorgu).scalars().all()
     satirlar = [{"m": m, "p": _performans(m), "hasta": db.scalar(select(Hasta.id).where(Hasta.merkez_id == m.id).limit(1)) is not None}
                 for m in merkezler]
-    return goster(request, "merkezler/liste.html", satirlar=satirlar, q=q)
+    baglam = {"satirlar": satirlar, "q": q, "ayar": ayar, "kurum_tipleri": KURUM_TIPLERI, "bolum": bolum,
+              "bolumler": [], "gruplar": [], "tek": None}
+    if ayar.mod == "tekil":
+        tek = ayar.varsayilan_merkez or (merkezler[0] if merkezler else None)
+        baglam["tek"] = next((s for s in satirlar if tek and s["m"].id == tek.id), None) or (
+            {"m": tek, "p": _performans(tek), "hasta": False} if tek else None)
+    elif ayar.mod == "universite":
+        arastirmacilar = [a for m in merkezler for a in m.arastirmacilar]
+        baglam["bolumler"] = sorted({a.bolum for a in arastirmacilar if a.bolum})
+        if bolum:
+            arastirmacilar = [a for a in arastirmacilar if (a.bolum or "") == bolum]
+        gruplar: dict[str, list] = {}
+        for a in sorted(arastirmacilar, key=lambda x: ((x.bolum or "~"), x.ad_soyad)):
+            gruplar.setdefault(a.bolum or "", []).append(a)
+        baglam["gruplar"] = sorted(gruplar.items(), key=lambda g: (g[0] == "", g[0]))
+    return goster(request, "merkezler/liste.html", **baglam)
 
 
 @router.get("/{mid}")
@@ -70,16 +92,37 @@ def ekle(request: Request, k: Kullanici = Depends(gerekli("merkez.yonet")), db: 
     return RedirectResponse(f"/merkezler/{m.id}", status_code=303)
 
 
+@router.post("/{mid}/duzenle")
+def duzenle(request: Request, mid: int, k: Kullanici = Depends(gerekli("merkez.yonet")), db: Session = Depends(get_db),
+            ad: str = Form(...), sehir: str = Form(...), kurum_tipi: str = Form(...), yatak_sayisi: str = Form(""),
+            hbys: str = Form(""), terapotik_alanlar: str = Form(""), fhir_uc_noktasi: str = Form(""), notlar: str = Form("")):
+    m = db.get(Merkez, mid)
+    if not m:
+        raise HTTPException(404)
+    eski = denetim.varlik_sozluk(m)
+    m.ad, m.sehir, m.kurum_tipi = ad.strip()[:200], sehir.strip()[:60], kurum_tipi
+    m.yatak_sayisi = int(yatak_sayisi) if yatak_sayisi.strip().isdigit() else None
+    m.hbys = hbys.strip() or None
+    m.fhir_uc_noktasi = fhir_uc_noktasi.strip() or None
+    m.notlar = notlar.strip() or None
+    m.terapotik_alanlar = [t.strip() for t in terapotik_alanlar.split(",") if t.strip()] or None
+    denetim.kaydet(db, k, "guncelle", "merkez", m.id, eski=eski, yeni=denetim.varlik_sozluk(m), ip=ip(request))
+    db.commit()
+    bilgi(request, "Merkez bilgileri güncellendi.")
+    return RedirectResponse(request.headers.get("referer") or f"/merkezler/{m.id}", status_code=303)
+
+
 @router.post("/{mid}/arastirmaci")
 def arastirmaci_ekle(request: Request, mid: int, k: Kullanici = Depends(gerekli("merkez.yonet")), db: Session = Depends(get_db),
-                     ad_soyad: str = Form(...), unvan: str = Form(""), uzmanlik: str = Form(""), gcp_egitim_tarihi: str = Form("")):
-    a = Arastirmaci(merkez_id=mid, ad_soyad=ad_soyad, unvan=unvan or None, uzmanlik=uzmanlik or None,
+                     ad_soyad: str = Form(...), unvan: str = Form(""), uzmanlik: str = Form(""), gcp_egitim_tarihi: str = Form(""),
+                     bolum: str = Form("")):
+    a = Arastirmaci(merkez_id=mid, ad_soyad=ad_soyad, unvan=unvan or None, uzmanlik=uzmanlik or None, bolum=bolum.strip()[:80] or None,
                     gcp_egitim_tarihi=date.fromisoformat(gcp_egitim_tarihi) if gcp_egitim_tarihi else None)
     db.add(a)
     db.flush()
-    denetim.kaydet(db, k, "olustur", "arastirmaci", a.id, yeni={"merkez_id": mid, "ad_soyad": ad_soyad}, ip=ip(request))
+    denetim.kaydet(db, k, "olustur", "arastirmaci", a.id, yeni={"merkez_id": mid, "ad_soyad": ad_soyad, "bolum": a.bolum}, ip=ip(request))
     db.commit()
-    return RedirectResponse(f"/merkezler/{mid}", status_code=303)
+    return RedirectResponse(request.headers.get("referer") or f"/merkezler/{mid}", status_code=303)
 
 
 # --- CSV ile hasta havuzu yukleme (FHIR olmayan kurulumlar icin dusuk esikli yol) --------------

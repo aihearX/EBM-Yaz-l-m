@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block baslik %}Yeni çalışma · eCRF ve başvuru{% endblock %}
+{% block yol %}<a href="/calismalar">Çalışmalar</a> › Yeni çalışma{% endblock %}
+{% block icerik %}
+{% include "sihirbaz/_adimlar.html" %}
+{% set a1, a2, a3 = t.adim1, t.adim2, t.adim3 %}
+<form method="post" action="/sihirbaz/4">
+<div class="izgara k2" style="max-width:1100px">
+  <div class="kart">
+    <h2>Standart eCRF formları</h2>
+    <div class="yardim" style="margin-bottom:8px">CDASH uyumlu hazır formlar; alanlar sonradan tasarımcıda düzenlenebilir.</div>
+    {% for kod, ad, aciklama in formlar %}
+    <label style="font-weight:400;margin-bottom:5px"><input type="checkbox" name="form_kod" value="{{ kod }}" {{ 'checked' if kod in veri.formlar }}> <b>{{ ad }}</b> <span style="color:var(--gri-500)">({{ kod }}) {{ aciklama }}</span></label>
+    {% endfor %}
+    <label style="font-weight:400;margin-top:6px"><input type="checkbox" name="anket" value="1" {{ 'checked' if 'ANKET' in veri.formlar }}> <b>Boş anket formu</b> <span style="color:var(--gri-500)">ölçek/anket sorularını kendiniz ekleyin</span></label>
+    <div class="ayrac"></div>
+    <h2>Başvuru kayıtları</h2>
+    <div class="yardim" style="margin-bottom:8px">Her seçim için 'ilk başvuru' kaydı açılır (karar: beklemede). Gönderim tarihini başvuru yapınca girersiniz.</div>
+    {% for kod, etiket in kurumlar.items() %}
+    <label style="font-weight:400;margin-bottom:5px"><input type="checkbox" name="basvuru" value="{{ kod }}" {{ 'checked' if kod in veri.basvurular }}> {{ etiket }}</label>
+    {% endfor %}
+  </div>
+  <div class="kart">
+    <h2>Özet</h2>
+    <table class="sikisik">
+      <tr><th>Protokol</th><td><b>{{ a1.kod }}</b> · {{ a1.kisa_ad }}</td></tr>
+      <tr><th>Başlık</th><td>{{ a1.baslik }}</td></tr>
+      <tr><th>Tür / faz</th><td>{{ tur_etiket }}{% if a1.faz %} · Faz {{ a1.faz }}{% endif %}</td></tr>
+      <tr><th>Sponsor</th><td>{{ a1.sponsor }}</td></tr>
+      <tr><th>Terapötik alan</th><td>{{ a1.terapotik_alan }}</td></tr>
+      <tr><th>Hedef gönüllü</th><td>{{ a1.hedef_hasta }}</td></tr>
+      <tr><th>Kollar</th><td>{% for kol in a2.kollar %}{{ kol.ad }}{% if a2.kollar|length > 1 %} ({{ kol.oran }}){% endif %}{{ ', ' if not loop.last }}{% endfor %}</td></tr>
+      <tr><th>Vizitler</th><td>{{ sablonlar[a2.vizit_sablonu] }}: {{ sablon_satirlar[a2.vizit_sablonu]|length }} vizit</td></tr>
+      <tr><th>Kriterler</th><td>{{ a2.dahil.splitlines()|select|list|length }} dahil, {{ a2.haric.splitlines()|select|list|length }} hariç{% if a2.protokol_var %} · protokol metninden tamamlanacak{% endif %}</td></tr>
+      {% if mod == 'cro' %}
+      <tr><th>Merkezler</th><td>{% for m in a3.merkezler %}{{ merkez_adlari.get(m.id, m.id) }} (hedef {{ m.hedef }}){{ ', ' if not loop.last }}{% else %}sonra eklenecek{% endfor %}</td></tr>
+      {% else %}
+      <tr><th>Merkez</th><td>{{ merkez_adlari.get(a3.merkez_id, '—') }}{% if a3.bolum %} · {{ a3.bolum }}{% endif %}</td></tr>
+      <tr><th>Baş araştırmacı</th><td>{{ a3.bas_arastirmaci_ad or '—' }}</td></tr>
+      {% if a3.koordinator %}<tr><th>Koordinatör</th><td>{{ a3.koordinator.ad_soyad }} ({{ a3.koordinator.kullanici_adi }})</td></tr>{% endif %}
+      {% endif %}
+    </table>
+    <div class="not" style="margin:10px 0">Tüm kayıtlar tek işlemde oluşturulur ve denetim izine yazılır. Eksik kalanlar çalışma sayfasındaki aşama kontrol listesinde görünür.</div>
+    <a class="btn" href="/sihirbaz/3">Geri</a> <button class="btn birincil">Çalışmayı oluştur</button>
+  </div>
+</div>
+</form>
+{% endblock %}

@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block baslik %}{{ c.kod }} · Advers olay özeti{% endblock %}
+{% block yol %}<a href="/calismalar">Çalışmalar</a> › <a href="/calismalar/{{ c.id }}">{{ c.kod }}</a> › <a href="/calismalar/{{ c.id }}/analiz">Analiz</a> › Advers olaylar{% endblock %}
+{% block icerik %}
+{% include "calismalar/_baslik.html" %}
+{% include "analiz/_stil.html" %}
+<div class="analiz-ust">
+  {% if durum.on_analiz %}<span class="rozet sari">Ön analiz: kilitlenmemiş veri içerir</span>{% else %}<span class="rozet yesil">Tüm kayıtlar kilitli</span>{% endif %}
+  <a class="btn" href="/calismalar/{{ c.id }}/analiz">Değişken özetleri</a>
+  <a class="btn" href="/calismalar/{{ c.id }}/guvenlik">Olay listesi (Güvenlik)</a>
+</div>
+<div class="kart">
+  <h2>Kol bazında advers olay özeti</h2>
+  <table class="sikisik">
+    <tr><th></th>{% for k in ae.kollar %}<th class="sag">{{ k }}</th>{% endfor %}</tr>
+    <tr><td>Gönüllü</td>{% for k in ae.kollar %}<td class="sayi">{{ ae.ozet[k].gonullu_toplam }}</td>{% endfor %}</tr>
+    <tr><td>En az bir olay yaşayan gönüllü</td>{% for k in ae.kollar %}{% set o = ae.ozet[k] %}<td class="sayi">{{ o.olayli_gonullu }}{% if o.gonullu_toplam %} <span class="kucuk">({{ (100 * o.olayli_gonullu / o.gonullu_toplam)|yuzde }})</span>{% endif %}</td>{% endfor %}</tr>
+    <tr><td>Olay sayısı</td>{% for k in ae.kollar %}<td class="sayi">{{ ae.ozet[k].olay }}</td>{% endfor %}</tr>
+    <tr><td>Ciddi olay (gönüllü)</td>{% for k in ae.kollar %}{% set o = ae.ozet[k] %}<td class="sayi">{{ o.ciddi }} ({{ o.ciddi_gonullu }})</td>{% endfor %}</tr>
+    <tr><td>Derece ≥ 3 olay (gönüllü)</td>{% for k in ae.kollar %}{% set o = ae.ozet[k] %}<td class="sayi">{{ o.derece3 }} ({{ o.derece3_gonullu }})</td>{% endfor %}</tr>
+  </table>
+</div>
+<div class="kart">
+  <h2>Sistem-organ sınıfına göre olaylar</h2>
+  <table class="sikisik">
+    <tr><th>Sistem-organ sınıfı (MedDRA SOC)</th>{% for k in ae.kollar %}<th class="sag">{{ k }}<br><span class="kucuk">olay (gönüllü)</span></th>{% endfor %}<th class="sag">Toplam<br><span class="kucuk">olay (gönüllü)</span></th></tr>
+    {% for s in ae.satirlar %}
+    <tr><td>{{ s.soc }}</td>{% for k in ae.kollar %}{% set h = s.kollar[k] %}<td class="sayi">{{ h.olay }} ({{ h.gonullu }})</td>{% endfor %}<td class="sayi"><b>{{ s.toplam.olay }} ({{ s.toplam.gonullu }})</b></td></tr>
+    {% else %}<tr><td colspan="{{ ae.kollar|length + 2 }}" class="kucuk">Bu çalışmada advers olay kaydı yok.</td></tr>{% endfor %}
+  </table>
+  <small>MedDRA sistem-organ sınıfı girilmemiş olaylar "Kodlanmamış" satırında toplanır. Gönüllü sayısı, aynı sınıfta birden çok olayı olan gönüllüyü bir kez sayar.</small>
+</div>
+<div class="analiz-dip">{{ on_analiz_notu }}</div>
+{% endblock %}
