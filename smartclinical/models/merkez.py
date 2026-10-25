@@ -46,6 +46,7 @@ class Arastirmaci(Taban):
     ad_soyad: Mapped[str] = mapped_column(String(120))
     unvan: Mapped[str | None] = mapped_column(String(40), nullable=True)
     uzmanlik: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    bolum: Mapped[str | None] = mapped_column(String(80), nullable=True)  # anabilim dali (universite modu)
     gcp_egitim_tarihi: Mapped[date | None] = mapped_column(Date, nullable=True)
     cv_tarihi: Mapped[date | None] = mapped_column(Date, nullable=True)
     tamamlanan_calisma: Mapped[int] = mapped_column(Integer, default=0)
