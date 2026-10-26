@@ -15,7 +15,7 @@
 <div class="kart" style="margin-bottom:16px">
   <h2>Aksiyon gerektiren uyarılar <span class="rozet kirmizi">{{ uyarilar|length }}</span></h2>
   <table class="sikisik"><tr><th>Merkez</th><th>Gösterge</th><th>Uyarı</th><th>Durum</th><th></th></tr>
-    {% for u in uyarilar %}<tr><td>{{ u.calisma_merkez.merkez_no if u.calisma_merkez else '—' }}</td><td>{{ u.kri_kod }}</td><td>{{ u.mesaj }}</td><td><span class="rozet {{ 'sari' if u.durum == 'inceleniyor' else 'kirmizi' }}">{{ u.durum }}</span></td>
+    {% for u in uyarilar %}<tr><td>{{ u.calisma_merkez.merkez_no if u.calisma_merkez else '—' }}</td><td>{{ u.kri_kod }}</td><td>{{ u.mesaj }}</td><td><span class="rozet {{ 'sari' if u.durum == 'inceleniyor' else 'kirmizi' }}">{{ {'acik': 'Açık', 'inceleniyor': 'İnceleniyor'}.get(u.durum, u.durum) }}</span></td>
       <td>{% if u.id in tetiklenen %}<span class="rozet turkuaz">ziyaret planlandı</span>{% elif yonetir and u.calisma_merkez_id %}<form method="post" action="/calismalar/{{ c.id }}/izlem/tetikle/{{ u.id }}"><button class="btn kucuk">Tetiklenmiş ziyaret oluştur</button></form>{% endif %}</td></tr>{% endfor %}
   </table>
   <small>Tetiklenmiş ziyaret uyarıya bağlanır (tetikleyen uyarı) ve uyarı inceleme durumuna alınır.{% if sekme_gorunur(kullanici, 'rbm') %} <a href="/calismalar/{{ c.id }}/rbm">Risk bazlı izlem</a>{% endif %}</small>

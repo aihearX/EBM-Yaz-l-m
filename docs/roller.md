@@ -12,10 +12,10 @@ Rol globaldir; çalışma bazlı görünürlük ayrıca uygulanır (`services/ye
   çalışmada ekip ataması yapıldıysa yalnızca atandıkları çalışmaları görür (`calisma_filtresi`). Sihirbazla çalışma
   kuran kullanıcı atanabilir roldeyse kendiliğinden ekibe eklenir.
 - Tasarım ve düzenleme (`calisma_duzenleyebilir`): yönetici ve proje yöneticisi her zaman; araştırmacı yalnızca
-  kendi kurduğu ya da baş araştırmacısı kendi merkezinden olan çalışmada.
+  tekil ve üniversite modunda, kendi kurduğu ya da baş araştırmacısı kendi merkezinden olan çalışmada.
 
 Bu dosyadaki tablolar `tests/test_roller.py` tarafından koddaki kurallarla karşılaştırılır; tabloyu ve kodu birlikte
-güncelleyin. Semboller: `●` görünür, `—` görünmez, `○` koşullu (çalışma bazlı).
+güncelleyin. Semboller: `●` görünür, `—` görünmez, `○` koşullu (çalışma bazlı ya da kurulum moduna bağlı).
 
 ## Rol x sekme
 
@@ -24,8 +24,8 @@ güncelleyin. Semboller: `●` görünür, `—` görünmez, `○` koşullu (ça
 | ozet | ● | ● | ● | ● | ● | ● | ● | ● |
 | tasarim | ● | ● | — | — | — | ○ | — | — |
 | protokol | ● | ● | ● | ● | ● | ● | ● | ● |
-| merkezler | ● | ● | ● | ● | ● | ● | ● | ● |
-| basvurular | ● | ● | ● | — | ● | ● | — | ● |
+| merkezler | ● | ● | ● | ● | ● | ○ | ● | ● |
+| basvurular | ● | ● | ● | — | ● | ○ | — | ● |
 | ekip | ● | ● | — | — | — | — | — | — |
 | gonulluler | ● | ● | ● | ● | — | ● | ● | ● |
 | veri | ● | ● | ● | ● | — | ● | ● | ● |
@@ -37,6 +37,8 @@ güncelleyin. Semboller: `●` görünür, `—` görünmez, `○` koşullu (ça
 | belgeler | ● | ● | ● | ● | ● | ● | ● | ● |
 | analiz | ● | ● | — | ● | — | ● | — | — |
 | denetim | ● | ● | — | — | — | — | — | ● |
+
+`○` araştırmacıda moda bağlı: CRO modunda `tasarim`, `merkezler` ve `basvurular` görünmez ve rotaları 403 döner (çalışmayı CRO kurar ve yürütür).
 
 Notlar:
 

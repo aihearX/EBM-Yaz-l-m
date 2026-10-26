@@ -28,10 +28,12 @@ from smartclinical.models import (
     Rol,
 )
 from smartclinical.models.ekip import CalismaUyesi
+from smartclinical.models.kurulum import KurulumAyari
 from smartclinical.services import ecrf as ecrf_svc
+from smartclinical.services import kurulum as kurulum_svc
 from smartclinical.services import yetki
 from smartclinical.web import ekip as ekip_web
-from smartclinical.web.calismalar import SEKME_ETIKET, kontrol_listesi, sekme_gorunur
+from smartclinical.web.calismalar import CRO_ARASTIRMACI_KAPALI, SEKME_ETIKET, kontrol_listesi, sekme_gorunur
 
 PAROLA = "Test1234!xyz"
 SABLONLAR = Path("smartclinical/web/templates")
@@ -102,6 +104,19 @@ def _kid(kadi):
     return kid
 
 
+def _mod(mod: str | None) -> None:
+    """Kurulum modunu yazar; None kaydi siler (varsayilan tekil)."""
+    db = oturum_fabrikasi()()
+    if mod is None:
+        a = db.get(KurulumAyari, 1)
+        if a:
+            db.delete(a)
+    else:
+        kurulum_svc.ayar_yaz(db, mod, "Test")
+    db.commit()
+    db.close()
+
+
 def _sekmeler(html: str) -> list[str]:
     blok = re.search(r'<div class="sekmeler">(.*?)</div>', html, re.S).group(1)
     return [re.sub(r"<span.*?</span>", "", t).strip() for t in re.findall(r"<a [^>]*>(.*?)</a>", blok, re.S)]
@@ -155,6 +170,8 @@ def test_arastirmaci_sekmeleri(istemci):
     assert "Merkez Zekâsı" not in sekmeler and "Denetim İzi" not in sekmeler and "Tasarım" not in sekmeler
     assert "Gönüllüler" in sekmeler and "Veri (eCRF)" in sekmeler and "Analiz" in sekmeler
     assert "Ziyaret ve Sapmalar" in sekmeler and "TMF" in sekmeler
+    # tekil modda (kayit yok) merkezler ve basvurular arastirmaciya acik
+    assert "Merkezler" in sekmeler and "Etik / TİTCK" in sekmeler
     assert len(sekmeler) <= 12
     assert istemci.get(f"/calismalar/{c.id}/merkez-zekasi").status_code == 403
     assert istemci.get(f"/calismalar/{c.id}/rbm").status_code == 403
@@ -162,6 +179,52 @@ def test_arastirmaci_sekmeleri(istemci):
     r = istemci.get("/calismalar")
     assert "<th>Sponsor</th>" not in r.text and "<th>Tür</th>" not in r.text
     assert "Açık sorgu" in r.text and "Uyarı" in r.text
+
+
+def test_arastirmaci_sekmeleri_cro_modu(istemci):
+    """CRO modunda tasarim, merkezler ve basvurular CRO'nun isidir: sekme yok, rota 403, baglanti yok."""
+    c = _calisma("S1-001")
+    _mod("cro")
+    try:
+        _giris(istemci, "arastirmaci")
+        r = istemci.get(f"/calismalar/{c.id}")
+        assert r.status_code == 200
+        sekmeler = _sekmeler(r.text)
+        assert len(sekmeler) <= 9, sekmeler
+        for etiket in ("Tasarım", "Merkezler", "Etik / TİTCK"):
+            assert etiket not in sekmeler
+        assert "Gönüllüler" in sekmeler and "Veri (eCRF)" in sekmeler and "Protokol ve Kriterler" in sekmeler
+        # kontrol listesi 'tamamla' baglantilari kapali sekmelere gitmez
+        for yol in ("/tasarim", "/merkezler", "/basvurular", "/randomizasyon"):
+            assert f'href="/calismalar/{c.id}{yol}"' not in r.text, yol
+        for yol in ("/tasarim", "/basvurular", "/merkezler", "/randomizasyon", "/tasarim/form/yeni"):
+            assert istemci.get(f"/calismalar/{c.id}{yol}", follow_redirects=False).status_code == 403, yol
+        for yol, veri in (("/basvurular", {"kurum": "etik_kurul"}), ("/tasarim/kol", {"ad": "A"}),
+                          ("/durum", {"durum": "fizibilite", "gerekce": "x"})):
+            assert istemci.post(f"/calismalar/{c.id}{yol}", data=veri, follow_redirects=False).status_code == 403, yol
+        assert istemci.get(f"/calismalar/{c.id}/protokol").status_code == 200
+        r = istemci.get(f"/calismalar/{c.id}/gonulluler")
+        assert r.status_code == 200 and f'href="/calismalar/{c.id}/merkezler"' not in r.text
+        # kurucu arastirmaci bile CRO modunda duzenleyemez; yonetici ve PY etkilenmez
+        db = oturum_fabrikasi()()
+        k = db.get(Kullanici, _kid("arastirmaci"))
+        kurucu = SimpleNamespace(olusturan_id=k.id, merkezler=[])
+        assert not yetki.calisma_duzenleyebilir(db, k, kurucu)
+        assert sekme_gorunur(db.get(Kullanici, _kid("py")), "basvurular", db, db.get(Calisma, c.id))
+        db.close()
+        _giris(istemci, "py")
+        assert istemci.get(f"/calismalar/{c.id}/tasarim").status_code == 200
+        assert istemci.get(f"/calismalar/{c.id}/basvurular").status_code == 200
+    finally:
+        _mod(None)
+    # tekil modda ayni kurucu arastirmaci duzenleyebilir
+    db = oturum_fabrikasi()()
+    k = db.get(Kullanici, _kid("arastirmaci"))
+    assert yetki.calisma_duzenleyebilir(db, k, SimpleNamespace(olusturan_id=k.id, merkezler=[]))
+    db.close()
+    _giris(istemci, "arastirmaci")
+    assert istemci.get(f"/calismalar/{c.id}/basvurular").status_code == 200
+    assert istemci.get(f"/calismalar/{c.id}/merkezler").status_code == 200
 
 
 def test_sekme_gruplari_ve_sarma(istemci):
@@ -379,15 +442,12 @@ MATRIS = {
     "gonullu_detay": _beklenen(("sponsor", "arastirmaci", "koordinator")),
     "gonullu_form": _beklenen(("sponsor", "arastirmaci", "koordinator")),
 }
-# P2 (tasarim rotasinda calisma_duzenleyebilir) entegre olana dek; gonullu rotalari yetki.gonullu_erisimi'ni kullaniyor
-_BEKLEYEN: set[tuple[str, str]] = set()
 
 
 def _parametreler():
     for rota, satir in MATRIS.items():
         for kadi, kod in satir.items():
-            marks = [pytest.mark.xfail(strict=True, reason="P2 entegrasyonu bekleniyor")] if (rota, kadi) in _BEKLEYEN else []
-            yield pytest.param(rota, kadi, kod, id=f"{rota}-{kadi}", marks=marks)
+            yield pytest.param(rota, kadi, kod, id=f"{rota}-{kadi}")
 
 
 @pytest.mark.parametrize("rota,kadi,kod", list(_parametreler()))
@@ -406,7 +466,8 @@ def test_matris_dokumanla_uyumlu():
             rol = ROL_SUTUN[sutun]
             gorunur = sekme_gorunur(SimpleNamespace(rol=rol), sekme)
             if sembol == "○":
-                assert sekme == "tasarim" and rol == Rol.ARASTIRMACI and gorunur, (sekme, sutun)
+                # kosullu: rol duzeyinde acik, calisma ya da kurulum moduna gore kapanabilir
+                assert sekme in CRO_ARASTIRMACI_KAPALI and rol == Rol.ARASTIRMACI and gorunur, (sekme, sutun)
             else:
                 assert gorunur is (sembol == "●"), (sekme, sutun, sembol)
     izin_tablo = _tablo("Rol x izin")

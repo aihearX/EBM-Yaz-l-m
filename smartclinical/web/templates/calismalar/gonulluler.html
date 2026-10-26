@@ -25,7 +25,7 @@
       </tr>
       {% else %}<tr><td colspan="9" class="kucuk">{% if secili %}Bu durumda gönüllü yok. <a href="/calismalar/{{ c.id }}/gonulluler">Tümünü göster</a>
         {% else %}Henüz gönüllü yok.
-        {% if not aktif_merkezler %}<a href="/calismalar/{{ c.id }}/merkezler">İlk gönüllü için Merkezler sekmesinde bir merkezi Aktif yapın</a>.
+        {% if not aktif_merkezler %}{% if sekme_gorunur(kullanici, 'merkezler', none, c) %}<a href="/calismalar/{{ c.id }}/merkezler">İlk gönüllü için Merkezler sekmesinde bir merkezi Aktif yapın</a>{% else %}İlk gönüllü için aktif bir merkez gerekir; merkez aktivasyonunu proje ekibi yapar{% endif %}.
         {% elif izinli(kullanici, 'hasta.goruntule') %}<a href="/calismalar/{{ c.id }}/eslestirme">Aday hastaları tarayın</a> ya da sağdaki formla elle ekleyin.{% endif %}{% endif %}</td></tr>{% endfor %}
     </table>
     </div>
@@ -48,7 +48,7 @@
       <small>Onam tarihi girilirse tarama vizitleri hemen oluşturulur. Eşleştirme motorunun önerdiği hastalar onaylandığında otomatik olarak buraya düşer.</small>
     </div>
     {% elif izinli(kullanici, 'veri.gir') %}
-    <div class="not">Gönüllü eklemek için önce <a href="/calismalar/{{ c.id }}/merkezler">bir merkezi Aktif yapın</a>.</div>
+    <div class="not">Gönüllü eklemek için önce {% if sekme_gorunur(kullanici, 'merkezler', none, c) %}<a href="/calismalar/{{ c.id }}/merkezler">bir merkezi Aktif yapın</a>{% else %}merkezinizin aktif olması gerekir; aktivasyonu proje ekibi yapar{% endif %}.</div>
     {% endif %}
   </div>
 </div>

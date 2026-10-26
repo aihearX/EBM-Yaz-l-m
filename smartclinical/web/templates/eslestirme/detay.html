@@ -3,9 +3,12 @@
 {% block yol %}<a href="/calismalar/{{ c.id }}">{{ c.kod }}</a> › <a href="/calismalar/{{ c.id }}/eslestirme">Hasta Eşleştirme</a> › {{ s.hasta.kayit_no }}{% endblock %}
 {% block icerik %}
 {% include "calismalar/_baslik.html" %}
+{% set KARAR = {'uygun': 'Uygun', 'olasi': 'Olası', 'belirsiz': 'Belirsiz', 'uygun_degil': 'Uygun değil'} %}
+{% set SONUC = {'saglandi': 'Sağlandı', 'saglanmadi': 'Sağlanmadı', 'belirsiz': 'Belirsiz'} %}
+{% set INCELEME = {'onay': 'Onay', 'red': 'Red', 'beklet': 'Beklet'} %}
 <div class="baslik-satiri">
   <div><h1>Aday hasta {{ s.hasta.kayit_no }}</h1><small>{{ s.hasta.merkez.ad }} · {{ s.hasta.yas }} yaş, {{ s.hasta.cinsiyet }} · model {{ s.model_surumu }} · {{ s.sure_ms }} ms</small></div>
-  <div class="sag"><span class="rozet {{ 'yesil' if s.karar == 'uygun' else ('sari' if s.karar == 'olasi' else ('kirmizi' if s.karar == 'uygun_degil' else '')) }}" style="font-size:13px">Model: {{ s.karar }} · skor {{ (s.skor*100)|round|int }}</span></div>
+  <div class="sag"><span class="rozet {{ 'yesil' if s.karar == 'uygun' else ('sari' if s.karar == 'olasi' else ('kirmizi' if s.karar == 'uygun_degil' else '')) }}" style="font-size:13px">Model: {{ KARAR.get(s.karar, s.karar) }} · skor {{ (s.skor*100)|round|int }}</span></div>
 </div>
 <div class="izgara k21">
   <div>
@@ -15,10 +18,10 @@
         <tr><th>Tip</th><th>Kriter</th><th>Sonuç</th><th>Kanıt (kaynak metin)</th><th class="sag">Güven</th><th>Yöntem</th></tr>
         {% for r in satirlar %}
         <tr>
-          <td><span class="rozet {{ 'mavi' if r.tip == 'dahil' else 'kirmizi' }}">{{ r.tip }}</span></td>
+          <td><span class="rozet {{ 'mavi' if r.tip == 'dahil' else 'kirmizi' }}">{{ 'Dahil' if r.tip == 'dahil' else ('Hariç' if r.tip == 'haric' else r.tip) }}</span></td>
           <td>{{ r.metin }}</td>
           <td>{% set kotu = (r.tip == 'dahil' and r.sonuc == 'saglanmadi') or (r.tip == 'haric' and r.sonuc == 'saglandi') %}
-            <span class="rozet {{ 'kirmizi' if kotu else ('yesil' if r.sonuc in ('saglandi','saglanmadi') else 'sari') }}">{{ r.sonuc }}</span></td>
+            <span class="rozet {{ 'kirmizi' if kotu else ('yesil' if r.sonuc in ('saglandi','saglanmadi') else 'sari') }}">{{ SONUC.get(r.sonuc, r.sonuc) }}</span></td>
           <td>{% if r.kanit %}<span class="kanit">{{ r.kanit }}</span>{% else %}<small>Kaynak kayıtta yeterli bilgi yok; araştırmacı değerlendirmesi gerekir.</small>{% endif %}</td>
           <td class="sayi">{{ (r.guven*100)|round|int if r.guven is not none else '—' }}</td>
           <td><small>{{ r.yontem }}</small></td>
@@ -42,7 +45,7 @@
     <div class="kart">
       <h2>Araştırmacı kararı</h2>
       {% if s.inceleme_karari %}
-      <p><span class="rozet {{ 'yesil' if s.inceleme_karari == 'onay' else ('kirmizi' if s.inceleme_karari == 'red' else 'mavi') }}">{{ s.inceleme_karari }}</span> {{ s.inceleyen.ad_soyad if s.inceleyen }} · {{ s.inceleme_zamani|tarih }}</p>
+      <p><span class="rozet {{ 'yesil' if s.inceleme_karari == 'onay' else ('kirmizi' if s.inceleme_karari == 'red' else 'mavi') }}">{{ INCELEME.get(s.inceleme_karari, s.inceleme_karari) }}</span> {{ s.inceleyen.ad_soyad if s.inceleyen }} · {{ s.inceleme_zamani|tarih }}</p>
       {% if s.inceleme_notu %}<p><small>{{ s.inceleme_notu }}</small></p>{% endif %}
       {% if mevcut_gonullu %}<p>Gönüllü kaydı: <a href="/gonulluler/{{ mevcut_gonullu.id }}">{{ mevcut_gonullu.gonullu_no }}</a></p>{% endif %}
       {% else %}

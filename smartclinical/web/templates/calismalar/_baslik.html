@@ -6,7 +6,7 @@
   </div>
   <div class="sag">
     <span class="rozet mavi">{{ c.durum_etiket }}</span>
-    {% if c.risk_sinifi %}<span class="rozet {{ 'kirmizi' if c.risk_sinifi == 'yuksek' else ('sari' if c.risk_sinifi == 'orta' else 'yesil') }}">Risk: {{ c.risk_sinifi }}</span>{% endif %}
+    {% if c.risk_sinifi %}<span class="rozet {{ 'kirmizi' if c.risk_sinifi == 'yuksek' else ('sari' if c.risk_sinifi == 'orta' else 'yesil') }}">Risk: {{ {'yuksek': 'Yüksek', 'orta': 'Orta', 'dusuk': 'Düşük'}.get(c.risk_sinifi, c.risk_sinifi) }}</span>{% endif %}
   </div>
 </div>
 <div class="sekmeler">

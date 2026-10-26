@@ -31,10 +31,10 @@
         {% endfor %}
       </table>
       {% else %}
-      {% if not sema_var %}<div class="mesaj uyari" style="margin-bottom:8px">Vizit şeması tanımlı değil. Onam ve randomizasyonda standart şablon kullanılır{% if izinli(kullanici, 'calisma.duzenle') %}; şemayı <a href="/calismalar/{{ g.calisma_id }}/tasarim">tasarım sayfasında</a> tanımlayabilirsiniz{% endif %}.</div>{% endif %}
+      {% if not sema_var %}<div class="mesaj uyari" style="margin-bottom:8px">Vizit şeması tanımlı değil. Onam ve randomizasyonda standart şablon kullanılır{% if sekme_gorunur(kullanici, 'tasarim', none, g.calisma) %}; şemayı <a href="/calismalar/{{ g.calisma_id }}/tasarim">tasarım sayfasında</a> tanımlayabilirsiniz{% endif %}.</div>{% endif %}
       <p class="kucuk">Tarama vizitleri onam alındığında, takip vizitleri çalışmaya alındığında oluşturulur. Tarama formları: {% for f in formlar if 'Tarama' in f.vizit_listesi %}<a href="/gonulluler/{{ g.id }}/form/{{ f.id }}">{{ f.ad }}</a>{% if not loop.last %}, {% endif %}{% else %}—{% endfor %}</p>{% endif %}
       {% if bagsiz %}<p class="kucuk">Vizite bağlı olmayan kayıtlar: {% for fk in bagsiz %}<a href="/gonulluler/{{ g.id }}/form/{{ fk.form_id }}" class="rozet {{ 'mavi' if fk.durum == 'tamamlandi' else 'sari' }}">{{ fk.form.kod }} · {{ KAYIT_DURUM_ETIKET.get(fk.durum, fk.durum) }}</a> {% endfor %}</p>{% endif %}
-      {% if not formlar %}<p class="kucuk">Yayında eCRF formu yok{% if izinli(kullanici, 'calisma.duzenle') %}; <a href="/calismalar/{{ g.calisma_id }}/tasarim">tasarım sayfasından</a> form ekleyin{% endif %}.</p>{% elif taslak_form and izinli(kullanici, 'calisma.duzenle') %}<p class="kucuk">{{ taslak_form }} form taslak durumunda; yayınlandığında burada görünür.</p>{% endif %}
+      {% if not formlar %}<p class="kucuk">Yayında eCRF formu yok{% if sekme_gorunur(kullanici, 'tasarim', none, g.calisma) %}; <a href="/calismalar/{{ g.calisma_id }}/tasarim">tasarım sayfasından</a> form ekleyin{% endif %}.</p>{% elif taslak_form and izinli(kullanici, 'calisma.duzenle') %}<p class="kucuk">{{ taslak_form }} form taslak durumunda; yayınlandığında burada görünür.</p>{% endif %}
     </div>
     <div class="kart">
       <h2>Advers olaylar</h2>

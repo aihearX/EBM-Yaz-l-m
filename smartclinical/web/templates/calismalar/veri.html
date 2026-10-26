@@ -2,6 +2,7 @@
 {% block baslik %}{{ c.kod }} · Veri{% endblock %}
 {% block yol %}<a href="/calismalar">Çalışmalar</a> › <a href="/calismalar/{{ c.id }}">{{ c.kod }}</a> › Veri{% endblock %}
 {% block icerik %}
+{% set tasarim_acik = sekme_gorunur(kullanici, 'tasarim', none, c) %}
 {% include "calismalar/_baslik.html" %}
 <div class="izgara k4" style="margin-bottom:16px">
   <div class="olcum"><div class="etiket">Form kaydı</div><div class="deger">{{ toplam_kayit }}</div></div>
@@ -27,8 +28,8 @@
   <div class="kart">
     <h2>eCRF tanımları (CDASH uyumlu)</h2>
     <table class="sikisik"><tr><th>Kod</th><th>Form</th><th>Vizit</th><th class="sag">Alan</th><th>Sürüm</th><th>Durum</th></tr>
-      {% for f in formlar %}<tr><td>{% if izinli(kullanici, 'calisma.duzenle') %}<a href="/calismalar/{{ c.id }}/tasarim/form/{{ f.id }}">{{ f.kod }}</a>{% else %}{{ f.kod }}{% endif %}</td><td>{{ f.ad }}</td><td>{{ f.vizit_listesi|join(', ') or 'Her vizit' }}</td><td class="sayi">{{ f.alanlar|length }}</td><td>{{ f.versiyon }}</td><td><span class="rozet {{ 'yesil' if f.durum == 'yayinda' else 'sari' }}">{{ 'Yayında' if f.durum == 'yayinda' else 'Taslak' }}</span></td></tr>{% else %}<tr><td colspan="6" class="kucuk">Bu çalışmada eCRF formu tanımlı değil.
-        {% if izinli(kullanici, 'calisma.duzenle') %}<a href="/calismalar/{{ c.id }}/tasarim">Form tanımla</a>{% else %}Form tanımını proje yöneticisi yapar.{% endif %}</td></tr>{% endfor %}
+      {% for f in formlar %}<tr><td>{% if tasarim_acik %}<a href="/calismalar/{{ c.id }}/tasarim/form/{{ f.id }}">{{ f.kod }}</a>{% else %}{{ f.kod }}{% endif %}</td><td>{{ f.ad }}</td><td>{{ f.vizit_listesi|join(', ') or 'Her vizit' }}</td><td class="sayi">{{ f.alanlar|length }}</td><td>{{ f.versiyon }}</td><td><span class="rozet {{ 'yesil' if f.durum == 'yayinda' else 'sari' }}">{{ 'Yayında' if f.durum == 'yayinda' else 'Taslak' }}</span></td></tr>{% else %}<tr><td colspan="6" class="kucuk">Bu çalışmada eCRF formu tanımlı değil.
+        {% if tasarim_acik %}<a href="/calismalar/{{ c.id }}/tasarim">Form tanımla</a>{% else %}Form tanımını proje yöneticisi yapar.{% endif %}</td></tr>{% endfor %}
     </table>
   </div>
 </div>

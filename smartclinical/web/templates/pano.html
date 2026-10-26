@@ -76,7 +76,7 @@
     <div class="kart">
       <h2>İnceleme bekleyen eşleştirme önerileri</h2>
       {% if eslestirmeler %}
-      <ul class="liste-sade">{% for e in eslestirmeler %}<li><a href="/calismalar/{{ e.calisma_id }}/eslestirme/{{ e.id }}">{{ e.calisma.kod }} · {{ e.hasta.kayit_no }}</a> <span class="rozet {{ 'yesil' if e.karar == 'uygun' else 'sari' }}">{{ e.karar }}</span></li>{% endfor %}</ul>
+      <ul class="liste-sade">{% for e in eslestirmeler %}<li><a href="/calismalar/{{ e.calisma_id }}/eslestirme/{{ e.id }}">{{ e.calisma.kod }} · {{ e.hasta.kayit_no }}</a> <span class="rozet {{ 'yesil' if e.karar == 'uygun' else 'sari' }}">{{ {'uygun': 'Uygun', 'olasi': 'Olası', 'belirsiz': 'Belirsiz', 'uygun_degil': 'Uygun değil'}.get(e.karar, e.karar) }}</span></li>{% endfor %}</ul>
       {% else %}<p class="kucuk">Bekleyen öneri yok.</p>{% endif %}
     </div>
   </div>
