@@ -29,7 +29,6 @@ from smartclinical.models import (
 )
 from smartclinical.models import Form as CRF
 from smartclinical.services import analiz, yetki
-from smartclinical.web import analiz as analiz_web
 
 PAROLA = "Test1234!xyz"
 R = np.random.default_rng(7)
@@ -96,8 +95,6 @@ ALANLAR = [
 
 @pytest.fixture(scope="module")
 def istemci():
-    if not any(getattr(r, "path", "").startswith("/calismalar/{calisma_id}/analiz") for r in app.routes):
-        app.include_router(analiz_web.router)
     sifirla()
     db = oturum_fabrikasi()()
     m = Merkez(kod="T-01", ad="Test Hastanesi", sehir="Ankara", kurum_tipi="universite")

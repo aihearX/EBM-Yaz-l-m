@@ -233,7 +233,7 @@ def test_bos_calisma_bos_durumlari(istemci):
     r = istemci.get(f"/calismalar/{c.id}/rbm")
     assert "henüz merkez yok" in r.text and f"/calismalar/{c.id}/merkezler" in r.text
     r = istemci.get(f"/calismalar/{c.id}/merkez-zekasi")
-    assert "henüz merkez eklenmedi" in r.text
+    assert "Henüz merkez yok" in r.text
     # merkezi olan ama hasta havuzu bos calisma: CSV yukleme baglantisi
     c2 = _calisma("S1-001")
     r = istemci.get(f"/calismalar/{c2.id}/eslestirme")
@@ -400,7 +400,7 @@ def test_merkez_rolleri_kendi_merkezini_gorur(istemci):
     r = istemci.get(f"/calismalar/{c}/gonulluler")
     assert r.status_code == 200 and "01-001" in r.text and "02-001" not in r.text
     r = istemci.get(f"/calismalar/{c}/izlem")
-    assert "IMV" in r.text and "SIV" not in r.text
+    assert ">Ara izlem ziyareti</span>" in r.text and ">Başlatma ziyareti</span>" not in r.text
     # DG-001 yalnizca T-02'de: T-01 arastirmacisi goremez
     assert istemci.get(f"/calismalar/{_ids['dg']}").status_code == 403
     _giris(istemci, "admin")

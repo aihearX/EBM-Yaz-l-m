@@ -26,15 +26,12 @@ from smartclinical.models import (
 from smartclinical.models.randomizasyon import RandomizasyonAyari, RandomizasyonKaydi
 from smartclinical.services import ecrf, yetki
 from smartclinical.services import randomizasyon as rnd
-from smartclinical.web import randomizasyon as rnd_web
 
 PAROLA = "Test1234!xyz"
 
 
 @pytest.fixture(scope="module")
 def istemci():
-    if not any(getattr(r, "path", "").startswith("/calismalar/{calisma_id}/randomizasyon") for r in app.routes):
-        app.include_router(rnd_web.router)
     sifirla()
     db = oturum_fabrikasi()()
     m1 = Merkez(kod="T-01", ad="Test Hastanesi", sehir="Ankara", kurum_tipi="universite")

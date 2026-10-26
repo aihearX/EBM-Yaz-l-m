@@ -14,7 +14,6 @@ from smartclinical.main import app
 from smartclinical.models import Calisma, CalismaMerkez, CalismaTuru, DenetimKaydi, Kullanici, Merkez, Rol
 from smartclinical.models.ekip import CalismaUyesi
 from smartclinical.services import yetki
-from smartclinical.web import ekip
 
 PAROLA = "Test1234!xyz"
 
@@ -45,8 +44,6 @@ def istemci():
         db.add(CalismaMerkez(calisma_id=c.id, merkez_id=merkez.id, merkez_no="01"))
     db.commit()
     db.close()
-    if not any(getattr(r, "path", "").startswith("/calismalar/{calisma_id}/ekip") for r in app.routes):
-        app.include_router(ekip.router)  # entegrasyon web/__init__.py'de yapilir; testte elle
     with TestClient(app) as c:
         yield c
 

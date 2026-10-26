@@ -26,7 +26,6 @@ from smartclinical.models import (
 )
 from smartclinical.models.merkez import Arastirmaci
 from smartclinical.services import yetki
-from smartclinical.web import hesap as hesap_web
 from smartclinical.web.pano import _portfoy_satiri
 
 PAROLA = "Test1234!xyz"
@@ -66,8 +65,6 @@ def istemci():
     db.commit()
     _ids.update(ank=ank.id, izm=izm.id, c=c.id, h_izm=h_izm.id, h_ank=h_ank.id)
     db.close()
-    if not any(getattr(r, "path", "").startswith("/hesap") for r in app.routes):
-        app.include_router(hesap_web.router)
     with TestClient(app) as cl:
         yield cl
 

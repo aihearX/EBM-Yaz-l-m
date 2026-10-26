@@ -34,8 +34,6 @@ from smartclinical.services import analiz, ecrf, protokol, yetki
 from smartclinical.services.kriter import yapilandir
 from smartclinical.services.kriter.okunur import kriter_cumlesi
 from smartclinical.services.kurulum import ayar_yaz
-from smartclinical.web import analiz as analiz_web
-from smartclinical.web import ecrf as ecrf_web
 
 PAROLA = "Test1234!xyz"
 
@@ -59,9 +57,6 @@ Değerlendirmeler
 
 @pytest.fixture(scope="module")
 def istemci():
-    for r_, modul in (("/calismalar/{calisma_id}/tasarim", ecrf_web), ("/calismalar/{calisma_id}/analiz", analiz_web)):
-        if not any(getattr(r, "path", "").startswith(r_) for r in app.routes):
-            app.include_router(modul.router)
     sifirla()
     db = oturum_fabrikasi()()
     m1 = Merkez(kod="P4-01", ad="Birinci Hastane", sehir="Ankara", kurum_tipi="universite")

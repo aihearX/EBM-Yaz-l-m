@@ -57,8 +57,8 @@
     </tr>
     {% else %}<tr><td colspan="8" class="kucuk">
       {% if not cmler %}Bu çalışmada henüz merkez yok; eşleştirme merkez eklendikten sonra çalışır.{% if izinli(kullanici, 'merkez.yonet') %} <a href="/calismalar/{{ c.id }}/merkezler">Merkez ekle</a>{% endif %}
-      {% elif not aktif_var %}Aktif merkez yok; tarama merkez aktif duruma alındıktan sonra çalıştırılabilir.{% if izinli(kullanici, 'merkez.yonet') %} <a href="/calismalar/{{ c.id }}/merkezler">Merkez durumunu güncelle</a>{% endif %}
       {% elif not hasta_havuzu %}Merkezde kimliksizleştirilmiş hasta kaydı yok.{% if ilk_merkez %} <a href="/merkezler/{{ ilk_merkez.merkez_id }}/hasta-yukle">CSV ile hasta kaydı yükle</a>{% endif %}
+      {% elif not aktif_var %}Aktif merkez yok; tarama merkez aktif duruma alındıktan sonra çalıştırılabilir.{% if izinli(kullanici, 'merkez.yonet') %} <a href="/calismalar/{{ c.id }}/merkezler">Merkez durumunu güncelle</a>{% endif %}
       {% elif not c.kriterler %}Protokol kriterleri tanımlı değil.{% if izinli(kullanici, 'calisma.duzenle') %} <a href="/calismalar/{{ c.id }}/protokol">Kriter ekle</a>{% endif %}
       {% else %}Henüz tarama yapılmadı.{% if izinli(kullanici, 'eslestirme.calistir') %} "Ön taramayı çalıştır" ile merkezlerin kimliksizleştirilmiş kayıtları protokol kriterleriyle eşleştirilir.{% endif %}{% endif %}</td></tr>{% endfor %}
   </table>

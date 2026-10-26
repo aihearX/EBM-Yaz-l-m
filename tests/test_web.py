@@ -9,6 +9,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 
+from smartclinical.config import ayarlar
 from smartclinical.db import oturum_fabrikasi, sifirla
 from smartclinical.main import app
 from smartclinical.models import (
@@ -27,7 +28,6 @@ from smartclinical.scripts.yeniden_anahtarla import eslem_hesapla, yeniden_anaht
 from smartclinical.services import denetim, yetki
 from smartclinical.services.fhir import takma_kayit_no
 from smartclinical.web import giris as giris_web
-from smartclinical.web import hesap as hesap_web
 
 PAROLA = "Test1234!xyz"
 
@@ -46,8 +46,6 @@ def istemci():
     ])
     db.commit()
     db.close()
-    if not any(getattr(r, "path", "").startswith("/hesap") for r in app.routes):
-        app.include_router(hesap_web.router)  # entegrasyon web/__init__.py'de yapilir; testte elle
     giris_web._ip_denemeleri.clear()
     with TestClient(app) as c:
         yield c
@@ -205,9 +203,9 @@ def test_parola_politikasi(istemci, monkeypatch):
     assert yetki.parola_politikasi("sadeceharflerxx") is not None
     assert yetki.parola_politikasi("Uzun12345x") is not None  # 10 karakter: varsayilan 12'nin altinda
     assert yetki.parola_politikasi("Uzun12345xyz") is None
-    monkeypatch.setenv("SC_PAROLA_MIN", "8")
+    monkeypatch.setattr(ayarlar(), "parola_min", 8)
     assert yetki.parola_min() == 8 and yetki.parola_politikasi("Kisa1234") is None
-    monkeypatch.setenv("SC_PAROLA_GUN", "1")
+    monkeypatch.setattr(ayarlar(), "parola_gun", 1)
     k = Kullanici(parola_degisim=simdi() - timedelta(days=2))
     assert yetki.parola_suresi_doldu(k) and yetki.parola_degisimi_gerekli(k)
     assert not yetki.parola_suresi_doldu(Kullanici(parola_degisim=None))

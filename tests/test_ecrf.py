@@ -25,7 +25,6 @@ from smartclinical.models import (
 from smartclinical.models import Form as CRF
 from smartclinical.models.tasarim import VizitTanimi
 from smartclinical.services import ecrf, protokol, yetki
-from smartclinical.web import ecrf as ecrf_web
 
 PAROLA = "Test1234!xyz"
 
@@ -62,8 +61,6 @@ ALANLAR = [
 
 @pytest.fixture(scope="module")
 def istemci():
-    if not any(getattr(r, "path", "").startswith("/calismalar/{calisma_id}/tasarim") for r in app.routes):
-        app.include_router(ecrf_web.router)
     sifirla()
     db = oturum_fabrikasi()()
     m = Merkez(kod="T-01", ad="Test Hastanesi", sehir="Ankara", kurum_tipi="universite")

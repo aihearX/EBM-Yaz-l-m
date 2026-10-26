@@ -23,8 +23,7 @@ _PAROLA_SERBEST = ("/hesap", "/cikis", "/giris", "/static", "/api/")
 
 
 def _ayar(ad: str, env: str, varsayilan: int) -> int:
-    """config.Ayarlar'da alan varsa onu, yoksa ortam degiskenini okur."""
-    # TODO(entegrasyon): config.py'ye parola_min / parola_gun alanlari eklenince env dali yalnizca yedek kalir
+    """config.Ayarlar'daki alani okur; alan yoksa ortam degiskenine duser."""
     v = getattr(ayarlar(), ad, None)
     if v is None:
         v = os.environ.get(env, varsayilan)

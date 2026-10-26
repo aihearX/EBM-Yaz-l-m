@@ -16,15 +16,12 @@ from smartclinical.models.ekip import CalismaUyesi
 from smartclinical.models.kurulum import CalismaTaslagi, KurulumAyari
 from smartclinical.models.tasarim import VizitTanimi
 from smartclinical.services import denetim, kurulum, yetki
-from smartclinical.web import sihirbaz as sihirbaz_web
 
 PAROLA = "Test1234!xyz"
 
 
 @pytest.fixture(scope="module")
 def istemci():
-    if not any(getattr(r, "path", "").startswith("/sihirbaz") for r in app.routes):
-        app.include_router(sihirbaz_web.router)
     sifirla()
     with TestClient(app) as c:
         c.cookies.clear()
