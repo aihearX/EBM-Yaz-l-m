@@ -123,9 +123,13 @@ def test_bos_kurulumda_pano_yonlendirir(istemci):
     _giris(istemci, "admin")
     r = istemci.get("/")
     assert r.status_code == 200 and 'href="/sihirbaz"' in r.text and "İlk çalışmanızı oluşturun" in r.text
+    # tekil modda arastirmaci da calisma kurabilir; CRA ve sponsor kuramaz
     _giris(istemci, "arastirmaci")
-    r = istemci.get("/")
-    assert "Henüz size atanmış çalışma yok" in r.text and "/sihirbaz" not in r.text
+    assert "İlk çalışmanızı oluşturun" in istemci.get("/").text
+    for kadi in ("cra", "sponsor"):
+        _giris(istemci, kadi)
+        r = istemci.get("/")
+        assert "Henüz size atanmış çalışma yok" in r.text and "/sihirbaz" not in r.text
 
 
 def test_calismalar_olustur(istemci):
@@ -352,15 +356,14 @@ MATRIS = {
     "gonullu_detay": _beklenen(("sponsor", "arastirmaci", "koordinator")),
     "gonullu_form": _beklenen(("sponsor", "arastirmaci", "koordinator")),
 }
-# P2 (tasarim rotasinda calisma_duzenleyebilir) ve P4 (gonullu rotalarinda yetki.gonullu_erisimi) entegre olana dek
-_BEKLEYEN = {("tasarim", k) for k in ("cra", "vy", "sponsor", "arastirmaci", "koordinator", "denetci")} | {
-    (r, k) for r in ("gonullu_detay", "gonullu_form") for k in ("sponsor", "arastirmaci", "koordinator")}
+# P2 (tasarim rotasinda calisma_duzenleyebilir) entegre olana dek; gonullu rotalari yetki.gonullu_erisimi'ni kullaniyor
+_BEKLEYEN = {("tasarim", k) for k in ("cra", "vy", "sponsor", "arastirmaci", "koordinator", "denetci")}
 
 
 def _parametreler():
     for rota, satir in MATRIS.items():
         for kadi, kod in satir.items():
-            marks = [pytest.mark.xfail(strict=True, reason="P2/P4 entegrasyonu bekleniyor")] if (rota, kadi) in _BEKLEYEN else []
+            marks = [pytest.mark.xfail(strict=True, reason="P2 entegrasyonu bekleniyor")] if (rota, kadi) in _BEKLEYEN else []
             yield pytest.param(rota, kadi, kod, id=f"{rota}-{kadi}", marks=marks)
 
 

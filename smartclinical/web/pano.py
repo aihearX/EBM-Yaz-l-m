@@ -22,10 +22,12 @@ from ..models import (
     Sorgu,
     Vizit,
 )
-from ..services.yetki import calisma_filtresi, izinli
+from ..services import kurulum as kurulum_svc
+from ..services.yetki import calisma_filtresi
 from ._ortak import oturumlu
 from .calismalar import KAYITLI_DURUMLAR as KAYITLI
 from .sablon import goster
+from .sihirbaz import sihirbaz_acik
 
 router = APIRouter()
 
@@ -175,7 +177,7 @@ def pano(request: Request, k: Kullanici = Depends(oturumlu), db: Session = Depen
     calismalar = _calismalar(db, k)
     if not calismalar:
         toplam = db.scalar(select(func.count(Calisma.id)))
-        bos = "olustur" if (toplam == 0 and izinli(k, "calisma.olustur")) else "atanmamis"
+        bos = "olustur" if (toplam == 0 and sihirbaz_acik(k, kurulum_svc.ayar_getir(db).mod)) else "atanmamis"
         return goster(request, "pano.html", gorunum=g, bos=bos, calismalar=[], bugun=bugun)
 
     baglam = {"gorunum": g, "bos": None, "calismalar": calismalar, "bugun": bugun}

@@ -11,7 +11,7 @@
       <select name="durum" style="width:170px"><option value="">Tüm aşamalar</option>{% for d in durumlar %}<option value="{{ d.value }}" {{ 'selected' if durum == d.value }}>{{ DURUM_ETIKET[d] }}</option>{% endfor %}</select>
       <button class="btn">Filtrele</button>
     </form>
-    {% if izinli(kullanici, 'calisma.olustur') %}<a class="btn birincil" href="/sihirbaz">Yeni çalışma</a>{% endif %}
+    {% if sihirbaz_acik(kullanici, kurulum.mod) %}<a class="btn birincil" href="/sihirbaz">Yeni çalışma</a>{% endif %}
   </div>
 </div>
 <div class="kart">
@@ -31,7 +31,7 @@
   </tr>
   {% else %}<tr><td colspan="{{ 9 if sade else 11 }}" class="kucuk">
     {% if q or durum or tur %}Bu filtreye uyan çalışma yok. <a href="/calismalar">Filtreyi temizle</a>
-    {% elif izinli(kullanici, 'calisma.olustur') %}Henüz çalışma yok. <a href="/sihirbaz">İlk çalışmanızı oluşturun</a>
+    {% elif sihirbaz_acik(kullanici, kurulum.mod) %}Henüz çalışma yok. <a href="/sihirbaz">İlk çalışmanızı oluşturun</a>
     {% else %}Henüz size atanmış çalışma yok; proje yöneticinizle görüşün.{% endif %}</td></tr>{% endfor %}
 </table>
 </div>

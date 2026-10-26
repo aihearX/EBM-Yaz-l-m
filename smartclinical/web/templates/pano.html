@@ -8,7 +8,7 @@
     {% elif gorunum == 'izlem' %}izlem ve veri kalitesi
     {% elif kullanici.rol.value == 'sponsor' %}{{ kullanici.kurum or 'kurum atanmadı' }} · salt okunur özet
     {% else %}portföy durumu{% endif %}</small></div>
-  <div class="sag">{% if izinli(kullanici, 'calisma.olustur') and not bos %}<a class="btn birincil" href="/sihirbaz">Yeni çalışma</a>{% endif %}</div>
+  <div class="sag">{% if sihirbaz_acik(kullanici, kurulum.mod) and not bos %}<a class="btn birincil" href="/sihirbaz">Yeni çalışma</a>{% endif %}</div>
 </div>
 
 {% if bos %}

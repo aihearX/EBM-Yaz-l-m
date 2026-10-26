@@ -34,7 +34,7 @@ from ..services import ecrf as ecrf_svc
 from ..services import kurulum as kurulum_svc
 from ..services.yetki import ATANABILIR_ROLLER, gerekli
 from ._ortak import bilgi, ip
-from .sablon import goster
+from .sablon import goster, sablonlar
 
 router = APIRouter(prefix="/sihirbaz")
 
@@ -58,10 +58,17 @@ FORM_ACIKLAMA = {
 }
 
 
+def sihirbaz_acik(k: Kullanici, mod: str) -> bool:
+    """'Yeni calisma' dugmesi ve sihirbaz: calisma.olustur izni; arastirmaci yalnizca tekil ve universite modunda."""
+    return yetki.izinli(k, "calisma.olustur") and not (k.rol == Rol.ARASTIRMACI and mod == "cro")
+
+
+sablonlar.env.globals["sihirbaz_acik"] = sihirbaz_acik
+
+
 def sihirbazci(request: Request, k: Kullanici = Depends(gerekli("calisma.olustur")),
                db: Session = Depends(get_db)) -> Kullanici:
-    """Sihirbaza giris: calisma.olustur izni; arastirmaci yalnizca tekil ve universite modunda."""
-    if k.rol == Rol.ARASTIRMACI and kurulum_svc.ayar_getir(db).mod == "cro":
+    if not sihirbaz_acik(k, kurulum_svc.ayar_getir(db).mod):
         raise HTTPException(403, "CRO modunda çalışmayı proje yöneticisi kurar")
     request.state.kullanici = k
     return k

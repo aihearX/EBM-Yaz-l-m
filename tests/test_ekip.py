@@ -1,5 +1,7 @@
-"""Calisma bazli ekip atamasi: kisit yokken serbest erisim, ilk atamayla daralma, rol yollari, denetim izi."""
+"""Calisma bazli ekip atamasi: kisit yokken serbest erisim, ilk atamayla daralma, rol yollari, denetim izi,
+sihirbazla kuran kullanicinin otomatik uyeligi."""
 import os
+import re
 
 os.environ["SC_DB_URL"] = "sqlite:///:memory:"
 
@@ -87,9 +89,10 @@ def test_atama_yokken_herkes_gorur(istemci):
     assert istemci.get(f"/calismalar/{s1}").status_code == 200
     assert istemci.get(f"/calismalar/{dg}").status_code == 200
     assert {x["kod"] for x in istemci.get("/api/v1/calismalar").json()} == {"S1-001", "DG-001"}
+    assert istemci.get(f"/calismalar/{s1}/ekip").status_code == 403  # ekip sekmesi yalnizca yonetici ve PY
+    _giris(istemci, "admin")
     r = istemci.get(f"/calismalar/{s1}/ekip")
     assert r.status_code == 200 and "Henüz hiçbir çalışmada atama yok" in r.text
-    assert "Ekibe ekle" not in r.text  # CRA ekip yonetemez, yalnizca gorur
 
 
 def test_ilk_atama_kisiti_baslatir(istemci):
@@ -189,3 +192,27 @@ def test_calisma_filtresi_ve_erisim_fonksiyonlari():
     kodlar = [c.kod for c in db.execute(yetki.calisma_filtresi(db, py, select(Calisma))).scalars().unique()]
     assert kodlar == ["S1-001"]
     db.close()
+
+
+def test_sihirbazla_kuran_py_otomatik_uye(istemci):
+    """Kisit etkinken PY sihirbazla calisma kurar: CalismaUyesi kaydi olusur, yonlendirilen sayfa 200 doner."""
+    _giris(istemci, "py")
+    assert yetki.kisit_aktif(oturum_fabrikasi()())
+    r = istemci.post("/sihirbaz/1", data={"kod": "PY-100", "kisa_ad": "Otomatik", "baslik": "Otomatik uyelik", "tur": "akademik",
+                                         "terapotik_alan": "Kardiyoloji", "hedef_hasta": "5", "sponsor": "S1"}, follow_redirects=False)
+    assert r.status_code == 303 and r.headers["location"] == "/sihirbaz/2"
+    istemci.post("/sihirbaz/2", data={"kol_ad": ["Tek kol"], "kol_oran": ["1"], "vizit_sablonu": "kisa_takip"})
+    r = istemci.post("/sihirbaz/3", data={"merkez_id": "1"}, follow_redirects=False)
+    assert r.status_code == 303 and r.headers["location"] == "/sihirbaz/4"
+    r = istemci.post("/sihirbaz/4", data={"form_kod": ["DM"], "basvuru": ["etik_kurul"]}, follow_redirects=False)
+    assert r.status_code == 303 and re.match(r"/calismalar/\d+$", r.headers["location"])
+    assert istemci.get(r.headers["location"]).status_code == 200
+    assert _uye_id("PY-100", "py") is not None
+    db = oturum_fabrikasi()()
+    c = db.execute(select(Calisma).where(Calisma.kod == "PY-100")).scalar_one()
+    assert c.olusturan_id == _kid("py")
+    kayit = db.execute(select(DenetimKaydi).where(DenetimKaydi.varlik == "calisma_uyesi", DenetimKaydi.varlik_id == _uye_id("PY-100", "py"))).scalar_one()
+    assert kayit.yeni["kaynak"] == "sihirbaz"
+    db.close()
+    _giris(istemci, "cra2")  # uye degil
+    assert istemci.get(f"/calismalar/{c.id}").status_code == 403

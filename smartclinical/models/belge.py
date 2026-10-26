@@ -22,6 +22,20 @@ TMF_BOLGELER = {
 }
 
 
+BELGE_DURUM_ETIKET = {"taslak": "Taslak", "onayli": "Onaylı", "eskimis": "Eskimiş"}
+# yuklemede izin verilen uzantilar ve beklenen icerik turleri; ilk baytlar (magic) da kontrol edilir
+IZINLI_UZANTILAR = {
+    "pdf": ("application/pdf",),
+    "docx": ("application/vnd.openxmlformats-officedocument.wordprocessingml.document", "application/octet-stream"),
+    "xlsx": ("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "application/octet-stream"),
+    "png": ("image/png",),
+    "jpg": ("image/jpeg",),
+    "jpeg": ("image/jpeg",),
+}
+DOSYA_IMZALARI = {"pdf": (b"%PDF",), "docx": (b"PK",), "xlsx": (b"PK",), "png": (b"\x89PNG",), "jpg": (b"\xff\xd8",), "jpeg": (b"\xff\xd8",)}
+MAKS_BELGE_BOYUTU = 25 * 1024 * 1024
+
+
 class Belge(Taban):
     __tablename__ = "belge"
 
@@ -39,11 +53,21 @@ class Belge(Taban):
     yukleme: Mapped[datetime] = mapped_column(DateTime, default=simdi)
     son_gecerlilik: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     aciklama: Mapped[str | None] = mapped_column(Text, nullable=True)
+    onceki_id: Mapped[int | None] = mapped_column(ForeignKey("belge.id"), nullable=True)  # surum zinciri
 
     calisma = relationship("Calisma")
     merkez = relationship("Merkez")
     yukleyen = relationship("Kullanici")
+    onceki = relationship("Belge", remote_side=[id], foreign_keys=[onceki_id])
 
     @property
     def bolge_etiket(self) -> str:
         return f"{self.tmf_bolge} - {TMF_BOLGELER.get(self.tmf_bolge, '?')}"
+
+    @property
+    def durum_etiket(self) -> str:
+        return BELGE_DURUM_ETIKET.get(self.durum, self.durum)
+
+    @property
+    def uzanti(self) -> str:
+        return (self.dosya_adi or "").rsplit(".", 1)[-1].lower() if "." in (self.dosya_adi or "") else ""

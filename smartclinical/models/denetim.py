@@ -12,7 +12,8 @@ class DenetimKaydi(Taban):
 
     Kayitlar uygulama katmanindan silinemez; veritabani kullanicisinin bu tabloda
     sadece INSERT yetkisi olmalidir (bkz. deploy/postgres/yetkiler.sql).
-    Her kayit bir oncekinin ozetini (onceki_hash) tasir; zincir bozulursa
+    Her kayit bir oncekinin ozetini (onceki_hash) tasir; ozet HMAC-SHA256'dir (anahtar SC_SECRET_KEY'den
+    turetilir), zincir bozulursa
     `scripts/denetim_dogrula.py` uyarir.
     """
 
@@ -22,7 +23,7 @@ class DenetimKaydi(Taban):
     zaman: Mapped[datetime] = mapped_column(DateTime, default=simdi, index=True)
     kullanici_id: Mapped[int | None] = mapped_column(ForeignKey("kullanici.id"), nullable=True)
     kullanici_adi: Mapped[str | None] = mapped_column(String(64), nullable=True)  # kullanici silinse de kalsin
-    islem: Mapped[str] = mapped_column(String(24))  # olustur | guncelle | sil | giris | cikis | imza | disa_aktar | goruntule
+    islem: Mapped[str] = mapped_column(String(24))  # olustur | guncelle | sil | giris | cikis | imza | disa_aktar | goruntule | kilit_ac | zamanlanmis
     varlik: Mapped[str] = mapped_column(String(40), index=True)
     varlik_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     eski: Mapped[dict | None] = mapped_column(JSON, nullable=True)
@@ -33,6 +34,18 @@ class DenetimKaydi(Taban):
     hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
     kullanici = relationship("Kullanici")
+
+
+class DenetimZincir(Taban):
+    """Zincirin son ozeti; tek satir (id=1). Yeni kayit eklenirken bu satir kilitlenir
+    (PostgreSQL: SELECT ... FOR UPDATE, SQLite: BEGIN IMMEDIATE), boylece es zamanli
+    yazimlar sirali hale gelir ve iki kaydin ayni onceki_hash'i tasimasi onlenir."""
+
+    __tablename__ = "denetim_zincir"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    son_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    son_kayit_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
 
 class EImza(Taban):
