@@ -1,4 +1,5 @@
-"""Denetim izi hash zincirini dogrular. Cron ile gunluk calistirilmasi onerilir (bkz. deploy/KURULUM.md)."""
+"""Denetim izi zincirini dogrular. Zincir ozetleri HMAC-SHA256'dir; dogrulama calisirken SC_SECRET_KEY uygulamadakiyle
+ayni olmalidir (aksi halde ilk kayitta "bozuk" raporlanir). Gunluk calistirilmasi onerilir (bkz. deploy/KURULUM.md)."""
 import sys
 
 from ..db import db_oturumu
@@ -11,7 +12,7 @@ def main():
     if gecerli:
         print("Denetim izi zinciri gecerli.")
         return 0
-    print(f"UYARI: zincir {bozuk} numarali kayitta bozuk!", file=sys.stderr)
+    print(f"UYARI: zincir {bozuk} numarali kayitta bozuk! (anahtar degistiyse ilk kayitta durur)", file=sys.stderr)
     return 2
 
 

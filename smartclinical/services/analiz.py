@@ -3,9 +3,16 @@
 Butun ciktilar sozluk/liste olarak doner; sablonlar hesap yapmaz. Test secimi kural tabanlidir
 (normallik + grup sayisi + beklenen siklik); nihai analiz istatistiksel analiz planina gore yapilir.
 numpy ve scipy disinda bagimlilik yok.
+
+Uc gorunum var:
+- tek vizit: kol bazinda ozet ve kol karsilastirma testi (varsayilan vizit semadaki ilk gun >= 0 vizit);
+- tum vizitler: gonullu basina son deger ozetlenir, vizitler karisik oldugundan kol testi yapilmaz;
+- vizitler arasi degisim: ayni gonullude iki vizit farki, eslestirilmis t / Wilcoxon isaretli sira.
+merkez_id verildiginde (arastirmaci, koordinator) yalnizca o merkezin gonulluleri analize girer.
 """
 import math
 import warnings
+from datetime import date
 
 import numpy as np
 from scipy import stats
@@ -18,8 +25,12 @@ SAYISAL = "sayisal"
 KATEGORIK = "kategorik"
 KOL_YOK = "Kol atanmamış"
 ALFA = 0.05
+TUM_VIZITLER = "tum"  # web parametresi: vizit=tum
 
 _TIP_ESLEME = {"sayi": SAYISAL, "secim": KATEGORIK, "evet_hayir": KATEGORIK}
+# Dogum yili alani ham haliyle degil, turetilmis yas olarak analize girer
+_DOGUM_YILI_KODLARI = ("BRTHYR", "DOGUMYILI")
+_DOGUM_YILI_CDASH = ("DM.BRTHDTC", "DM.BRTHYR")
 
 _RANDOMIZE_SONRASI = (GonulluDurumu.RANDOMIZE, GonulluDurumu.TEDAVIDE, GonulluDurumu.TAKIPTE,
                       GonulluDurumu.TAMAMLADI)
@@ -53,13 +64,24 @@ def alan_tipi(alan: dict) -> str | None:
     return _TIP_ESLEME.get(alan.get("tip"))
 
 
+def _dogum_yili_mi(alan: dict) -> bool:
+    return alan.get("tip") == "sayi" and (str(alan.get("kod", "")).upper() in _DOGUM_YILI_KODLARI
+                                          or str(alan.get("cdash", "")).upper() in _DOGUM_YILI_CDASH)
+
+
 def _kol_adi(g) -> str:
     return g.kol.ad if g.kol else KOL_YOK
 
 
-def _kol_adlari(calisma) -> list[str]:
+def _gonulluler(calisma, merkez_id=None):
+    if merkez_id is None:
+        return list(calisma.gonulluler)
+    return [g for g in calisma.gonulluler if g.calisma_merkez and g.calisma_merkez.merkez_id == merkez_id]
+
+
+def _kol_adlari(calisma, merkez_id=None) -> list[str]:
     adlar = [k.ad for k in calisma.kollar]
-    if any(g.kol is None for g in calisma.gonulluler):
+    if any(g.kol is None for g in _gonulluler(calisma, merkez_id)):
         adlar.append(KOL_YOK)
     return adlar
 
@@ -68,10 +90,10 @@ def _formlar(calisma):
     return sorted(calisma.formlar, key=lambda f: (f.sira, f.id))
 
 
-def _kayitlar(calisma):
+def _kayitlar(calisma, merkez_id=None):
     """Analize giren form kayitlari, gonullu no ve vizit sirasina gore."""
     liste = []
-    for g in calisma.gonulluler:
+    for g in _gonulluler(calisma, merkez_id):
         for fk in g.form_kayitlari:
             if fk.durum in ANALIZ_DURUMLARI:
                 liste.append(fk)
@@ -83,23 +105,49 @@ def _r(v, basamak=2):
     return None if v is None else round(float(v), basamak)
 
 
+def _referans_yil(g) -> int:
+    t = g.randomizasyon_tarihi or g.tarama_tarihi or g.onam_tarihi
+    return t.year if t else date.today().year
+
+
+def varsayilan_vizit(calisma) -> str | None:
+    """Baslangic viziti: semadaki ilk gun >= 0 vizit; sema yoksa None (web tum vizitlere duser)."""
+    tanimlar = sorted(calisma.vizit_tanimlari, key=lambda t: (t.gun, t.sira))
+    for t in tanimlar:
+        if t.gun >= 0:
+            return t.ad
+    return tanimlar[0].ad if tanimlar else None
+
+
+def vizit_adlari(calisma) -> list[str]:
+    return [t.ad for t in sorted(calisma.vizit_tanimlari, key=lambda t: (t.sira, t.gun))]
+
+
 # ---------------------------------------------------------------------------
 # Veri seti ve degisken listesi
 # ---------------------------------------------------------------------------
-def veri_seti(calisma) -> tuple[list[str], list[dict]]:
+def veri_seti(calisma, merkez_id=None) -> tuple[list[str], list[dict]]:
     """Genis tablo: her satir bir form kaydi (taslaklar haric) + gonullu no, kol, vizit.
 
-    Sutunlar 'FORMKOD.ALANKOD' bicimindedir; sayi alanlari float, digerleri metin.
+    Sutunlar 'FORMKOD.ALANKOD' bicimindedir; sayi alanlari float, digerleri metin. Dogum yili sutunu
+    yerine turetilmis yas (FORMKOD.YAS) yazilir.
     """
     sutunlar = ["gonullu_no", "kol", "vizit"]
     tipler = {}
+    yas_kaynak = {}
     for f in _formlar(calisma):
         for a in f.alanlar:
-            kod = f"{f.kod}.{a['kod']}"
+            if _dogum_yili_mi(a):
+                kod = f"{f.kod}.YAS"
+                yas_kaynak[kod] = f"{f.kod}.{a['kod']}"
+                tipler[kod] = "sayi"
+            else:
+                kod = f"{f.kod}.{a['kod']}"
+                tipler[kod] = a.get("tip")
             sutunlar.append(kod)
-            tipler[kod] = a.get("tip")
+    ters_yas = {v: k for k, v in yas_kaynak.items()}
     satirlar = []
-    for fk in _kayitlar(calisma):
+    for fk in _kayitlar(calisma, merkez_id):
         satir = {s: None for s in sutunlar}
         satir["gonullu_no"] = fk.gonullu.gonullu_no
         satir["kol"] = _kol_adi(fk.gonullu)
@@ -107,6 +155,10 @@ def veri_seti(calisma) -> tuple[list[str], list[dict]]:
         onek = fk.form.kod + "."
         for alan_kod, v in (fk.veriler or {}).items():
             kod = onek + alan_kod
+            if kod in ters_yas:
+                yil = sayiya(v)
+                satir[ters_yas[kod]] = None if yil is None else float(_referans_yil(fk.gonullu) - int(yil))
+                continue
             if kod not in tipler:
                 continue  # formdan kaldirilmis alan
             if tipler[kod] == "sayi":
@@ -119,11 +171,11 @@ def veri_seti(calisma) -> tuple[list[str], list[dict]]:
     return sutunlar, satirlar
 
 
-def degiskenler(calisma) -> list[dict]:
+def degiskenler(calisma, merkez_id=None) -> list[dict]:
     """Analiz edilebilir degiskenler: [{kod, etiket, tip, form, vizitler, duzeyler}]."""
     # formun gercekte hangi vizitlerde kaydi var (vizit sirasina gore)
     gozlenen: dict[int, dict[str, int]] = {}
-    for fk in _kayitlar(calisma):
+    for fk in _kayitlar(calisma, merkez_id):
         if fk.vizit:
             gozlenen.setdefault(fk.form_id, {}).setdefault(fk.vizit.ad, fk.vizit.sira)
     liste = []
@@ -132,6 +184,11 @@ def degiskenler(calisma) -> list[dict]:
         for a in f.alanlar:
             tip = alan_tipi(a)
             if not tip:
+                continue
+            if _dogum_yili_mi(a):
+                liste.append({"kod": f"{f.kod}.YAS", "etiket": "Yaş (doğum yılından türetilmiş)", "tip": SAYISAL,
+                              "form": f.ad, "form_kod": f.kod, "vizitler": vizitler, "duzeyler": [],
+                              "kaynak": a["kod"], "turetilmis": "yas"})
                 continue
             etiket = a.get("etiket") or a["kod"]
             if a.get("birim"):
@@ -144,35 +201,63 @@ def degiskenler(calisma) -> list[dict]:
     return liste
 
 
-def degisken_bul(calisma, kod: str) -> dict | None:
-    for d in degiskenler(calisma):
+def degisken_bul(calisma, kod: str, merkez_id=None) -> dict | None:
+    for d in degiskenler(calisma, merkez_id):
         if d["kod"] == kod:
             return d
     return None
 
 
-def kol_degerleri(calisma, kod: str, vizit: str | None = None) -> dict[str, list]:
-    """Secilen degiskenin kol bazinda degerleri (eksikler None). Vizit verilirse yalniz o vizit."""
-    form_kod, _, alan_kod = kod.partition(".")
-    form = next((f for f in _formlar(calisma) if f.kod == form_kod), None)
-    if form is None:
+def _deger_oku(d: dict, fk) -> object:
+    """Form kaydindan degiskenin degeri; turetilmis yas icin referans yil - dogum yili."""
+    veriler = fk.veriler or {}
+    if d.get("turetilmis") == "yas":
+        yil = sayiya(veriler.get(d["kaynak"]))
+        return None if yil is None else float(_referans_yil(fk.gonullu) - int(yil))
+    alan_kod = d["kod"].partition(".")[2]
+    v = veriler.get(alan_kod)
+    if d["tip"] == SAYISAL:
+        return sayiya(v)
+    return None if v in (None, "", []) else str(v)
+
+
+def gonullu_degerleri(calisma, kod: str, vizit: str | None = None, merkez_id=None) -> dict[str, dict]:
+    """{gonullu_no: {"kol": ad, "deger": v, "vizit": ad}}. vizit None -> gonullunun son viziti (vizit sirasina gore)."""
+    d = degisken_bul(calisma, kod, merkez_id)
+    if d is None:
         return {}
-    alan = next((a for a in form.alanlar if a["kod"] == alan_kod), None)
-    if alan is None:
-        return {}
-    tip = alan_tipi(alan)
-    gruplar: dict[str, list] = {ad: [] for ad in _kol_adlari(calisma)}
-    for fk in _kayitlar(calisma):
-        if fk.form_id != form.id:
+    form_kod = d["form_kod"]
+    sonuc: dict[str, dict] = {}
+    for fk in _kayitlar(calisma, merkez_id):  # vizit sirasina gore; sonraki kayit oncekini ezer
+        if fk.form.kod != form_kod:
             continue
         if vizit and (not fk.vizit or fk.vizit.ad != vizit):
             continue
-        v = (fk.veriler or {}).get(alan_kod)
-        if tip == SAYISAL:
-            v = sayiya(v)
-        else:
-            v = None if v in (None, "", []) else str(v)
-        gruplar.setdefault(_kol_adi(fk.gonullu), []).append(v)
+        v = _deger_oku(d, fk)
+        no = fk.gonullu.gonullu_no
+        if no in sonuc and v is None and sonuc[no]["deger"] is not None:
+            continue  # bos tekrar dolu degeri silmesin
+        sonuc[no] = {"kol": _kol_adi(fk.gonullu), "deger": v, "vizit": fk.vizit.ad if fk.vizit else ""}
+    return sonuc
+
+
+def kol_degerleri(calisma, kod: str, vizit: str | None = None, merkez_id=None) -> dict[str, list]:
+    """Secilen degiskenin kol bazinda degerleri (eksikler None).
+
+    Vizit verilirse yalniz o vizitteki kayitlar; verilmezse gonullu basina son deger (tum vizitler gorunumu).
+    """
+    d = degisken_bul(calisma, kod, merkez_id)
+    if d is None:
+        return {}
+    gruplar: dict[str, list] = {ad: [] for ad in _kol_adlari(calisma, merkez_id)}
+    if vizit:
+        for fk in _kayitlar(calisma, merkez_id):
+            if fk.form.kod != d["form_kod"] or not fk.vizit or fk.vizit.ad != vizit:
+                continue
+            gruplar.setdefault(_kol_adi(fk.gonullu), []).append(_deger_oku(d, fk))
+        return gruplar
+    for x in gonullu_degerleri(calisma, kod, None, merkez_id).values():
+        gruplar.setdefault(x["kol"], []).append(x["deger"])
     return gruplar
 
 
@@ -190,11 +275,11 @@ def betimle(degerler, tip: str, duzeyler: list[str] | None = None) -> dict:
         n = int(x.size)
         if n == 0:
             return {"tip": SAYISAL, "n": 0, "eksik": eksik, "ortalama": None, "ss": None, "medyan": None,
-                    "caa": None, "min": None, "maks": None}
+                    "caa": None, "min": None, "maks": None, "c1": None, "c3": None}
         q1, q3 = np.percentile(x, [25, 75])
         return {"tip": SAYISAL, "n": n, "eksik": eksik, "ortalama": _r(x.mean()),
                 "ss": _r(x.std(ddof=1)) if n >= 2 else None, "medyan": _r(np.median(x)),
-                "caa": _r(q3 - q1), "min": _r(x.min()), "maks": _r(x.max())}
+                "caa": _r(q3 - q1), "min": _r(x.min()), "maks": _r(x.max()), "c1": _r(q1), "c3": _r(q3)}
     sayilar: dict[str, int] = {d: 0 for d in (duzeyler or [])}
     for v in degerler:
         if v is not None:
@@ -221,6 +306,14 @@ def kutu_verisi(degerler) -> dict | None:
 # ---------------------------------------------------------------------------
 # Kol karsilastirmasi: uygun testin otomatik secimi
 # ---------------------------------------------------------------------------
+def _shapiro_p(x: np.ndarray) -> float | None:
+    if x.size < 3 or np.ptp(x) == 0:
+        return None
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        return float(stats.shapiro(x).pvalue)
+
+
 def _normal_mi(gruplar: dict[str, np.ndarray]) -> tuple[bool, list[str]]:
     notlar, normal = [], True
     for ad, x in gruplar.items():
@@ -228,9 +321,7 @@ def _normal_mi(gruplar: dict[str, np.ndarray]) -> tuple[bool, list[str]]:
             notlar.append(f"{ad}: tüm değerler aynı")
             normal = False
             continue
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            p = float(stats.shapiro(x).pvalue)
+        p = _shapiro_p(x)
         notlar.append(f"{ad}: Shapiro-Wilk p={p:.3f}".replace(".", ","))
         if p <= ALFA:
             normal = False
@@ -300,12 +391,35 @@ def kol_karsilastir(gruplar: dict[str, list], tip: str) -> dict:
                   tablo=tablo.tolist(), duzeyler=duzeyler)
 
 
-def degisken_analizi(calisma, kod: str, vizit: str | None = None) -> dict | None:
-    """Web icin tek giris: kol bazinda betimleme, toplam, test ve grafik verisi."""
-    d = degisken_bul(calisma, kod)
+def eslestirilmis_karsilastir(farklar: list[float]) -> dict:
+    """Ayni gonullude iki vizit farki: normallik saglaniyorsa eslestirilmis t, degilse Wilcoxon isaretli sira."""
+    x = np.array([v for v in farklar if v is not None], dtype=float)
+    n = int(x.size)
+    if n < 3:
+        return _sonuc(None, None, None, f"Her iki vizitte de değeri olan gönüllü sayısı {n}; test için en az 3 gerekir.")
+    if np.ptp(x) == 0:
+        return _sonuc(None, None, None, f"{n} gönüllüde fark aynı ({x[0]:g}); test yapılmadı.")
+    p_sw = _shapiro_p(x)
+    sw = f"Shapiro-Wilk p={p_sw:.3f}".replace(".", ",")
+    if p_sw is not None and p_sw > ALFA:
+        r = stats.ttest_rel(x, np.zeros(n))
+        return _sonuc("Eşleştirilmiş t testi", r.statistic, r.pvalue,
+                      f"{n} eşleştirilmiş gönüllü; farkların dağılımı normal ({sw}).", n_cift=n)
+    r = stats.wilcoxon(x)
+    return _sonuc("Wilcoxon işaretli sıra testi", r.statistic, r.pvalue,
+                  f"{n} eşleştirilmiş gönüllü; farkların dağılımı normal değil ({sw}), parametrik olmayan test seçildi.",
+                  n_cift=n)
+
+
+def degisken_analizi(calisma, kod: str, vizit: str | None = None, merkez_id=None) -> dict | None:
+    """Web icin tek giris: kol bazinda betimleme, toplam, test ve grafik verisi.
+
+    vizit None: tum vizitler; gonullu basina son deger ozetlenir ve kol testi yapilmaz.
+    """
+    d = degisken_bul(calisma, kod, merkez_id)
     if d is None:
         return None
-    gruplar = {ad: g for ad, g in kol_degerleri(calisma, kod, vizit).items() if g}  # kaydi olmayan kol gosterilmez
+    gruplar = {ad: g for ad, g in kol_degerleri(calisma, kod, vizit, merkez_id).items() if g}  # kaydi olmayan kol gosterilmez
     hepsi = [v for g in gruplar.values() for v in g]
     # duzey sirasi tum kollarda ayni olsun: tanimli secenekler + gozlenen ek degerler
     duzeyler = list(d["duzeyler"])
@@ -314,7 +428,14 @@ def degisken_analizi(calisma, kod: str, vizit: str | None = None) -> dict | None
             duzeyler.append(str(v))
     kollar = [{"ad": ad, "ozet": betimle(g, d["tip"], duzeyler)} for ad, g in gruplar.items()]
     sonuc = {"degisken": d, "vizit": vizit, "kollar": kollar, "toplam": betimle(hepsi, d["tip"], duzeyler),
-             "test": kol_karsilastir({ad: g for ad, g in gruplar.items() if any(v is not None for v in g)}, d["tip"])}
+             "gorunum": "vizit" if vizit else "tum", "aciklama": None}
+    if vizit:
+        sonuc["test"] = kol_karsilastir({ad: g for ad, g in gruplar.items() if any(v is not None for v in g)}, d["tip"])
+    else:
+        sonuc["test"] = _sonuc(None, None, None, "Tüm vizitler görünümünde kol testi yapılmaz: ölçümler farklı "
+                                                 "vizitlerden geldiğinden karşılaştırma yanıltıcı olur.")
+        sonuc["aciklama"] = (f"Her gönüllü için son kaydedilen değer alındı; n gönüllü sayısıdır "
+                             f"({len(hepsi)} gönüllü). Kol karşılaştırması için tek bir vizit seçin.")
     if d["tip"] == SAYISAL:
         sonuc["grafik"] = [{"ad": ad, **(kutu_verisi(g) or {})} for ad, g in gruplar.items() if kutu_verisi(g)]
     else:
@@ -324,11 +445,132 @@ def degisken_analizi(calisma, kod: str, vizit: str | None = None) -> dict | None
     return sonuc
 
 
+def vizit_degisimi(calisma, kod: str, vizit1: str, vizit2: str, merkez_id=None) -> dict | None:
+    """Iki vizit arasi degisim: ayni gonullude (vizit2 - vizit1). Yalnizca sayisal degiskenler."""
+    d = degisken_bul(calisma, kod, merkez_id)
+    if d is None:
+        return None
+    sonuc = {"degisken": d, "vizit1": vizit1, "vizit2": vizit2, "gorunum": "degisim", "kollar": [], "toplam": None,
+             "grafik": [], "aciklama": None}
+    if d["tip"] != SAYISAL:
+        sonuc["test"] = _sonuc(None, None, None, "Vizitler arası değişim yalnızca sayısal değişkenler için hesaplanır.")
+        return sonuc
+    g1 = gonullu_degerleri(calisma, kod, vizit1, merkez_id)
+    g2 = gonullu_degerleri(calisma, kod, vizit2, merkez_id)
+    ciftler: dict[str, list[tuple[float, float]]] = {ad: [] for ad in _kol_adlari(calisma, merkez_id)}
+    for no, x in g1.items():
+        y = g2.get(no)
+        if y is None or x["deger"] is None or y["deger"] is None:
+            continue
+        ciftler.setdefault(x["kol"], []).append((x["deger"], y["deger"]))
+    for ad, cift in ciftler.items():
+        if not cift:
+            continue
+        farklar = [b - a for a, b in cift]
+        sonuc["kollar"].append({"ad": ad, "n": len(cift), "ozet1": betimle([a for a, _ in cift], SAYISAL),
+                                "ozet2": betimle([b for _, b in cift], SAYISAL), "fark": betimle(farklar, SAYISAL)})
+        kutu = kutu_verisi(farklar)
+        if kutu:
+            sonuc["grafik"].append({"ad": ad, **kutu})
+    tum_fark = [b - a for cift in ciftler.values() for a, b in cift]
+    sonuc["toplam"] = betimle(tum_fark, SAYISAL)
+    sonuc["test"] = eslestirilmis_karsilastir(tum_fark)
+    sonuc["aciklama"] = (f"Fark = {vizit2} − {vizit1}; yalnızca her iki vizitte de değeri olan gönüllüler alındı "
+                         f"({len(tum_fark)} gönüllü). Test kollardan bağımsız, tüm gönüllüler üzerinde yapılır.")
+    return sonuc
+
+
+# ---------------------------------------------------------------------------
+# Baslangic ozeti (Tablo 1)
+# ---------------------------------------------------------------------------
+def _ts(v, basamak=1) -> str:
+    if v is None:
+        return "—"
+    return f"{v:.{basamak}f}".replace(".", ",")
+
+
+def tablo1(calisma, vizit: str | None, merkez_id=None) -> dict:
+    """Secili vizitte tum sayisal ve kategorik alanlar kol bazinda tek tabloda.
+
+    Sayisal: normal dagilimda ortalama ± SS, degilse medyan [Ç1–Ç3]; kategorik: n (%).
+    Donus: {vizit, kollar, satirlar: [{etiket, alt, hucreler: {kol: metin}, toplam, n}]}.
+    """
+    kollar = _kol_adlari(calisma, merkez_id)
+    satirlar = []
+    gorulen_kol: set[str] = set()
+    for d in degiskenler(calisma, merkez_id):
+        gruplar = kol_degerleri(calisma, d["kod"], vizit, merkez_id)
+        gruplar = {ad: g for ad, g in gruplar.items() if any(v is not None for v in g)}
+        if not gruplar:
+            continue
+        gorulen_kol.update(gruplar)
+        hepsi = [v for g in gruplar.values() for v in g]
+        n_satir = {"etiket": d["etiket"], "alt": False, "hucreler": {}, "toplam": "", "kod": d["kod"], "n": True}
+        if d["tip"] == SAYISAL:
+            x = np.array([v for v in hepsi if v is not None], dtype=float)
+            p = _shapiro_p(x)
+            normal = p is None or p > ALFA
+            n_satir["etiket"] = f"{d['etiket']}, {'ortalama ± SS' if normal else 'medyan [Ç1–Ç3]'}"
+
+            def hucre(g):
+                o = betimle(g, SAYISAL)
+                if o["n"] == 0:
+                    return "—"
+                if normal:
+                    return f"{_ts(o['ortalama'])} ± {_ts(o['ss'])}" if o["ss"] is not None else _ts(o["ortalama"])
+                return f"{_ts(o['medyan'])} [{_ts(o['c1'])}–{_ts(o['c3'])}]"
+
+            for ad in kollar:
+                n_satir["hucreler"][ad] = hucre(gruplar.get(ad, [])) + f" (n={betimle(gruplar.get(ad, []), SAYISAL)['n']})"
+            n_satir["toplam"] = hucre(hepsi) + f" (n={int(x.size)})"
+            satirlar.append(n_satir)
+            continue
+        duzeyler = list(d["duzeyler"])
+        for v in hepsi:
+            if v is not None and str(v) not in duzeyler:
+                duzeyler.append(str(v))
+        ozetler = {ad: betimle(gruplar.get(ad, []), KATEGORIK, duzeyler) for ad in kollar}
+        toplam = betimle(hepsi, KATEGORIK, duzeyler)
+        n_satir["etiket"] = f"{d['etiket']}, n (%)"
+        for ad in kollar:
+            n_satir["hucreler"][ad] = f"n={ozetler[ad]['n']}"
+        n_satir["toplam"] = f"n={toplam['n']}"
+        satirlar.append(n_satir)
+        for i, dz in enumerate(duzeyler):
+            satir = {"etiket": dz, "alt": True, "hucreler": {}, "toplam": "", "kod": d["kod"], "n": False}
+            for ad in kollar:
+                h = ozetler[ad]["duzeyler"][i]
+                satir["hucreler"][ad] = f"{h['n']} ({_ts(h['yuzde'])}%)" if h["yuzde"] is not None else "0"
+            t = toplam["duzeyler"][i]
+            satir["toplam"] = f"{t['n']} ({_ts(t['yuzde'])}%)" if t["yuzde"] is not None else "0"
+            satirlar.append(satir)
+    kollar = [k for k in kollar if k in gorulen_kol] or kollar
+    for s in satirlar:
+        s["hucreler"] = {k: s["hucreler"].get(k, "—") for k in kollar}
+    gonullu = {no for no in gonullu_degerleri_tum(calisma, vizit, merkez_id)}
+    return {"vizit": vizit, "kollar": kollar, "satirlar": satirlar, "gonullu": len(gonullu)}
+
+
+def gonullu_degerleri_tum(calisma, vizit: str | None, merkez_id=None) -> set[str]:
+    """Secili vizitte analize giren kaydi olan gonullu numaralari."""
+    return {fk.gonullu.gonullu_no for fk in _kayitlar(calisma, merkez_id)
+            if not vizit or (fk.vizit and fk.vizit.ad == vizit)}
+
+
+def tablo1_csv_satirlari(t: dict) -> list[list[str]]:
+    baslik = ["Değişken"] + list(t["kollar"]) + ["Toplam"]
+    satirlar = [baslik]
+    for s in t["satirlar"]:
+        etiket = ("  " + s["etiket"]) if s["alt"] else s["etiket"]
+        satirlar.append([etiket] + [s["hucreler"][k] for k in t["kollar"]] + [s["toplam"]])
+    return satirlar
+
+
 # ---------------------------------------------------------------------------
 # Veri durumu, gonullu akisi, advers olay ozeti
 # ---------------------------------------------------------------------------
-def veri_durumu(calisma) -> dict:
-    hepsi = [fk for g in calisma.gonulluler for fk in g.form_kayitlari]
+def veri_durumu(calisma, merkez_id=None) -> dict:
+    hepsi = [fk for g in _gonulluler(calisma, merkez_id) for fk in g.form_kayitlari]
     analiz = [fk for fk in hepsi if fk.durum in ANALIZ_DURUMLARI]
     kilitli = sum(1 for fk in analiz if fk.durum == "kilitli")
     oran = (100 * kilitli / len(analiz)) if analiz else 0.0
@@ -336,9 +578,10 @@ def veri_durumu(calisma) -> dict:
             "kilitli_oran": round(oran, 1), "on_analiz": oran < 100}
 
 
-def gonullu_akisi(calisma) -> dict:
+def gonullu_akisi(calisma, merkez_id=None) -> dict:
     """Kol bazinda gonullu akisi. 'tarandi' ile 'tarama_oncesi' toplami calisma gonullu sayisina esittir."""
-    kollar = _kol_adlari(calisma)
+    kollar = _kol_adlari(calisma, merkez_id)
+    gonulluler = _gonulluler(calisma, merkez_id)
     tanimlar = [
         ("tarama_oncesi", "Tarama öncesi (aday, ön tarama, onam)", lambda g: g.durum not in _TARANDI, None),
         ("tarandi", "Tarandı", lambda g: g.durum in _TARANDI, None),
@@ -353,7 +596,7 @@ def gonullu_akisi(calisma) -> dict:
     for anahtar, etiket, kosul, neden_alani in tanimlar:
         sayilar = {k: 0 for k in kollar}
         nedenler: dict[str, int] = {}
-        for g in calisma.gonulluler:
+        for g in gonulluler:
             if not kosul(g):
                 continue
             sayilar[_kol_adi(g)] = sayilar.get(_kol_adi(g), 0) + 1
@@ -362,17 +605,17 @@ def gonullu_akisi(calisma) -> dict:
                 nedenler[neden] = nedenler.get(neden, 0) + 1
         satirlar.append({"anahtar": anahtar, "etiket": etiket, "kollar": sayilar, "toplam": sum(sayilar.values()),
                          "nedenler": sorted(nedenler.items(), key=lambda x: -x[1]) if neden_alani else None})
-    return {"kollar": kollar, "satirlar": satirlar, "toplam_gonullu": len(calisma.gonulluler)}
+    return {"kollar": kollar, "satirlar": satirlar, "toplam_gonullu": len(gonulluler)}
 
 
-def advers_olay_ozeti(calisma) -> dict:
+def advers_olay_ozeti(calisma, merkez_id=None) -> dict:
     """Kol x sistem-organ sinifi: olay ve gonullu sayilari; kol bazinda ciddi ve derece >= 3 sayilari."""
-    kollar = _kol_adlari(calisma)
+    kollar = _kol_adlari(calisma, merkez_id)
     bos = lambda: {"olay": 0, "gonullu": set()}  # noqa: E731
     soc_tablo: dict[str, dict[str, dict]] = {}
     ozet = {k: {"gonullu_toplam": 0, "olayli_gonullu": set(), "olay": 0, "ciddi": 0, "derece3": 0,
                 "ciddi_gonullu": set(), "derece3_gonullu": set()} for k in kollar}
-    for g in calisma.gonulluler:
+    for g in _gonulluler(calisma, merkez_id):
         kol = _kol_adi(g)
         oz = ozet.setdefault(kol, {"gonullu_toplam": 0, "olayli_gonullu": set(), "olay": 0, "ciddi": 0, "derece3": 0,
                                    "ciddi_gonullu": set(), "derece3_gonullu": set()})

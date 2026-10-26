@@ -1,0 +1,12 @@
+# Kurulum: cp deploy/systemd/smartclinical-gece.{service,timer} /etc/systemd/system/
+#          systemctl daemon-reload && systemctl enable --now smartclinical-gece.timer
+[Unit]
+Description=EBM SmartClinical gece işleri zamanlayıcısı
+
+[Timer]
+OnCalendar=*-*-* 02:00:00
+Persistent=true
+RandomizedDelaySec=5min
+
+[Install]
+WantedBy=timers.target

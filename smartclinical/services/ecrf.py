@@ -15,7 +15,8 @@ from ..models.tasarim import VizitTanimi
 from ..models.veri import Form, FormKaydi
 
 # Alan sozlugu standardi (Form.alanlar icindeki her kayit)
-ALAN_ANAHTARLARI = ("kod", "etiket", "tip", "zorunlu", "birim", "min", "max", "secenekler", "cdash", "bolum", "kosul")
+ALAN_ANAHTARLARI = ("kod", "etiket", "tip", "zorunlu", "birim", "min", "max", "secenekler", "cdash", "bolum", "kosul",
+                    "toplam")
 
 ALAN_TIPLERI = {
     "metin": "Metin",
@@ -35,6 +36,8 @@ FORM_KOD = re.compile(r"^[A-Z][A-Z0-9_]{0,15}$")
 # ---------------------------------------------------------------------------
 # Standart formlar (CDASH). demo_veri ve kurulum sihirbazi buradan okur.
 # ---------------------------------------------------------------------------
+_PHQ_SECENEK = ["0 - Hiç", "1 - Birkaç gün", "2 - Günlerin yarısından fazlası", "3 - Hemen her gün"]
+
 STANDART_FORMLAR: dict[str, dict] = {
     "DM": {"ad": "Demografi", "vizitler": ["Tarama"], "alanlar": [
         {"kod": "BRTHYR", "etiket": "Doğum yılı", "tip": "sayi", "zorunlu": True, "min": 1930, "max": 2008, "cdash": "DM.BRTHDTC"},
@@ -69,7 +72,7 @@ STANDART_FORMLAR: dict[str, dict] = {
         {"kod": "EXDOSU", "etiket": "Doz birimi", "tip": "secim", "secenekler": ["mg", "U", "mL"], "cdash": "EX.EXDOSU"},
         {"kod": "EXADJ", "etiket": "Doz değişikliği nedeni", "tip": "metin"},
     ]},
-    "CM": {"ad": "Eşlik Eden İlaçlar", "vizitler": [], "alanlar": [
+    "CM": {"ad": "Eşlik Eden İlaçlar", "vizitler": [], "tekrarlayan": True, "alanlar": [
         {"kod": "CMTRT", "etiket": "İlaç adı", "tip": "metin", "zorunlu": True, "cdash": "CM.CMTRT"},
         {"kod": "CMINDC", "etiket": "Endikasyon", "tip": "metin", "cdash": "CM.CMINDC"},
         {"kod": "CMSTDAT", "etiket": "Başlangıç", "tip": "tarih", "cdash": "CM.CMSTDTC"},
@@ -78,7 +81,46 @@ STANDART_FORMLAR: dict[str, dict] = {
     "QS": {"ad": "ECOG Performans", "vizitler": [], "alanlar": [
         {"kod": "ECOG", "etiket": "ECOG skoru", "tip": "secim", "secenekler": ["0", "1", "2", "3", "4"], "zorunlu": True, "cdash": "QS.QSORRES"},
     ]},
-    "ANKET": {"ad": "Anket", "vizitler": [], "alanlar": []},
+    "MH": {"ad": "Tıbbi Öykü", "vizitler": ["Tarama"], "tekrarlayan": True, "alanlar": [
+        {"kod": "MHTERM", "etiket": "Tanı / durum", "tip": "metin", "zorunlu": True, "cdash": "MH.MHTERM"},
+        {"kod": "MHSTDAT", "etiket": "Başlangıç", "tip": "tarih", "cdash": "MH.MHSTDTC"},
+        {"kod": "MHONGO", "etiket": "Devam ediyor", "tip": "evet_hayir", "cdash": "MH.MHONGO"},
+    ]},
+    # Telifsiz olcekler: PHQ-9 ve GAD-7 (Pfizer, serbest kullanim), VAS agri. Toplam puan 'toplam' anahtariyla
+    # kaynak alanlardan hesaplanir (bkz. toplam_hesapla); kullanici girmez.
+    "PHQ9": {"ad": "PHQ-9 Depresyon Ölçeği", "vizitler": [], "alanlar": [
+        {"kod": f"PHQ{i}", "etiket": e, "tip": "secim", "secenekler": _PHQ_SECENEK, "zorunlu": True, "cdash": "QS.QSORRES"}
+        for i, e in enumerate((
+            "İşlerden az ilgi duyma ya da zevk alamama",
+            "Kendini kederli, çökkün ya da umutsuz hissetme",
+            "Uykuya dalmada, uyumada güçlük ya da çok fazla uyuma",
+            "Yorgun ya da enerjisiz hissetme",
+            "İştahsızlık ya da aşırı yeme",
+            "Kendini kötü hissetme; başarısız olduğunu ya da aileyi hayal kırıklığına uğrattığını düşünme",
+            "Gazete okumak ya da televizyon izlemek gibi işlere odaklanmada güçlük",
+            "Başkalarının fark edeceği kadar yavaş hareket etme ya da konuşma; ya da tersine huzursuzluk",
+            "Ölmüş olmanın ya da kendine zarar vermenin daha iyi olacağını düşünme"), 1)
+    ] + [{"kod": "PHQ9TOT", "etiket": "PHQ-9 toplam puan", "tip": "sayi", "min": 0, "max": 27, "cdash": "QS.QSSTRESN",
+          "toplam": [f"PHQ{i}" for i in range(1, 10)]}]},
+    "GAD7": {"ad": "GAD-7 Anksiyete Ölçeği", "vizitler": [], "alanlar": [
+        {"kod": f"GAD{i}", "etiket": e, "tip": "secim", "secenekler": _PHQ_SECENEK, "zorunlu": True, "cdash": "QS.QSORRES"}
+        for i, e in enumerate((
+            "Kendini sinirli, kaygılı ya da gergin hissetme",
+            "Endişelenmeyi durduramama ya da kontrol edememe",
+            "Farklı şeyler hakkında çok fazla endişelenme",
+            "Gevşeyememe",
+            "Yerinde duramayacak kadar huzursuz olma",
+            "Kolayca sinirlenme ya da alınganlık",
+            "Korkunç bir şey olacakmış gibi korku duyma"), 1)
+    ] + [{"kod": "GAD7TOT", "etiket": "GAD-7 toplam puan", "tip": "sayi", "min": 0, "max": 21, "cdash": "QS.QSSTRESN",
+          "toplam": [f"GAD{i}" for i in range(1, 8)]}]},
+    "VAS": {"ad": "VAS Ağrı Skalası", "vizitler": [], "alanlar": [
+        {"kod": "VASDAT", "etiket": "Değerlendirme tarihi", "tip": "tarih", "zorunlu": True, "cdash": "QS.QSDTC"},
+        {"kod": "VASPAIN", "etiket": "Ağrı şiddeti (0 ağrı yok – 10 en şiddetli)", "tip": "sayi", "zorunlu": True,
+         "min": 0, "max": 10, "cdash": "QS.QSORRES"},
+    ]},
+    # Serbest anket: alanlar tasarimcida kurulur; yayina alinana kadar veri girisinde gorunmez
+    "ANKET": {"ad": "Anket", "vizitler": [], "durum": "taslak", "alanlar": []},
 }
 
 # ---------------------------------------------------------------------------
@@ -178,7 +220,8 @@ def standart_formlari_ekle(db: Session, calisma, kodlar: list[str]) -> list[Form
             continue
         s = STANDART_FORMLAR[kod]
         f = Form(calisma_id=calisma.id, kod=kod, ad=s["ad"], vizitler=list(s["vizitler"]), sira=sira,
-                 alanlar=[dict(a) for a in s["alanlar"]], versiyon="1.0", durum="yayinda")
+                 alanlar=[alan_normalize(a) for a in s["alanlar"]], versiyon="1.0",
+                 durum=s.get("durum", "yayinda"), tekrarlayan=bool(s.get("tekrarlayan")))
         db.add(f)
         calisma.formlar.append(f)
         eklenen.append(f)
@@ -198,6 +241,7 @@ def alan_normalize(a: dict) -> dict:
             y[k] = v
     for k in ("min", "max"):
         v = a.get(k)
+        y[k] = None  # anahtar her zaman var; sablonlar ve disa aktarim 'in' kontrolu yapmaz
         if v not in (None, ""):
             try:
                 v = float(str(v).replace(",", "."))
@@ -214,6 +258,12 @@ def alan_normalize(a: dict) -> dict:
     kosul = a.get("kosul")
     if isinstance(kosul, dict) and str(kosul.get("alan") or "").strip():
         y["kosul"] = {"alan": str(kosul["alan"]).strip().upper(), "deger": str(kosul.get("deger") or "").strip()}
+    toplam = a.get("toplam")
+    if isinstance(toplam, str):
+        toplam = [s.strip() for s in re.split(r"[;,\s]+", toplam) if s.strip()]
+    if toplam:
+        y["toplam"] = [str(k).strip().upper() for k in toplam if str(k).strip()]
+        y["tip"] = "sayi"
     return y
 
 
@@ -258,6 +308,12 @@ def form_dogrula(alanlar: list) -> list[str]:
             hatalar.append(f"'{a.get('kod')}': koşul alanı '{kosul['alan']}' formda yok.")
         elif kosul["alan"] == a.get("kod"):
             hatalar.append(f"'{a.get('kod')}': alan kendi değerine koşullanamaz.")
+    for a in alanlar:
+        if not isinstance(a, dict) or not a.get("toplam"):
+            continue
+        eksik = [k for k in a["toplam"] if k not in kodlar or k == a.get("kod")]
+        if eksik:
+            hatalar.append(f"'{a.get('kod')}': toplam puan kaynağı formda yok ({', '.join(eksik)}).")
     return hatalar
 
 
@@ -309,48 +365,77 @@ def _bos(v) -> bool:
 
 
 def edit_check(form: Form, veriler: dict) -> list[tuple[str, str]]:
-    """Otomatik edit-check'ler. Donus: (alan kodu, soru) listesi; kaydi engellemez, sorgu acar."""
+    """Otomatik edit-check'ler. Donus: (alan kodu, soru) listesi; kaydi engellemez, sorgu acar.
+
+    Mesajlar sorgu listesinde tek basina okunur: alan etiketi (kodu parantezde) ve form adi yazilir.
+    """
     sorunlar: list[tuple[str, str]] = []
+    form_adi = form.ad or form.kod
     for alan in form.alanlar:
-        kod, etiket, tip = alan["kod"], alan.get("etiket", alan["kod"]), alan.get("tip")
+        kod, tip = alan["kod"], alan.get("tip")
+        etiket = f"{alan.get('etiket') or kod} ({kod})"
         if not kosul_saglandi(alan, veriler):
             continue  # kosulu saglanmayan alan ne zorunlu ne de gorunur
         v = veriler.get(kod, "")
         if _bos(v):
-            if alan.get("zorunlu"):
-                sorunlar.append((kod, f"'{etiket}' zorunlu alan boş bırakılmış."))
+            if alan.get("zorunlu") and not alan.get("toplam"):
+                sorunlar.append((kod, f"{form_adi} formunda zorunlu '{etiket}' alanı boş bırakılmış."))
             continue
         if tip == "sayi":
             try:
                 f = float(str(v).replace(",", "."))
             except ValueError:
-                sorunlar.append((kod, f"'{etiket}' sayısal değer bekleniyor, girilen: {v}"))
+                sorunlar.append((kod, f"{form_adi} formunda '{etiket}' için sayısal değer bekleniyor, girilen: {v}"))
                 continue
+            birim = f" {alan['birim']}" if alan.get("birim") else ""
             if alan.get("min") is not None and f < alan["min"]:
-                sorunlar.append((kod, f"'{etiket}' = {v} {alan.get('birim', '')} beklenen aralığın altında (min {alan['min']}). Lütfen doğrulayın."))
+                sorunlar.append((kod, f"{form_adi} formunda '{etiket}' = {v}{birim} beklenen aralığın altında (en az {alan['min']}). Lütfen doğrulayın."))
             if alan.get("max") is not None and f > alan["max"]:
-                sorunlar.append((kod, f"'{etiket}' = {v} {alan.get('birim', '')} beklenen aralığın üstünde (maks {alan['max']}). Lütfen doğrulayın."))
+                sorunlar.append((kod, f"{form_adi} formunda '{etiket}' = {v}{birim} beklenen aralığın üstünde (en çok {alan['max']}). Lütfen doğrulayın."))
         elif tip == "tarih":
             try:
                 t = date.fromisoformat(str(v))
                 if t > date.today():
-                    sorunlar.append((kod, f"'{etiket}' gelecek tarihli olamaz."))
+                    sorunlar.append((kod, f"{form_adi} formunda '{etiket}' gelecek tarihli olamaz."))
             except ValueError:
-                sorunlar.append((kod, f"'{etiket}' geçerli tarih değil."))
+                sorunlar.append((kod, f"{form_adi} formunda '{etiket}' geçerli tarih değil."))
         elif tip == "secim":
             sec = alan.get("secenekler") or []
             if sec and str(v) not in [str(s) for s in sec]:
-                sorunlar.append((kod, f"'{etiket}' için '{v}' seçenekler arasında değil."))
+                sorunlar.append((kod, f"{form_adi} formunda '{etiket}' için '{v}' seçenekler arasında değil."))
         elif tip == "coklu_secim":
             sec = [str(s) for s in alan.get("secenekler") or []]
             secilen = v if isinstance(v, (list, tuple)) else [v]
             yabanci = [str(x) for x in secilen if sec and str(x) not in sec]
             if yabanci:
-                sorunlar.append((kod, f"'{etiket}' için '{', '.join(yabanci)}' seçenekler arasında değil."))
+                sorunlar.append((kod, f"{form_adi} formunda '{etiket}' için '{', '.join(yabanci)}' seçenekler arasında değil."))
         elif tip == "evet_hayir":
             if str(v) not in EVET_HAYIR:
-                sorunlar.append((kod, f"'{etiket}' yalnızca Evet veya Hayır olabilir."))
+                sorunlar.append((kod, f"{form_adi} formunda '{etiket}' yalnızca Evet veya Hayır olabilir."))
     return sorunlar
+
+
+def _puan(v) -> float | None:
+    """'2 - Günlerin yarısından fazlası' ya da '2' -> 2.0; bos/okunamayan None."""
+    if v in (None, "", []):
+        return None
+    m = re.match(r"\s*(-?\d+(?:[.,]\d+)?)", str(v))
+    return float(m.group(1).replace(",", ".")) if m else None
+
+
+def toplam_hesapla(form: Form, veriler: dict) -> dict:
+    """'toplam' anahtari olan alanlara kaynak alanlarin sayisal toplamini yazar (tum kaynaklar doluysa)."""
+    for a in form.alanlar:
+        kaynak = a.get("toplam")
+        if not kaynak:
+            continue
+        puanlar = [_puan(veriler.get(k)) for k in kaynak]
+        if puanlar and all(p is not None for p in puanlar):
+            t = sum(puanlar)
+            veriler[a["kod"]] = str(int(t)) if t == int(t) else str(t)
+        else:
+            veriler[a["kod"]] = ""
+    return veriler
 
 
 def veri_oku(form: Form, gelen) -> dict:
@@ -362,4 +447,4 @@ def veri_oku(form: Form, gelen) -> dict:
             veriler[kod] = [x for x in gelen.getlist(kod)] if hasattr(gelen, "getlist") else list(gelen.get(kod, []) or [])
         else:
             veriler[kod] = gelen.get(kod, "")
-    return veriler
+    return toplam_hesapla(form, veriler)

@@ -1,3 +1,4 @@
+import json
 from datetime import date, datetime
 from pathlib import Path
 
@@ -7,6 +8,7 @@ from .. import __version__
 from ..models.calisma import DURUM_ETIKET, DURUM_SIRASI, TUR_ETIKET
 from ..models.kullanici import ROL_ETIKET
 from ..models.kurulum import MOD_ETIKET, KurulumAyari
+from ..services.kriter.okunur import kriter_cumlesi
 from ..services.yetki import izinli
 
 sablonlar = Jinja2Templates(directory=Path(__file__).parent / "templates")
@@ -49,18 +51,44 @@ def gun_farki(v):
     return (date.today() - v).days
 
 
-sablonlar.env.filters.update({"tarih": tarih, "yuzde": yuzde, "sayi": sayi, "gun_farki": gun_farki})
+def json_tr(v, girinti=1):
+    """Turkce karakterleri kacirmadan JSON; <pre> icinde okunur."""
+    return json.dumps(v, ensure_ascii=False, indent=girinti, default=str)
+
+
+class _KurulumVekili:
+    """goster() disinda render edilen sayfalar (hata.html) icin: her erisimde gercek ayari okur.
+
+    Istek nesnesi olmadan da dogru modu verir; veritabanina ulasilamazsa tekil mod varsayilir.
+    """
+
+    def __getattr__(self, ad):
+        try:
+            from ..db import oturum_fabrikasi
+            from ..services.kurulum import ayar_getir
+
+            db = oturum_fabrikasi()()
+            try:
+                a = ayar_getir(db)
+                return getattr(a, ad)
+            finally:
+                db.close()
+        except Exception:
+            return getattr(KurulumAyari(id=1, mod="tekil", kurum_adi=""), ad)
+
+
+sablonlar.env.filters.update({"tarih": tarih, "yuzde": yuzde, "sayi": sayi, "gun_farki": gun_farki, "json_tr": json_tr})
 sablonlar.env.globals.update({
-    "surum": __version__,
+    "surum": __version__,  # yalnizca yonetim/sistem.html ve fizibilite raporu kullanir
     "izinli": izinli,
+    "kriter_cumlesi": kriter_cumlesi,
     "DURUM_ETIKET": DURUM_ETIKET,
     "DURUM_SIRASI": DURUM_SIRASI,
     "TUR_ETIKET": TUR_ETIKET,
     "ROL_ETIKET": ROL_ETIKET,
     "MOD_ETIKET": MOD_ETIKET,
     "bugun": date.today,
-    # goster() disinda render edilen sayfalar (hata.html) icin gecici varsayilan; goster istek basina gercegini koyar
-    "kurulum": KurulumAyari(id=1, mod="tekil", kurum_adi=""),
+    "kurulum": _KurulumVekili(),
 })
 
 
@@ -85,3 +113,13 @@ def goster(request, ad: str, **baglam):
     baglam.setdefault("mesaj", request.session.pop("mesaj", None) if hasattr(request, "session") else None)
     baglam.setdefault("kurulum", kurulum_ayari(request))
     return sablonlar.TemplateResponse(request, ad, baglam)
+
+
+def hata_sayfasi(request, kod: int, mesaj: str):
+    """hata.html'i gercek kurulum ayari ve (varsa) oturum kullanicisiyla render eder; main.http_hata bunu cagirir."""
+    baglam = {"kod": kod, "hata_mesaji": mesaj, "mesaj": None, "kullanici": getattr(request.state, "kullanici", None)}
+    try:
+        baglam["kurulum"] = kurulum_ayari(request)
+    except Exception:
+        baglam["kurulum"] = KurulumAyari(id=1, mod="tekil", kurum_adi="")
+    return sablonlar.TemplateResponse(request, "hata.html", baglam, status_code=kod)

@@ -4,6 +4,7 @@
 {% block icerik %}
 {% include "calismalar/_baslik.html" %}
 {% include "analiz/_stil.html" %}
+{% if merkez_notu %}<div class="mesaj bilgi">{{ merkez_notu }}</div>{% endif %}
 <div class="izgara k4" style="margin-bottom:16px">
   <div class="olcum"><div class="etiket">Analize giren kayıt</div><div class="deger">{{ durum.analiz }}</div><div class="alt">{{ durum.taslak }} taslak hariç tutuldu</div></div>
   <div class="olcum"><div class="etiket">Kilitli oranı</div><div class="deger {{ 'iyi' if not durum.on_analiz else 'uyari' }}">{{ durum.kilitli_oran|yuzde }}</div><div class="alt">{{ durum.kilitli }} kilitli kayıt</div></div>
@@ -12,6 +13,7 @@
 </div>
 <div class="analiz-ust">
   {% if durum.on_analiz %}<span class="rozet sari">Ön analiz: kilitlenmemiş veri içerir</span>{% else %}<span class="rozet yesil">Tüm kayıtlar kilitli</span>{% endif %}
+  <a class="btn" href="/calismalar/{{ c.id }}/analiz/tablo1">Başlangıç özeti (Tablo 1)</a>
   <a class="btn" href="/calismalar/{{ c.id }}/analiz/advers-olaylar">Advers olay özeti</a>
   <a class="btn" href="/calismalar/{{ c.id }}/analiz/veri-seti.csv">Analiz veri setini indir (CSV)</a>
   <small>İndirme denetim izine yazılır; noktalı virgül ayraçlı, ondalık ayracı virgül.</small>
@@ -30,29 +32,45 @@
 </div>
 
 <div class="kart">
-  <h2>Değişken özeti ve kol karşılaştırması</h2>
+  <h2>{% if mod == 'degisim' %}Vizitler arası değişim{% else %}Değişken özeti ve kol karşılaştırması{% endif %}</h2>
   {% if degisken_sayisi %}
-  <form method="get" class="analiz-sec">
-    <div class="alan"><label for="degisken">Değişken</label>
-      <select name="degisken" id="degisken">
-        <option value="">Seçin</option>
-        {% for form_ad, liste in formlar.items() %}<optgroup label="{{ form_ad }}">
-          {% for d in liste %}<option value="{{ d.kod }}" {{ 'selected' if d.kod == degisken }}>{{ d.kod }} – {{ d.etiket }}</option>{% endfor %}
-        </optgroup>{% endfor %}
-      </select></div>
-    <div class="alan"><label for="vizit">Vizit</label>
-      <select name="vizit" id="vizit">
-        <option value="">Tüm vizitler</option>
-        {% if secili %}{% for v in secili.degisken.vizitler %}<option value="{{ v }}" {{ 'selected' if v == vizit }}>{{ v }}</option>{% endfor %}{% endif %}
-      </select></div>
-    <div class="alan"><button class="btn birincil" type="submit">Göster</button></div>
+  <form method="get">
+    <div class="analiz-mod">
+      <label><input type="radio" name="mod" value="vizit" {{ 'checked' if mod == 'vizit' }} onchange="this.form.submit()"> Tek vizit, kol karşılaştırması</label>
+      <label><input type="radio" name="mod" value="degisim" {{ 'checked' if mod == 'degisim' }} onchange="this.form.submit()"> Vizitler arası değişim (aynı gönüllüde)</label>
+      {% if tek_kollu %}<small>Tek kollu çalışmada varsayılan görünüm değişimdir; kol testi yapılmaz.</small>{% endif %}
+    </div>
+    <div class="analiz-sec">
+      <div class="alan"><label for="degisken">Değişken</label>
+        <select name="degisken" id="degisken">
+          <option value="">Seçin</option>
+          {% for form_ad, liste in formlar.items() %}<optgroup label="{{ form_ad }}">
+            {% for d in liste %}<option value="{{ d.kod }}" {{ 'selected' if d.kod == degisken }}>{{ d.kod }} – {{ d.etiket }}</option>{% endfor %}
+          </optgroup>{% endfor %}
+        </select></div>
+      {% if mod == 'degisim' %}
+      <div class="alan"><label for="vizit1">İlk vizit</label>
+        <select name="vizit1" id="vizit1">{% for v in vizitler %}<option value="{{ v }}" {{ 'selected' if v == vizit1 }}>{{ v }}</option>{% endfor %}</select></div>
+      <div class="alan"><label for="vizit2">Son vizit</label>
+        <select name="vizit2" id="vizit2">{% for v in vizitler %}<option value="{{ v }}" {{ 'selected' if v == vizit2 }}>{{ v }}</option>{% endfor %}</select></div>
+      {% else %}
+      <div class="alan" style="grid-column: span 2"><label for="vizit">Vizit</label>
+        <select name="vizit" id="vizit">
+          {% for v in vizitler %}<option value="{{ v }}" {{ 'selected' if v == vizit }}>{{ v }}{% if v == varsayilan_vizit %} (başlangıç){% endif %}</option>{% endfor %}
+          <option value="{{ TUM }}" {{ 'selected' if vizit == TUM or not vizit }}>Tüm vizitler (gönüllü başına son değer)</option>
+        </select></div>
+      {% endif %}
+      <div class="alan"><button class="btn birincil" type="submit">Göster</button></div>
+    </div>
   </form>
-  {% if secili %}{% include "analiz/degisken.html" %}{% else %}<p class="kucuk" style="margin-top:10px">Bir değişken seçin; kol bazında özet, uygun test ve grafik gösterilir. Vizit seçimi değişken seçildikten sonra daralır.</p>{% endif %}
+  {% if secili and mod == 'degisim' %}{% include "analiz/degisim.html" %}
+  {% elif secili %}{% include "analiz/degisken.html" %}
+  {% else %}<p class="kucuk" style="margin-top:10px">{% if mod == 'degisim' %}Bir sayısal değişken ve iki vizit seçin; aynı gönüllüdeki fark özetlenir ve eşleştirilmiş test uygulanır.{% else %}Bir değişken seçin; seçili vizitte kol bazında özet, uygun test ve grafik gösterilir. Varsayılan vizit şemadaki başlangıç vizitidir.{% endif %}</p>{% endif %}
   {% else %}<p class="kucuk">Analiz edilebilir değişken yok: eCRF formlarında sayı veya seçim alanı tanımlı değil ya da henüz tamamlanmış kayıt yok.</p>{% endif %}
 </div>
 <div class="analiz-dip">{{ on_analiz_notu }}</div>
 {% endblock %}
-{% block script %}{% if secili %}<script>
+{% block script %}{% if secili and secili.grafik %}<script>
 {% if secili.degisken.tip == 'sayisal' %}
 SCGrafik.kutu(document.getElementById("g-degisken"), {{ secili.grafik|tojson }});
 {% else %}

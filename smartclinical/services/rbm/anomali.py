@@ -26,6 +26,9 @@ def anomali_tespit(degerler, yon="yuksek", z_esik=Z_ESIK):
     if n == 0:
         return {k: AnomaliSonucu(None, False, "Veri yok", None, 0) for k in degerler}
 
+    def _s(v):
+        return f"{v:.2f}".replace(".", ",")
+
     x = np.array(list(gecerli.values()))
     med = float(np.median(x))
     mad = float(np.median(np.abs(x - med))) * MAD_OLCEK
@@ -43,7 +46,7 @@ def anomali_tespit(degerler, yon="yuksek", z_esik=Z_ESIK):
             continue
         v = gecerli[k]
         if n < MIN_MERKEZ:
-            sonuc[k] = AnomaliSonucu(None, False, f"{n} merkezle karsilastirma yapilamadi (en az {MIN_MERKEZ} gerekli).",
+            sonuc[k] = AnomaliSonucu(None, False, f"{n} merkezle karşılaştırma yapılamadı (en az {MIN_MERKEZ} gerekli).",
                                      siralar[k], n)
             continue
         if mad > 0:
@@ -53,11 +56,19 @@ def anomali_tespit(degerler, yon="yuksek", z_esik=Z_ESIK):
         z_yon = z if yon == "yuksek" else -z
         tukey = v > ust_cit if yon == "yuksek" else v < alt_cit
         aykiri = bool(z_yon >= z_esik or (tukey and z_yon > 1.0))
-        if aykiri:
-            acik = (f"Merkez degeri {v:.2f}, diger merkezlerin medyani {med:.2f}; robust z-skor {z_yon:.1f} "
-                    f"(esik {z_esik}). {n} merkez arasinda {siralar[k]}. sirada.")
+        if not np.isfinite(z_yon):
+            # diger merkezlerin tamami ayni degerde: z-skor tanimsiz, sapma yonu yine de soylenir
+            if aykiri:
+                acik = (f"Merkez değeri {_s(v)}; bu düzey diğer merkezlerde gözlenmedi (hepsi {_s(med)}). "
+                        f"{n} merkez arasında {siralar[k]}. sırada.")
+            else:
+                acik = f"Merkez değeri {_s(v)}, diğer merkezlerin tamamı {_s(med)}; kötü yönde sapma yok."
+        elif aykiri:
+            acik = (f"Merkez değeri {_s(v)}, diğer merkezlerin medyanı {_s(med)}; dayanıklı z-skoru "
+                    f"{str(round(z_yon, 1)).replace('.', ',')} (eşik {str(z_esik).replace('.', ',')}). "
+                    f"{n} merkez arasında {siralar[k]}. sırada.")
         else:
-            acik = f"Merkez degeri {v:.2f}, medyan {med:.2f}; merkezler arasi dagilimin icinde ({siralar[k]}/{n})."
+            acik = f"Merkez değeri {_s(v)}, medyan {_s(med)}; merkezler arası dağılımın içinde ({siralar[k]}/{n})."
         sonuc[k] = AnomaliSonucu(float(z_yon) if np.isfinite(z_yon) else None, aykiri, acik, siralar[k], n)
     return sonuc
 

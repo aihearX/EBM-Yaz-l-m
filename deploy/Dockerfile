@@ -1,5 +1,5 @@
 # EBM SmartClinical uygulama imajı
-# Derleme (depo kökünden):  docker build -f deploy/Dockerfile -t smartclinical:1.4.2 .
+# Derleme (depo kökünden):  docker build -f deploy/Dockerfile -t smartclinical:yerel .
 FROM python:3.12-slim AS temel
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -19,7 +19,9 @@ RUN pip install -r requirements.txt "psycopg[binary]>=3.1"
 
 COPY smartclinical ./smartclinical
 COPY ml ./ml
+COPY deploy/entrypoint.sh /usr/local/bin/smartclinical-giris
 RUN pip install --no-deps . \
+    && chmod +x /usr/local/bin/smartclinical-giris \
     && mkdir -p /app/veri /app/yuklemeler \
     && chown -R smartclinical:smartclinical /app
 
@@ -28,4 +30,5 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
     CMD curl -fs http://localhost:8000/saglik || exit 1
 
-CMD ["uvicorn", "smartclinical.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2", "--proxy-headers", "--forwarded-allow-ips", "*"]
+# X-Forwarded-* basliklari yalnizca PROXY_HOST (varsayilan: nginx konteyneri) adresinden kabul edilir
+ENTRYPOINT ["smartclinical-giris"]

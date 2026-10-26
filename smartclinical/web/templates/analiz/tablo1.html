@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block baslik %}{{ c.kod }} · Başlangıç özeti{% endblock %}
+{% block yol %}<a href="/calismalar">Çalışmalar</a> › <a href="/calismalar/{{ c.id }}">{{ c.kod }}</a> › <a href="/calismalar/{{ c.id }}/analiz">Analiz</a> › Başlangıç özeti{% endblock %}
+{% block icerik %}
+{% include "calismalar/_baslik.html" %}
+{% include "analiz/_stil.html" %}
+{% if merkez_notu %}<div class="mesaj bilgi">{{ merkez_notu }}</div>{% endif %}
+<div class="baslik-satiri">
+  <div><h2 style="margin:0">Başlangıç özeti (Tablo 1)</h2><small>Seçili vizitte tüm sayısal ve seçim alanları, kol bazında. Sayısal: normal dağılımda ortalama ± SS, değilse medyan [Ç1–Ç3]; seçim: n (%).</small></div>
+  <div class="sag"><a class="btn" href="/calismalar/{{ c.id }}/analiz">Analize dön</a></div>
+</div>
+<div class="kart">
+  <form method="get" class="satir" style="display:flex;gap:8px;align-items:end;margin-bottom:10px">
+    <div class="alan" style="margin:0"><label for="vizit">Vizit</label>
+      <select name="vizit" id="vizit" style="min-width:200px">
+        {% for v in vizitler %}<option value="{{ v }}" {{ 'selected' if v == vizit }}>{{ v }}</option>{% endfor %}
+        <option value="{{ TUM }}" {{ 'selected' if vizit == TUM }}>Tüm vizitler (gönüllü başına son değer)</option>
+      </select></div>
+    <button class="btn birincil">Göster</button>
+    <a class="btn" href="/calismalar/{{ c.id }}/analiz/tablo1.csv?vizit={{ vizit }}">CSV indir</a>
+    <small>{{ t.gonullu }} gönüllünün kaydı var. İndirme denetim izine yazılır.</small>
+  </form>
+  {% if t.satirlar %}
+  <table class="sikisik tablo1">
+    <tr><th>Değişken</th>{% for k in t.kollar %}<th class="sag">{{ k }}</th>{% endfor %}<th class="sag">Toplam</th></tr>
+    {% for s in t.satirlar %}
+    <tr><td class="{{ 'alt' if s.alt else 'degisken' }}">{{ s.etiket }}</td>{% for k in t.kollar %}<td class="sayi">{{ s.hucreler[k] }}</td>{% endfor %}<td class="sayi">{{ s.toplam }}</td></tr>
+    {% endfor %}
+  </table>
+  {% else %}<p class="kucuk">Seçili vizitte analize giren kayıt yok.</p>{% endif %}
+</div>
+<div class="analiz-dip">{{ on_analiz_notu }} Doğum yılı yerine türetilmiş yaş (randomizasyon yılı − doğum yılı) kullanılır.</div>
+{% endblock %}

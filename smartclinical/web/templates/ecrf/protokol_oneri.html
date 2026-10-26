@@ -5,19 +5,19 @@
 {% include "calismalar/_baslik.html" %}
 <div class="baslik-satiri">
   <div><h2 style="margin:0">Protokolden çıkarılan öneriler</h2><small>Yöntem: {{ 'Türkçe Klinik BDM' if t.yontem == 'bdm' else 'kural tabanlı' }}. Uygulanmasını istediklerinizi işaretleyin; işaretlenmeyenler kaydedilmez.</small></div>
-  <div class="sag"><a class="btn" href="/calismalar/{{ c.id }}/tasarim/protokol-taslak">Metne dön</a></div>
+  <div class="sag"><form method="post" action="/calismalar/{{ c.id }}/tasarim/protokol-taslak/metin" class="inline"><input type="hidden" name="metin" value="{{ metin }}"><button class="btn">Metne dön</button></form></div>
 </div>
 {% for n in t.notlar %}<div class="mesaj bilgi">{{ n }}</div>{% endfor %}
-{% if t.bos %}
-<div class="kart"><p>Metinden öneri çıkarılamadı. Başlıkların ("Dahil Etme Kriterleri", "Hariç Tutma Kriterleri", "Vizit Takvimi") ve madde işaretlerinin metinde bulunduğundan emin olun.</p></div>
+{% if t.bos and not t.taninmayan %}
+<div class="kart"><p>Metinden öneri çıkarılamadı. Başlıkların ("Dahil Etme Kriterleri", "Hariç Tutma Kriterleri", "Çalışma Kolları", "Vizit Takvimi") ve madde satırlarının metinde bulunduğundan emin olun.</p></div>
 {% else %}
 <form method="post" action="/calismalar/{{ c.id }}/tasarim/protokol-taslak/uygula">
 <div class="izgara k2">
   <div class="kart">
     <h2>Dahil etme kriterleri <span class="rozet kontur">{{ t.dahil|length }}</span></h2>
-    {% for s in t.dahil %}<label style="display:block;font-weight:400;margin-bottom:4px"><input type="checkbox" name="dahil" value="{{ s }}" {{ 'disabled' if s in mevcut.kriter else 'checked' }}> {{ s }}{% if s in mevcut.kriter %} <span class="rozet kontur">zaten var</span>{% endif %}</label>{% else %}<p class="kucuk">Bulunamadı.</p>{% endfor %}
+    {% for s in t.dahil %}<label style="display:block;font-weight:400;margin-bottom:4px"><input type="checkbox" name="dahil" value="{{ s }}" {{ 'disabled' if mevcut.kriter.get(s) else 'checked' }}> {{ s }}{% if mevcut.kriter.get(s) %} <span class="rozet kontur">zaten var</span>{% endif %}</label>{% else %}<p class="kucuk">Bulunamadı.</p>{% endfor %}
     <h2 style="margin-top:14px">Hariç tutma kriterleri <span class="rozet kontur">{{ t.haric|length }}</span></h2>
-    {% for s in t.haric %}<label style="display:block;font-weight:400;margin-bottom:4px"><input type="checkbox" name="haric" value="{{ s }}" {{ 'disabled' if s in mevcut.kriter else 'checked' }}> {{ s }}{% if s in mevcut.kriter %} <span class="rozet kontur">zaten var</span>{% endif %}</label>{% else %}<p class="kucuk">Bulunamadı.</p>{% endfor %}
+    {% for s in t.haric %}<label style="display:block;font-weight:400;margin-bottom:4px"><input type="checkbox" name="haric" value="{{ s }}" {{ 'disabled' if mevcut.kriter.get(s) else 'checked' }}> {{ s }}{% if mevcut.kriter.get(s) %} <span class="rozet kontur">zaten var</span>{% endif %}</label>{% else %}<p class="kucuk">Bulunamadı.</p>{% endfor %}
     <p class="kucuk" style="margin-top:8px">Kriterler eklendiğinde hesaplanabilir sorguya dönüştürülür ve araştırmacı onayı bekler (Protokol ve Kriterler sekmesi).</p>
   </div>
   <div>
@@ -27,10 +27,12 @@
     </div>
     <div class="kart">
       <h2>Vizit şeması <span class="rozet kontur">{{ t.vizitler|length }}</span></h2>
-      {% if not sema_degisir %}<p class="kucuk">Vizit kaydı oluşturulmuş gönüllüler olduğundan şema değiştirilemez.</p>{% endif %}
+      {% if not sema_degisir %}<p class="kucuk">Vizit kaydı oluşturulmuş gönüllüler olduğundan şema kilitli; vizit önerileri uygulanamaz.</p>
+      {% else %}
       <table class="sikisik"><tr><th></th><th>Vizit</th><th class="sag">Gün</th><th class="sag">Pencere</th></tr>
-      {% for ad, gun, pencere in t.vizitler %}<tr><td><input type="checkbox" name="vizitler" value="{{ ad }}|{{ gun }}|{{ pencere }}" {{ 'disabled' if (ad in mevcut.vizit or not sema_degisir) else 'checked' }}></td><td>{{ ad }}{% if ad in mevcut.vizit %} <span class="rozet kontur">zaten var</span>{% endif %}</td><td class="sayi">{{ gun }}</td><td class="sayi">±{{ pencere }}</td></tr>{% else %}<tr><td colspan="4" class="kucuk">Bulunamadı.</td></tr>{% endfor %}
+      {% for ad, gun, pencere in t.vizitler %}<tr><td><input type="checkbox" name="vizitler" value="{{ ad }}|{{ gun }}|{{ pencere }}" {{ 'disabled' if ad in mevcut.vizit else 'checked' }}></td><td>{{ ad }}{% if ad in mevcut.vizit %} <span class="rozet kontur">zaten var</span>{% endif %}</td><td class="sayi">{{ gun }}</td><td class="sayi">±{{ pencere }}</td></tr>{% else %}<tr><td colspan="4" class="kucuk">Bulunamadı.</td></tr>{% endfor %}
       </table>
+      {% endif %}
     </div>
     <div class="kart">
       <h2>Önerilen standart formlar <span class="rozet kontur">{{ t.formlar|length }}</span></h2>
@@ -38,6 +40,23 @@
     </div>
   </div>
 </div>
+{% if t.taninmayan %}
+<div class="kart">
+  <h2>Tanınmayan satırlar <span class="rozet kontur">{{ t.taninmayan|length }}</span></h2>
+  <p class="kucuk">Madde gibi görünen ama bir bölüme yerleştirilemeyen satırlar. Tek tıkla dahil etme kriteri, hariç tutma kriteri ya da kol olarak ekleyin; işaretlenmeyenler atlanır.</p>
+  <table class="sikisik">
+    <tr><th>Satır</th><th style="width:300px">Ekle</th></tr>
+    {% for s in t.taninmayan %}{% set i = loop.index %}
+    <tr><td>{{ s }}{% if mevcut.kriter.get(s) %} <span class="rozet kontur">zaten var</span>{% endif %}</td>
+      <td>{% if not mevcut.kriter.get(s) %}<input type="hidden" name="tn_metin_{{ i }}" value="{{ s }}">
+        <label style="font-weight:400;margin-right:8px"><input type="radio" name="tn_tip_{{ i }}" value="dahil"> dahil</label>
+        <label style="font-weight:400;margin-right:8px"><input type="radio" name="tn_tip_{{ i }}" value="haric"> hariç</label>
+        <label style="font-weight:400;margin-right:8px"><input type="radio" name="tn_tip_{{ i }}" value="kol"> kol</label>
+        <label style="font-weight:400"><input type="radio" name="tn_tip_{{ i }}" value="" checked> atla</label>{% endif %}</td></tr>
+    {% endfor %}
+  </table>
+</div>
+{% endif %}
 <div style="display:flex;gap:8px;align-items:center">
   <button class="btn birincil">Seçilenleri uygula</button>
   <a class="btn" href="/calismalar/{{ c.id }}/tasarim">Vazgeç</a>

@@ -38,13 +38,17 @@ ONCUL = {
 }
 
 ETIKET = {
-    "kurum_universite": "Universite hastanesi",
-    "kurum_egitim_arastirma": "Egitim ve arastirma hastanesi",
-    "kurum_sehir": "Sehir hastanesi",
-    "kurum_ozel": "Ozel hastane",
-    "etik_kurul_gun": "Etik kurul ortalama suresi",
-    "sozlesme_sablonu_var": "Hazir sozlesme sablonu",
-    "daha_once_calisildi": "Daha once birlikte calisildi",
+    "kurum_universite": "Üniversite hastanesi",
+    "kurum_egitim_arastirma": "Eğitim ve araştırma hastanesi",
+    "kurum_sehir": "Şehir hastanesi",
+    "kurum_ozel": "Özel hastane",
+    "etik_kurul_gun": "Etik kurul ortalama süresi",
+    "sozlesme_sablonu_var": "Hazır sözleşme şablonu",
+    "daha_once_calisildi": "Daha önce birlikte çalışıldı",
+    "tur_tibbi_cihaz": "Tıbbi cihaz çalışması",
+    "tur_gozlemsel": "Gözlemsel çalışma",
+    "tur_akademik": "Akademik çalışma",
+    "tur_ileri_tedavi": "İleri tedavi çalışması",
 }
 
 
@@ -169,14 +173,14 @@ class GecikmeModeli:
                 katkilar[ETIKET.get(o, o)] = etki
 
         aciklama = [
-            f"Beklenen aktivasyon suresi medyan {medyan:.0f} gun (ceyrekler {p25:.0f}-{p75:.0f}).",
-            f"{hedef_gun} gunluk hedefi asma olasiligi %{p_gec * 100:.0f}.",
+            f"Beklenen aktivasyon süresi medyan {medyan:.0f} gün (çeyrekler {p25:.0f}–{p75:.0f}).",
+            f"{hedef_gun} günlük hedefi aşma olasılığı %{p_gec * 100:.0f}.",
         ]
         for ad, etki in sorted(katkilar.items(), key=lambda kv: -abs(kv[1]))[:3]:
-            yon = "uzatiyor" if etki > 0 else "kisaltiyor"
-            aciklama.append(f"{ad}: sureyi yaklasik {abs(etki):.0f} gun {yon}.")
+            yon = "uzatıyor" if etki > 0 else "kısaltıyor"
+            aciklama.append(f"{ad}: süreyi yaklaşık {abs(etki):.0f} gün {yon}.")
         if not self.egitildi:
-            aciklama.append("Model oncul parametrelerle calisiyor (yeterli egitim verisi yok).")
+            aciklama.append("Model öncül parametrelerle çalışıyor (yeterli eğitim verisi yok).")
         return GecikmeRiski(p_gec, medyan, p25, p75, aciklama, katkilar)
 
 

@@ -13,7 +13,7 @@ from ...models import (
     RiskUyarisi,
 )
 from .anomali import anomali_tespit
-from .gostergeler import VARSAYILAN_KRILER, kri_hesapla
+from .gostergeler import VARSAYILAN_KRILER, deger_metni, kri_hesapla
 
 log = logging.getLogger(__name__)
 
@@ -89,14 +89,14 @@ def bilesik_risk_puani(degerler, kriler):
 def izlem_onerisi(cm):
     p = cm.risk_puani
     if p is None:
-        return "Henuz yeterli veri yok; standart izlem plani uygulanir."
+        return "Henüz yeterli veri yok; standart izlem planı uygulanır."
     if p >= 60:
-        return "Yuksek risk: 2 hafta icinde tetiklenmis yerinde ziyaret, kritik verilerde %100 SDV."
+        return "Yüksek risk: 2 hafta içinde tetiklenmiş yerinde ziyaret, kritik verilerde %100 SDV."
     if p >= 35:
-        return "Orta risk: yerinde ziyaret sikligi artirilir (6 haftada bir), kritik verilerde %50 SDV, aylik uzaktan izlem."
+        return "Orta risk: yerinde ziyaret sıklığı artırılır (6 haftada bir), kritik verilerde %50 SDV, aylık uzaktan izlem."
     if p >= 15:
-        return "Dusuk-orta risk: standart ziyaret plani, risk bazli SDV (%20), aylik uzaktan veri incelemesi."
-    return "Dusuk risk: uzaktan izlem yeterli, yerinde ziyaret 3 ayda bir, SDV ornekleme %10."
+        return "Düşük-orta risk: standart ziyaret planı, risk bazlı SDV (%20), aylık uzaktan veri incelemesi."
+    return "Düşük risk: uzaktan izlem yeterli, yerinde ziyaret 3 ayda bir, SDV örnekleme %10."
 
 
 def erken_uyari_calistir(db, calisma, kullanici_id=None):
@@ -134,14 +134,15 @@ def erken_uyari_calistir(db, calisma, kullanici_id=None):
 
             esik = _alan(k, "esik_aksiyon") if seviye == "aksiyon" else _alan(k, "esik_uyari")
             merkez_ad = cm.merkez.ad if cm.merkez else f"Merkez {cm.merkez_no}"
-            mesaj = f"{merkez_ad} ({cm.merkez_no}): {ad} = {deger:g} {birim}".rstrip()
+            mesaj = f"{merkez_ad} ({cm.merkez_no}): {ad} {deger_metni(deger, birim)}"
             nedenler = []
             if _esik_seviyesi(deger, k):
-                yon_metin = "ustunde" if yon == "yuksek" else "altinda"
-                nedenler.append(f"Deger {esik:g} {birim} {seviye} esiginin {yon_metin}.".replace("  ", " "))
+                yon_metin = "üstünde" if yon == "yuksek" else "altında"
+                nedenler.append(f"Değer, {deger_metni(esik, birim)} {seviye} eşiğinin {yon_metin}.")
             if an:
                 nedenler.append(an.aciklama)
-            nedenler.append(f"Gostergenin bilesik risk puanindaki agirligi {_alan(k, 'agirlik'):g}.")
+            agirlik = f"{float(_alan(k, 'agirlik') or 1):g}".replace(".", ",")
+            nedenler.append(f"Göstergenin bileşik risk puanındaki ağırlığı {agirlik}.")
             aciklama = " ".join(nedenler)
 
             mevcut = acik_map.get((cm_id, kod))
@@ -168,12 +169,12 @@ def erken_uyari_calistir(db, calisma, kullanici_id=None):
         if degerlendirildi:
             u.durum = "kapandi"
             u.kapanis = _simdi()
-            u.kapanis_notu = "Gosterge esik altina dondu (otomatik kapanis)."
+            u.kapanis_notu = "Gösterge eşik altına döndü (otomatik kapanış)."
 
     for cm_id, d in degerler.items():
         cm_map[cm_id].risk_puani = bilesik_risk_puani(d, kriler)
 
-    log.info("Erken uyari: calisma %s, %d uyari", calisma.kod, len(uretilen))
+    log.info("Erken uyari: calisma %s, %d uyari", calisma.kod, len(uretilen))  # gunluk: ASCII
     return uretilen
 
 
@@ -224,12 +225,12 @@ QTL_HESAPLAYICILAR = {
 }
 
 VARSAYILAN_QTLLER = [
-    {"parametre": "Erken ayrilma orani", "hesaplama": "erken_ayrilma", "limit": 20.0, "ikincil_limit": 15.0, "birim": "%",
-     "gerekce": "Birincil sonlanim icin guc hesabinda %20 kayip varsayildi."},
-    {"parametre": "Major protokol sapmasi orani", "hesaplama": "major_sapma", "limit": 10.0, "ikincil_limit": 7.0, "birim": "%",
-     "gerekce": "Per-protokol populasyonunun butunlugu."},
+    {"parametre": "Erken ayrılma oranı", "hesaplama": "erken_ayrilma", "limit": 20.0, "ikincil_limit": 15.0, "birim": "%",
+     "gerekce": "Birincil sonlanım için güç hesabında %20 kayıp varsayıldı."},
+    {"parametre": "Major protokol sapması oranı", "hesaplama": "major_sapma", "limit": 10.0, "ikincil_limit": 7.0, "birim": "%",
+     "gerekce": "Per-protokol popülasyonunun bütünlüğü."},
     {"parametre": "Uygunluk kriteri ihlali", "hesaplama": "uygunluk_ihlali", "limit": 5.0, "ikincil_limit": 3.0, "birim": "%",
-     "gerekce": "Yanlis populasyon kaydi birincil analizi tehdit eder."},
+     "gerekce": "Yanlış popülasyon kaydı birincil analizi tehdit eder."},
 ]
 
 

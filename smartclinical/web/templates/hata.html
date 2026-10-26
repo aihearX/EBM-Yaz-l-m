@@ -3,7 +3,8 @@
 {% block icerik %}
 <div class="kart" style="max-width:560px">
   <h2>{{ kod }} – {% if kod == 404 %}Bulunamadı{% elif kod == 403 %}Yetkisiz işlem{% else %}Hata{% endif %}</h2>
-  <p>{{ mesaj }}</p>
+  <p>{{ hata_mesaji if hata_mesaji is defined and hata_mesaji else mesaj }}</p>
+  {% if kod == 403 %}<p class="kucuk">Kullanım modu: {{ kurulum.mod_etiket }}. Bu sayfaya erişim rolünüze ve kurulum moduna göre belirlenir; yetki gerekiyorsa yöneticinize başvurun.</p>{% endif %}
   <a class="btn" href="/">Genel bakışa dön</a>
 </div>
 {% endblock %}

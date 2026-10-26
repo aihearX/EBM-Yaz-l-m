@@ -1,0 +1,30 @@
+{# ozet.html icine dahil edilir: iki vizit arasi degisim, kol bazinda fark ozeti ve eslestirilmis test #}
+{% set d = secili.degisken %}
+<div class="izgara k21" style="margin-top:14px">
+  <div>
+    <h3 style="margin:0 0 6px">{{ d.kod }} – {{ d.etiket }} <small>· {{ d.form }} · {{ secili.vizit1 }} → {{ secili.vizit2 }}</small></h3>
+    {% if secili.aciklama %}<p class="kucuk" style="margin:0 0 8px">{{ secili.aciklama }}</p>{% endif %}
+    {% if secili.kollar %}
+    <table class="sikisik">
+      <tr><th></th>{% for k in secili.kollar %}<th class="sag">{{ k.ad }} <small>(n={{ k.n }})</small></th>{% endfor %}<th class="sag">Toplam</th></tr>
+      <tr><td>{{ secili.vizit1 }} ortalama ± SS</td>{% for k in secili.kollar %}<td class="sayi">{{ k.ozet1.ortalama|sayi(1) }} ± {{ k.ozet1.ss|sayi(1) }}</td>{% endfor %}<td class="sayi">—</td></tr>
+      <tr><td>{{ secili.vizit2 }} ortalama ± SS</td>{% for k in secili.kollar %}<td class="sayi">{{ k.ozet2.ortalama|sayi(1) }} ± {{ k.ozet2.ss|sayi(1) }}</td>{% endfor %}<td class="sayi">—</td></tr>
+      <tr><td><b>Fark ortalaması ± SS</b></td>{% for k in secili.kollar %}<td class="sayi"><b>{{ k.fark.ortalama|sayi(1) }}</b> ± {{ k.fark.ss|sayi(1) }}</td>{% endfor %}<td class="sayi"><b>{{ secili.toplam.ortalama|sayi(1) }}</b> ± {{ secili.toplam.ss|sayi(1) }}</td></tr>
+      <tr><td>Fark medyanı [Ç1–Ç3]</td>{% for k in secili.kollar %}<td class="sayi">{{ k.fark.medyan|sayi(1) }} [{{ k.fark.c1|sayi(1) }}–{{ k.fark.c3|sayi(1) }}]</td>{% endfor %}<td class="sayi">{{ secili.toplam.medyan|sayi(1) }} [{{ secili.toplam.c1|sayi(1) }}–{{ secili.toplam.c3|sayi(1) }}]</td></tr>
+      <tr><td>Fark en küçük / en büyük</td>{% for k in secili.kollar %}<td class="sayi">{{ k.fark.min|sayi(1) }} / {{ k.fark.maks|sayi(1) }}</td>{% endfor %}<td class="sayi">{{ secili.toplam.min|sayi(1) }} / {{ secili.toplam.maks|sayi(1) }}</td></tr>
+    </table>
+    {% else %}<p class="kucuk">Her iki vizitte de değeri olan gönüllü bulunamadı.</p>{% endif %}
+    {% set t = secili.test %}
+    <div class="analiz-gerekce">
+      {% if t.test %}<b>{{ t.test }}</b>{% if t.istatistik is not none %} · istatistik {{ t.istatistik|sayi(3) }}{% endif %} · p = {{ t.p|sayi(4) }}
+      {% if t.p < 0.05 %}<span class="rozet turkuaz">p &lt; 0,05</span>{% endif %}
+      {% else %}<b>Test yapılmadı.</b>{% endif %}
+      <div>Gerekçe: {{ t.gerekce }}</div>
+      {% if t.test %}<div class="kucuk">Sıfır hipotezi: ortalama (ya da medyan) değişim sıfırdır. Çoklu karşılaştırma düzeltmesi uygulanmamıştır.</div>{% endif %}
+    </div>
+  </div>
+  <div>
+    <div class="analiz-grafik" id="g-degisken"></div>
+    <small>Kutu: kol bazında gönüllü başına fark ({{ secili.vizit2 }} − {{ secili.vizit1 }}); kalın çizgi medyan, noktalar aykırı değerler.</small>
+  </div>
+</div>

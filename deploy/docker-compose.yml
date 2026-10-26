@@ -1,33 +1,79 @@
 # EBM SmartClinical – hastane içi (on-premise) kurulum
 # Kullanım (deploy/ dizininden):
-#   docker compose up -d                       # app + postgres + nginx
+#   docker compose up -d                       # postgres + şema + yetkiler + app + nginx
 #   docker compose --profile bdm up -d         # + Türkçe klinik BDM (GPU)
 #   docker compose --profile bdm-cpu up -d     # + BDM (CPU, llama.cpp)
+#   docker compose --profile gece run --rm gece   # gece işleri (KRI, tahmin, SAE süre kontrolü); zamanlama için bkz. KURULUM.md
 # Ortam değişkenleri için ../.env dosyası kullanılır (bkz. ../.env.example).
+#
+# Ağlar: "uygulama" dış dünyaya kapalıdır (internal); yalnızca nginx "dis" ağında da bulunur ve 80/443'ü açar.
+# Veritabanı rolleri: smartclinical_sema şemayı oluşturur (sema servisi), smartclinical yalnızca veri okur/yazar (app).
 
 name: smartclinical
 
+x-app: &app
+  build:
+    context: ..
+    dockerfile: deploy/Dockerfile
+  image: smartclinical:yerel
+  env_file: ../.env
+  environment: &app-env
+    SC_ORTAM: uretim
+    SC_DB_URL: postgresql+psycopg://smartclinical:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD tanimlanmali}@postgres:5432/smartclinical
+    SC_DOSYA_DIZINI: /app/yuklemeler
+    SC_BDM_URL: ${SC_BDM_URL:-http://bdm:11434}
+    SC_GOMME_URL: ${SC_GOMME_URL:-http://gomme:8081}
+    PROXY_HOST: nginx
+  volumes:
+    - yuklemeler:/app/yuklemeler
+  networks: [uygulama]
+
 services:
-  app:
-    build:
-      context: ..
-      dockerfile: deploy/Dockerfile
-    image: smartclinical:1.4.2
-    restart: unless-stopped
-    env_file: ../.env
+  # 1) Şema: tabloları şema sahibi rolle oluşturur; her açılışta ve güncellemede çalışır, mevcut tabloya dokunmaz.
+  sema:
+    <<: *app
+    restart: "no"
+    entrypoint: ["python", "-c", "from smartclinical.db import tablolari_olustur; tablolari_olustur(); print('sema hazir')"]
     environment:
-      SC_ORTAM: uretim
-      SC_DB_URL: postgresql+psycopg://smartclinical:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD tanimlanmali}@postgres:5432/smartclinical
-      SC_DOSYA_DIZINI: /app/yuklemeler
-      SC_BDM_URL: ${SC_BDM_URL:-http://bdm:11434}
-      SC_GOMME_URL: ${SC_GOMME_URL:-http://gomme:8081}
-    volumes:
-      - yuklemeler:/app/yuklemeler
+      <<: *app-env
+      SC_DB_URL: postgresql+psycopg://smartclinical_sema:${POSTGRES_SEMA_PASSWORD:?POSTGRES_SEMA_PASSWORD tanimlanmali}@postgres:5432/smartclinical
     depends_on:
       postgres:
         condition: service_healthy
-    networks: [ic]
-    # Dış dünyaya port açılmaz; erişim nginx üzerinden
+
+  # 2) Yetkiler: tablolar oluştuktan sonra DML yetkileri ve denetim izi koruma tetikleyicileri (yetkiler.sql ikinci blok).
+  yetki:
+    image: postgres:16-alpine
+    restart: "no"
+    environment:
+      PGPASSWORD: ${POSTGRES_ADMIN_PASSWORD:?POSTGRES_ADMIN_PASSWORD tanimlanmali}
+      APP_DB_PASSWORD: ${POSTGRES_PASSWORD}
+      SEMA_DB_PASSWORD: ${POSTGRES_SEMA_PASSWORD}
+    volumes:
+      - ./postgres/yetkiler.sql:/yetkiler.sql:ro
+    entrypoint: ["psql", "-h", "postgres", "-U", "smartclinical_admin", "-d", "smartclinical", "-v", "ON_ERROR_STOP=1", "-f", "/yetkiler.sql"]
+    depends_on:
+      sema:
+        condition: service_completed_successfully
+    networks: [uygulama]
+
+  # 3) Uygulama: yalnızca DML yetkili rolle çalışır; dış dünyaya port açmaz, erişim nginx üzerinden.
+  app:
+    <<: *app
+    restart: unless-stopped
+    depends_on:
+      yetki:
+        condition: service_completed_successfully
+
+  # Gece işleri: KRI/QTL, merkez zekâsı tahmini, SAE süre kontrolü (profil ile tek seferlik çalıştırılır)
+  gece:
+    <<: *app
+    profiles: [gece]
+    restart: "no"
+    entrypoint: ["python", "-m", "smartclinical.scripts.gece_isleri"]
+    depends_on:
+      app:
+        condition: service_started
 
   postgres:
     image: postgres:16-alpine
@@ -37,16 +83,17 @@ services:
       POSTGRES_USER: smartclinical_admin
       POSTGRES_PASSWORD: ${POSTGRES_ADMIN_PASSWORD:?POSTGRES_ADMIN_PASSWORD tanimlanmali}
       APP_DB_PASSWORD: ${POSTGRES_PASSWORD}
+      SEMA_DB_PASSWORD: ${POSTGRES_SEMA_PASSWORD}
       TZ: Europe/Istanbul
     volumes:
       - pgdata:/var/lib/postgresql/data
-      - ./postgres/yetkiler.sql:/docker-entrypoint-initdb.d/20_yetkiler.sql:ro
+      - ./postgres/yetkiler.sql:/docker-entrypoint-initdb.d/20_yetkiler.sql:ro   # ilk kurulumda roller
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U smartclinical_admin -d smartclinical"]
       interval: 10s
       timeout: 5s
       retries: 5
-    networks: [ic]
+    networks: [uygulama]
 
   nginx:
     image: nginx:1.27-alpine
@@ -58,7 +105,7 @@ services:
       - ./nginx/smartclinical.conf:/etc/nginx/conf.d/default.conf:ro
       - ${TLS_SERTIFIKA_DIZINI:-./sertifika}:/etc/nginx/sertifika:ro
     depends_on: [app]
-    networks: [ic]
+    networks: [uygulama, dis]
 
   # --- Türkçe Klinik BDM (GPU) ---------------------------------------------
   bdm:
@@ -78,7 +125,7 @@ services:
             - driver: nvidia
               count: 1
               capabilities: [gpu]
-    networks: [ic]
+    networks: [uygulama]
 
   # --- Türkçe Klinik BDM (CPU, GPU olmayan hastaneler için) -----------------
   bdm-cpu:
@@ -91,7 +138,7 @@ services:
     volumes:
       - ../ml/modeller/gguf:/modeller:ro
     networks:
-      ic:
+      uygulama:
         aliases: [bdm]
 
   # --- Gömme (embedding) servisi – RAG ---------------------------------------
@@ -102,7 +149,7 @@ services:
     command: --model-id /modeller/ebm-klinik-tr-embed-v2 --port 8081
     volumes:
       - ../ml/modeller:/modeller:ro
-    networks: [ic]
+    networks: [uygulama]
 
 volumes:
   pgdata:
@@ -110,6 +157,8 @@ volumes:
   bdm_modeller:
 
 networks:
-  ic:
+  uygulama:
     driver: bridge
-    internal: false   # NOT: tamamen kapalı ağda 'true' yapın; nginx portları yine de host'a açılır
+    internal: true    # app, postgres ve BDM servisleri dışarı çıkamaz
+  dis:
+    driver: bridge    # yalnızca nginx; host'a 80/443 açılır

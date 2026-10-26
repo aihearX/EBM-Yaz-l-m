@@ -3,6 +3,7 @@
 <div class="izgara k21" style="margin-top:14px">
   <div>
     <h3 style="margin:0 0 6px">{{ d.kod }} – {{ d.etiket }} <small>· {{ d.form }}{% if secili.vizit %} · {{ secili.vizit }}{% else %} · tüm vizitler{% endif %}</small></h3>
+    {% if secili.aciklama %}<p class="kucuk" style="margin:0 0 8px">{{ secili.aciklama }}</p>{% endif %}
     {% if d.tip == 'sayisal' %}
     <table class="sikisik">
       <tr><th></th>{% for k in secili.kollar %}<th class="sag">{{ k.ad }}</th>{% endfor %}<th class="sag">Toplam</th></tr>
@@ -27,7 +28,7 @@
       {% if t.p < 0.05 %}<span class="rozet turkuaz">p &lt; 0,05</span>{% endif %}
       {% else %}<b>Test yapılmadı.</b>{% endif %}
       <div>Gerekçe: {{ t.gerekce }}</div>
-      <div class="kucuk">Tek değişken için iki yönlü test; seçilen her değişken için ayrı test yapıldığından çoklu karşılaştırma düzeltmesi uygulanmamıştır.</div>
+      {% if t.test %}<div class="kucuk">Tek değişken için iki yönlü test; seçilen her değişken için ayrı test yapıldığından çoklu karşılaştırma düzeltmesi uygulanmamıştır.</div>{% endif %}
     </div>
   </div>
   <div>

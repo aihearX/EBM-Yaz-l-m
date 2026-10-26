@@ -176,10 +176,14 @@ def test_veri_seti_taslaklari_dislar(istemci):
 
 def test_degisken_analizi(istemci):
     db, c = _calisma()
+    # tum vizitler: gonullu basina son deger, kol testi yok
     a = analiz.degisken_analizi(c, "VS.SYSBP")
-    assert [k["ad"] for k in a["kollar"]] == ["Kol A", "Kol B"] and a["kollar"][0]["ozet"]["n"] == 8
-    assert a["test"]["test"] in ("Welch t testi", "Mann-Whitney U testi") and a["test"]["p"] < 0.05
+    assert [k["ad"] for k in a["kollar"]] == ["Kol A", "Kol B"] and a["kollar"][0]["ozet"]["n"] == 4
+    assert a["test"]["test"] is None and "kol testi yapılmaz" in a["test"]["gerekce"] and a["gorunum"] == "tum"
     assert len(a["grafik"]) == 2 and {"min", "c1", "medyan", "c3", "maks", "aykiri"} <= set(a["grafik"][0])
+    a = analiz.degisken_analizi(c, "VS.SYSBP", "V1")
+    assert a["kollar"][0]["ozet"]["n"] == 4
+    assert a["test"]["test"] in ("Welch t testi", "Mann-Whitney U testi") and 0 <= a["test"]["p"] <= 1
     a = analiz.degisken_analizi(c, "VS.SYSBP", "V2")
     assert a["kollar"][1]["ozet"]["n"] == 3  # kol B'de V2 taslagi disarida
     a = analiz.degisken_analizi(c, "VS.ATES")

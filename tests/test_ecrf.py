@@ -192,7 +192,8 @@ def test_kol_vizit_form_ekle(istemci):
 def test_yetkisiz_kullanici_duzenleyemez(istemci):
     _giris(istemci, "cra")
     cid = _calisma()
-    assert istemci.get(f"/calismalar/{cid}/tasarim").status_code == 200
+    # tasarim sekmesi yalnizca calismayi duzenleyebilenlere acik (sekme_kontrol)
+    assert istemci.get(f"/calismalar/{cid}/tasarim").status_code == 403
     assert istemci.get(f"/calismalar/{cid}/tasarim/form/yeni").status_code == 403
     assert istemci.post(f"/calismalar/{cid}/tasarim/kol", data={"ad": "X"}).status_code == 403
 

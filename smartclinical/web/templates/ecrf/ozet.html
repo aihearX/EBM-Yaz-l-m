@@ -56,7 +56,7 @@
     <h2>eCRF formları <span class="rozet kontur">{{ formlar|length }}</span></h2>
     {% if formlar %}
     <table class="sikisik"><tr><th>Kod</th><th>Form</th><th>Vizitler</th><th class="sag">Alan</th><th>Sürüm</th><th>Durum</th></tr>
-      {% for f in formlar %}<tr><td>{% if duzenle %}<a href="/calismalar/{{ c.id }}/tasarim/form/{{ f.id }}">{{ f.kod }}</a>{% else %}{{ f.kod }}{% endif %}</td><td>{{ f.ad }}</td>
+      {% for f in formlar %}<tr><td>{% if duzenle %}<a href="/calismalar/{{ c.id }}/tasarim/form/{{ f.id }}">{{ f.kod }}</a>{% else %}{{ f.kod }}{% endif %}</td><td>{{ f.ad }}{% if f.tekrarlayan %} <span class="rozet kontur" title="Aynı vizitte birden fazla satır">tekrarlayan</span>{% endif %}</td>
         <td><small>{{ f.vizit_listesi|join(', ') or 'Her vizit' }}</small></td><td class="sayi">{{ f.alanlar|length }}</td><td>{{ f.versiyon }}{% if f.id in kayitli_formlar %} <span class="rozet kontur" title="Veri kaydı var; alan silme ve tip değişikliği kapalı">kayıtlı</span>{% endif %}</td>
         <td><span class="rozet {{ 'yesil' if f.durum == 'yayinda' else 'sari' }}">{{ FORM_DURUMLARI.get(f.durum, f.durum) }}</span></td></tr>{% endfor %}
     </table>
@@ -64,14 +64,27 @@
     {% if duzenle %}
     <div style="margin-top:10px"><a class="btn birincil" href="/calismalar/{{ c.id }}/tasarim/form/yeni">Yeni form tasarla</a></div>
     {% if standart %}
-    <details style="margin-top:8px"{% if not formlar %} open{% endif %}><summary>Standart formlardan ekle (CDASH)</summary>
+    <details style="margin-top:8px"{% if not formlar %} open{% endif %}><summary>Standart formlardan ekle (CDASH ve telifsiz ölçekler)</summary>
     <form method="post" action="/calismalar/{{ c.id }}/tasarim/form/standart" style="margin-top:8px">
-      {% for kod, ad in standart %}<label style="display:block;font-weight:400"><input type="checkbox" name="kodlar" value="{{ kod }}"> {{ kod }} – {{ ad }}</label>{% endfor %}
+      {% for kod, ad in standart %}<label style="display:block;font-weight:400"><input type="checkbox" name="kodlar" value="{{ kod }}"> {{ kod }} – {{ ad }}{% if kod == 'ANKET' %} <small>(taslak eklenir; alanları siz tanımlarsınız)</small>{% endif %}</label>{% endfor %}
       <button class="btn" style="margin-top:6px">Seçilenleri ekle</button>
     </form></details>
     {% endif %}
     {% endif %}
   </div>
 </div>
+{% if vizitler and formlar %}
+<div class="kart">
+  <h2>Vizit × form matrisi</h2>
+  <p class="kucuk">Hangi form hangi vizitte doldurulur. Vizit seçilmemiş formlar her vizitte görünür.</p>
+  <div style="overflow-x:auto">
+  <table class="sikisik">
+    <tr><th>Form</th>{% for t in vizitler %}<th class="sag" title="gün {{ t.gun }} ± {{ t.pencere_gun }}">{{ t.ad }}</th>{% endfor %}</tr>
+    {% for satir in matris %}<tr><td><b>{{ satir.form.kod }}</b> {{ satir.form.ad }}{% if satir.form.durum != 'yayinda' %} <span class="rozet sari">{{ FORM_DURUMLARI.get(satir.form.durum) }}</span>{% endif %}</td>
+      {% for var in satir.vizitler %}<td class="sayi">{% if var %}<span title="bu vizitte doldurulur">●</span>{% else %}<span style="color:var(--gri-300)">·</span>{% endif %}</td>{% endfor %}</tr>{% endfor %}
+  </table>
+  </div>
+</div>
+{% endif %}
 <div class="not">Tasarım değişiklikleri denetim izine yazılır. Veri kaydı olan formlarda alan silinemez ve tip değiştirilemez; diğer değişiklikler form sürümünü artırır.</div>
 {% endblock %}

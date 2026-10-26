@@ -1,0 +1,25 @@
+# Gece işleri: aktif çalışmalarda KRI/QTL hesabı ve erken uyarı, merkez zekâsı tahmini, SAE bildirim süresi kontrolü.
+# Zamanlayıcı: smartclinical-gece.timer (her gece 02:00). Elle: systemctl start smartclinical-gece
+[Unit]
+Description=EBM SmartClinical gece işleri (KRI, tahmin, SAE süre kontrolü)
+After=network-online.target postgresql.service smartclinical.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=smartclinical
+Group=smartclinical
+WorkingDirectory=/opt/smartclinical
+EnvironmentFile=/opt/smartclinical/.env
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/opt/smartclinical/.venv/bin/python -m smartclinical.scripts.gece_isleri
+TimeoutStartSec=1h
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/smartclinical/veri /var/log/smartclinical
+
+StandardOutput=append:/var/log/smartclinical/gece.log
+StandardError=append:/var/log/smartclinical/gece.log

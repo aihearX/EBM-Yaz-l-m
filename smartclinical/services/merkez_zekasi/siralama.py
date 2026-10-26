@@ -10,13 +10,17 @@ VARSAYILAN_AGIRLIKLAR = {
 }
 
 BILESEN_ETIKET = {
-    "kazanim": "Hasta kazanim tahmini",
+    "kazanim": "Hasta kazanım tahmini",
     "gecikme": "Aktivasyon gecikme riski",
-    "kalite": "Kalite gecmisi",
+    "kalite": "Kalite geçmişi",
     "deneyim": "Deneyim",
     "rekabet": "Rekabet",
-    "cografya": "Cografi dagilim",
+    "cografya": "Coğrafi dağılım",
 }
+
+
+def _kucuk(s: str) -> str:
+    return s.replace("I", "ı").replace("İ", "i").lower()
 
 
 def _kirp(x, alt=0.0, ust=1.0):
@@ -52,12 +56,12 @@ def _gerekce(a, b, katkilar):
     zayif = min(b.items(), key=lambda kv: kv[1])
     parcalar = []
     if a.get("tahmini_kazanim") is not None:
-        parcalar.append(f"Beklenen kazanim {a['tahmini_kazanim']:.2f} hasta/ay")
+        parcalar.append(f"Beklenen kazanım {a['tahmini_kazanim']:.2f} hasta/ay".replace(".", ","))
     if a.get("gecikme_riski") is not None:
         parcalar.append(f"aktivasyon gecikme riski %{a['gecikme_riski'] * 100:.0f}")
     c1 = ", ".join(parcalar) + "." if parcalar else ""
-    c2 = "En guclu yonleri: " + " ve ".join(BILESEN_ETIKET[k].lower() for k, _ in guclu) + "."
-    c3 = f"Dikkat edilmesi gereken bilesen: {BILESEN_ETIKET[zayif[0]].lower()} ({zayif[1] * 100:.0f}/100)."
+    c2 = "En güçlü yönleri: " + " ve ".join(_kucuk(BILESEN_ETIKET[k]) for k, _ in guclu) + "."
+    c3 = f"Dikkat edilmesi gereken bileşen: {_kucuk(BILESEN_ETIKET[zayif[0]])} ({zayif[1] * 100:.0f}/100)."
     return " ".join(p for p in (c1, c2, c3) if p)
 
 

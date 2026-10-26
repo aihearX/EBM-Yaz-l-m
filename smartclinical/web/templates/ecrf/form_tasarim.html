@@ -1,17 +1,19 @@
 {% extends "base.html" %}
-{% block baslik %}{{ c.kod }} · {{ f.ad if f else 'Yeni form' }}{% endblock %}
-{% block yol %}<a href="/calismalar">Çalışmalar</a> › <a href="/calismalar/{{ c.id }}">{{ c.kod }}</a> › <a href="/calismalar/{{ c.id }}/tasarim">Tasarım</a> › {{ f.ad if f else 'Yeni form' }}{% endblock %}
+{% block baslik %}{{ c.kod }} · {{ f.ad if f else 'Yeni eCRF formu' }}{% endblock %}
+{% block yol %}<a href="/calismalar">Çalışmalar</a> › <a href="/calismalar/{{ c.id }}">{{ c.kod }}</a> › <a href="/calismalar/{{ c.id }}/tasarim">Tasarım</a> › {{ f.ad if f else 'Yeni eCRF formu' }}{% endblock %}
 {% block icerik %}
+{% include "ecrf/_stil.html" %}
 {% set d = taslak or {} %}
 {% set kod = d.get('kod', f.kod if f else '') %}
 {% set ad = d.get('ad', f.ad if f else '') %}
 {% set aciklama = d.get('aciklama', (f.aciklama or '') if f else '') %}
 {% set durum = d.get('durum', f.durum if f else 'taslak') %}
+{% set tekrarlayan = d.get('tekrarlayan', f.tekrarlayan if f else False) %}
 {% set secili_vizitler = d.get('vizitler', f.vizit_listesi if f else []) %}
 <div class="baslik-satiri">
   <div><h1>{{ f.ad if f else 'Yeni eCRF formu' }}{% if f %} <small style="font-weight:400">({{ f.kod }} v{{ f.versiyon }})</small>{% endif %}</h1>
-    <small>{% if f and not degistirilebilir %}Bu formda veri kaydı var: alan silinemez, tip değiştirilemez; diğer değişiklikler sürümü artırır.{% else %}Alanları tabloda düzenleyin; kayıt sırasında kodlar ve koşullar sunucuda doğrulanır.{% endif %}</small></div>
-  <div class="sag">{% if f %}<a class="btn" href="/calismalar/{{ c.id }}/tasarim/form/{{ f.id }}/onizle">Önizle</a>{% endif %}<a class="btn" href="/calismalar/{{ c.id }}/tasarim">Tasarıma dön</a></div>
+    <small>{% if f and not degistirilebilir %}Bu formda veri kaydı var: alan silinemez, tip değiştirilemez; diğer değişiklikler sürümü artırır.{% else %}Alan ekleyin, etiketi yazın; kod otomatik üretilir. Satıra tıklayınca bölüm, koşul ve CDASH ayrıntıları altta açılır.{% endif %}</small></div>
+  <div class="sag">{% if f %}<a class="btn" href="/calismalar/{{ c.id }}/tasarim/form/{{ f.id }}/onizle">Tam önizleme</a>{% endif %}<a class="btn" href="/calismalar/{{ c.id }}/tasarim">Tasarıma dön</a></div>
 </div>
 {% for h in hatalar %}<div class="mesaj uyari">{{ h }}</div>{% endfor %}
 <form method="post" action="/calismalar/{{ c.id }}/tasarim/form/{{ f.id if f else 'yeni' }}" id="tasarimci" data-degistirilebilir="{{ '1' if degistirilebilir else '0' }}">
@@ -19,11 +21,14 @@
     <div class="kart">
       <h2>Form bilgisi</h2>
       <div class="izgara k3">
-        <div class="alan"><label>Kod</label><input type="text" name="kod" value="{{ kod }}" required maxlength="16" placeholder="VS" style="text-transform:uppercase"><div class="yardim">Büyük harf, rakam, alt çizgi; dışa aktarımda form kimliği.</div></div>
-        <div class="alan"><label>Ad</label><input type="text" name="ad" value="{{ ad }}" required placeholder="Vital Bulgular"></div>
+        <div class="alan"><label>Ad</label><input type="text" name="ad" id="form-ad" value="{{ ad }}" required placeholder="Vital Bulgular"></div>
+        <div class="alan"><label>Kod</label><input type="text" name="kod" id="form-kod" value="{{ kod }}" required maxlength="16" placeholder="VS" style="text-transform:uppercase"><div class="yardim">Addan üretilir; dışa aktarımda form kimliği.</div></div>
         <div class="alan"><label>Durum</label><select name="durum">{% for k, e in FORM_DURUMLARI.items() %}<option value="{{ k }}" {{ 'selected' if durum == k }}>{{ e }}</option>{% endfor %}</select><div class="yardim">Yalnızca "Yayında" formlar veri girişinde görünür.</div></div>
       </div>
-      <div class="alan"><label>Açıklama</label><input type="text" name="aciklama" value="{{ aciklama }}" placeholder="Veri girişi yapana kısa yönerge"></div>
+      <div class="izgara k2">
+        <div class="alan"><label>Açıklama</label><input type="text" name="aciklama" value="{{ aciklama }}" placeholder="Veri girişi yapana kısa yönerge"></div>
+        <div class="alan"><label style="display:flex;gap:6px;align-items:center;margin-top:22px"><input type="checkbox" name="tekrarlayan" value="1" {{ 'checked' if tekrarlayan }}> Tekrarlayan form</label><div class="yardim">Aynı vizitte birden fazla satır girilir (eşlik eden ilaç, tıbbi öykü, advers olay gibi).</div></div>
+      </div>
     </div>
     <div class="kart">
       <h2>Vizitler</h2>
@@ -33,22 +38,51 @@
       {% else %}<p class="kucuk">Vizit şeması henüz tanımlı değil; form her vizitte doldurulur. Şemayı <a href="/calismalar/{{ c.id }}/tasarim">tasarım sayfasından</a> tanımlayabilirsiniz.</p>{% endif %}
     </div>
   </div>
-  <div class="kart">
-    <div class="baslik-satiri" style="margin-bottom:8px"><h2 style="margin:0">Alanlar</h2><div class="sag"><button type="button" class="btn" id="alan-ekle">Satır ekle</button></div></div>
-    <div style="overflow-x:auto">
-    <table class="sikisik" id="alan-tablo">
-      <thead><tr><th style="width:26px">#</th><th>Kod</th><th>Etiket</th><th>Tip</th><th title="Zorunlu">Zor.</th><th>Birim</th><th>Min</th><th>Max</th><th>Seçenekler <small>(; ile ayırın)</small></th><th>Bölüm</th><th>Koşul alanı</th><th>Koşul değeri</th><th>CDASH</th><th style="width:96px"></th></tr></thead>
-      <tbody></tbody>
-    </table>
+  <div class="tsr-izgara">
+    <div class="kart">
+      <div class="baslik-satiri" style="margin-bottom:6px"><h2 style="margin:0">Alanlar</h2></div>
+      <div class="tsr-arac">
+        <button type="button" class="btn birincil" id="alan-ekle">Alan ekle</button>
+        <span class="ayrac"></span>
+        <small>Hızlı ekle:</small>
+        <button type="button" class="btn kucuk" data-hizli="tarih">Tarih</button>
+        <button type="button" class="btn kucuk" data-hizli="evet_hayir">Evet/Hayır</button>
+        <button type="button" class="btn kucuk" data-hizli="sayi">Sayı + birim</button>
+        <button type="button" class="btn kucuk" data-hizli="secim">Seçim</button>
+      </div>
+      <div style="overflow-x:auto">
+      <table class="tsr-tablo" id="alan-tablo">
+        <colgroup><col class="c-sira"><col class="c-kod"><col class="c-etiket"><col class="c-tip"><col class="c-zor"><col class="c-ek"><col class="c-islem"></colgroup>
+        <thead><tr><th>#</th><th>Kod</th><th>Etiket</th><th>Tip</th><th title="Zorunlu">Zor.</th><th>Seçenekler / Birim · Min · Max</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
+      </div>
+      <p class="kucuk" id="alan-bos" style="display:none">Henüz alan yok. "Alan ekle" ya da hızlı ekleme düğmeleriyle başlayın.</p>
+      <div class="tsr-panel" id="alan-ayrinti" hidden>
+        <div class="baslik-satiri" style="margin-bottom:6px"><h3 style="margin:0">Alan ayrıntısı: <span id="ayrinti-kod">—</span></h3><button type="button" class="btn kucuk" id="ayrinti-kapat">Kapat</button></div>
+        <div class="izgara k4">
+          <div class="alan"><label>Bölüm</label><input type="text" data-p="bolum" placeholder="Ölçümler"><div class="yardim">Alanın üstünde bölüm başlığı gösterilir.</div></div>
+          <div class="alan"><label>Koşul alanı</label><input type="text" data-p="kosul_alan" list="kod-listesi" style="text-transform:uppercase" placeholder="ATES"><div class="yardim">Bu alan, koşul alanı koşul değerine eşitse görünür.</div></div>
+          <div class="alan"><label>Koşul değeri</label><input type="text" data-p="kosul_deger" placeholder="Evet"></div>
+          <div class="alan"><label>CDASH değişkeni</label><input type="text" data-p="cdash" list="cdash-listesi" placeholder="VS.VSORRES"><div class="yardim">Dışa aktarımda eşleme; listeden seçin ya da yazın.</div></div>
+        </div>
+        <div class="alan" id="ayrinti-toplam" hidden><label>Toplam puan kaynakları</label><input type="text" data-p="toplam" placeholder="PHQ1, PHQ2, PHQ3"><div class="yardim">Virgülle ayrılmış alan kodları; bu alan kullanıcı girmeden toplamdan hesaplanır (ölçek puanı).</div></div>
+        <datalist id="kod-listesi"></datalist>
+        <datalist id="cdash-listesi">{% for x in cdash_onerileri %}<option value="{{ x }}">{% endfor %}</datalist>
+      </div>
+      <div class="yardim" style="margin-top:8px">Seçenekleri her satıra bir tane yazın. Koşullu alan, koşulu sağlanmadığında gizlenir ve zorunlu sayılmaz. Kaydederken kodlar ve koşullar sunucuda doğrulanır.</div>
+      <input type="hidden" name="alanlar_json" id="alanlar_json" value="{{ alanlar_json }}">
+      <div style="display:flex;gap:8px;align-items:center;margin-top:12px">
+        <button class="btn birincil">Kaydet</button>
+        {% if f %}<a class="btn" href="/calismalar/{{ c.id }}/tasarim/form/{{ f.id }}/onizle">Tam önizleme</a>{% endif %}
+        <a class="btn" href="/calismalar/{{ c.id }}/tasarim">Vazgeç</a>
+      </div>
     </div>
-    <p class="kucuk" id="alan-bos" style="display:none">Henüz alan yok. "Satır ekle" ile başlayın.</p>
-    <div class="yardim">Koşul: koşul alanındaki değer koşul değerine eşitse alan görünür ve zorunlu sayılır; aksi halde gizlenir. Bölüm: alanın üstünde bölüm başlığı gösterilir.</div>
-    <input type="hidden" name="alanlar_json" id="alanlar_json" value="{{ alanlar_json }}">
-  </div>
-  <div style="display:flex;gap:8px;align-items:center">
-    <button class="btn birincil">Kaydet</button>
-    {% if f %}<a class="btn" href="/calismalar/{{ c.id }}/tasarim/form/{{ f.id }}/onizle">Önizle</a>{% endif %}
-    <a class="btn" href="/calismalar/{{ c.id }}/tasarim">Vazgeç</a>
+    <div class="kart">
+      <h2>Canlı önizleme</h2>
+      <p class="kucuk">Veri girişi yapanın göreceği sıra ve etiketler. Kaydettikten sonra tam önizleme açılabilir.</p>
+      <div class="onz" id="onizleme"></div>
+    </div>
   </div>
 </form>
 {% if f and degistirilebilir %}
@@ -57,19 +91,16 @@
 <template id="alan-satir">
   <tr>
     <td class="sira"></td>
-    <td><input type="text" data-k="kod" style="width:90px;text-transform:uppercase" maxlength="32"></td>
-    <td><input type="text" data-k="etiket" style="width:170px"></td>
-    <td><select data-k="tip">{% for k, e in tipler.items() %}<option value="{{ k }}">{{ e }}</option>{% endfor %}</select></td>
-    <td><input type="checkbox" data-k="zorunlu"></td>
-    <td><input type="text" data-k="birim" style="width:60px"></td>
-    <td><input type="text" data-k="min" style="width:55px" inputmode="decimal"></td>
-    <td><input type="text" data-k="max" style="width:55px" inputmode="decimal"></td>
-    <td><input type="text" data-k="secenekler" style="width:150px" placeholder="Evet; Hayır"></td>
-    <td><input type="text" data-k="bolum" style="width:100px"></td>
-    <td><input type="text" data-k="kosul_alan" style="width:80px;text-transform:uppercase"></td>
-    <td><input type="text" data-k="kosul_deger" style="width:70px"></td>
-    <td><input type="text" data-k="cdash" style="width:100px" placeholder="VS.VSORRES"></td>
-    <td style="white-space:nowrap"><button type="button" class="btn kucuk" data-islem="yukari" title="Yukarı">↑</button> <button type="button" class="btn kucuk" data-islem="asagi" title="Aşağı">↓</button> <button type="button" class="btn kucuk tehlike" data-islem="sil" title="Sil">×</button></td>
+    <td><input type="text" data-k="kod" style="text-transform:uppercase" maxlength="32" placeholder="KOD"></td>
+    <td><input type="text" data-k="etiket" placeholder="Etiket"></td>
+    <td><select data-k="tip" class="tip">{% for k, e in tipler.items() %}<option value="{{ k }}">{{ e }}</option>{% endfor %}</select></td>
+    <td class="orta"><input type="checkbox" data-k="zorunlu" title="Zorunlu"></td>
+    <td class="ek" data-gorunum="yok">
+      <textarea data-k="secenekler" rows="2" placeholder="Her satıra bir seçenek"></textarea>
+      <div class="sayi-ek"><input type="text" data-k="birim" placeholder="birim" title="Birim"><input type="text" data-k="min" placeholder="min" inputmode="decimal" title="En küçük"><input type="text" data-k="max" placeholder="max" inputmode="decimal" title="En büyük"></div>
+      <span class="ek-yok">—</span>
+    </td>
+    <td class="islem"><button type="button" class="btn kucuk" data-islem="ayrinti" title="Bölüm, koşul, CDASH">Ayrıntı</button> <button type="button" class="btn kucuk" data-islem="yukari" title="Yukarı">↑</button> <button type="button" class="btn kucuk" data-islem="asagi" title="Aşağı">↓</button> <button type="button" class="btn kucuk tehlike" data-islem="sil" title="Sil">×</button></td>
   </tr>
 </template>
 {% endblock %}
