@@ -13,7 +13,7 @@ from ..models.veri import KAYIT_DURUM_ETIKET, SORGU_ETIKET, VIZIT_DURUM_ETIKET
 from ..services import denetim, ecrf
 from ..services import gonullu as gsvc
 from ..services import randomizasyon as rnd
-from ..services.yetki import calisma_erisimi, gerekli, izinli
+from ..services.yetki import gerekli, gonullu_erisimi, izinli
 from ._ortak import bilgi, ip, oturumlu
 from .sablon import goster
 
@@ -22,12 +22,6 @@ router = APIRouter(prefix="/gonulluler")
 ETIKETLER = {"VIZIT_DURUM_ETIKET": VIZIT_DURUM_ETIKET, "KAYIT_DURUM_ETIKET": KAYIT_DURUM_ETIKET,
              "SORGU_ETIKET": SORGU_ETIKET}
 
-
-try:
-    from ..services.yetki import gonullu_erisimi
-except ImportError:  # TODO(entegrasyon): P1 birlesince bu yerel kopya kalkar; imza yetki.gonullu_erisimi ile ayni
-    def gonullu_erisimi(db: Session, k: Kullanici, g: Gonullu) -> bool:
-        return calisma_erisimi(db, k, g.calisma)
 
 
 def _gonullu(db: Session, gid: int, k: Kullanici) -> Gonullu:

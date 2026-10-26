@@ -12,8 +12,7 @@ from ..models.tasarim import VizitTanimi
 from ..services import denetim
 from ..services import ecrf as svc
 from ..services import protokol as protokol_svc
-from ..services.yetki import gerekli
-from ._ortak import bilgi, calisma_getir, ip, oturumlu
+from ._ortak import bilgi, calisma_duzenleyen, calisma_getir, ip, oturumlu
 from .calismalar import _ozet, sekme_kontrol
 from .sablon import goster
 
@@ -68,7 +67,7 @@ def ozet(request: Request, c: Calisma = Depends(calisma_getir), k: Kullanici = D
 # --- Kollar -----------------------------------------------------------------
 
 @router.post("/kol")
-def kol_ekle(request: Request, c: Calisma = Depends(calisma_getir), k: Kullanici = Depends(gerekli("calisma.duzenle")),
+def kol_ekle(request: Request, c: Calisma = Depends(calisma_getir), k: Kullanici = Depends(calisma_duzenleyen),
              db: Session = Depends(get_db), ad: str = Form(...), aciklama: str = Form(""), oran: int = Form(1)):
     kol = Kol(calisma_id=c.id, ad=ad.strip()[:80], aciklama=aciklama.strip() or None, oran=max(1, oran))
     db.add(kol)
@@ -81,7 +80,7 @@ def kol_ekle(request: Request, c: Calisma = Depends(calisma_getir), k: Kullanici
 
 @router.post("/kol/{kol_id}/sil")
 def kol_sil(request: Request, kol_id: int, c: Calisma = Depends(calisma_getir),
-            k: Kullanici = Depends(gerekli("calisma.duzenle")), db: Session = Depends(get_db)):
+            k: Kullanici = Depends(calisma_duzenleyen), db: Session = Depends(get_db)):
     kol = db.get(Kol, kol_id)
     if not kol or kol.calisma_id != c.id:
         raise HTTPException(404)
@@ -97,7 +96,7 @@ def kol_sil(request: Request, kol_id: int, c: Calisma = Depends(calisma_getir),
 # --- Vizit semasi -----------------------------------------------------------
 
 @router.post("/vizit/sablon")
-def vizit_sablon(request: Request, c: Calisma = Depends(calisma_getir), k: Kullanici = Depends(gerekli("calisma.duzenle")),
+def vizit_sablon(request: Request, c: Calisma = Depends(calisma_getir), k: Kullanici = Depends(calisma_duzenleyen),
                  db: Session = Depends(get_db), sablon: str = Form(...)):
     eski = [(t.ad, t.gun, t.pencere_gun) for t in c.vizit_tanimlari]
     try:
@@ -114,7 +113,7 @@ def vizit_sablon(request: Request, c: Calisma = Depends(calisma_getir), k: Kulla
 
 
 @router.post("/vizit")
-def vizit_ekle(request: Request, c: Calisma = Depends(calisma_getir), k: Kullanici = Depends(gerekli("calisma.duzenle")),
+def vizit_ekle(request: Request, c: Calisma = Depends(calisma_getir), k: Kullanici = Depends(calisma_duzenleyen),
                db: Session = Depends(get_db), ad: str = Form(...), gun: int = Form(...), pencere_gun: int = Form(3)):
     if not ad.strip():
         bilgi(request, "Vizit adı boş olamaz.")
@@ -130,7 +129,7 @@ def vizit_ekle(request: Request, c: Calisma = Depends(calisma_getir), k: Kullani
 
 @router.post("/vizit/{vizit_id}/sil")
 def vizit_sil(request: Request, vizit_id: int, c: Calisma = Depends(calisma_getir),
-              k: Kullanici = Depends(gerekli("calisma.duzenle")), db: Session = Depends(get_db)):
+              k: Kullanici = Depends(calisma_duzenleyen), db: Session = Depends(get_db)):
     t = db.get(VizitTanimi, vizit_id)
     if not t or t.calisma_id != c.id:
         raise HTTPException(404)
@@ -149,7 +148,7 @@ def vizit_sil(request: Request, vizit_id: int, c: Calisma = Depends(calisma_geti
 
 @router.post("/form/standart")
 async def form_standart(request: Request, c: Calisma = Depends(calisma_getir),
-                        k: Kullanici = Depends(gerekli("calisma.duzenle")), db: Session = Depends(get_db)):
+                        k: Kullanici = Depends(calisma_duzenleyen), db: Session = Depends(get_db)):
     gelen = await request.form()
     kodlar = gelen.getlist("kodlar")
     eklenen = svc.standart_formlari_ekle(db, c, kodlar)
@@ -176,7 +175,7 @@ def _tasarimci(request, db, c, f: CRF | None, hatalar=None, taslak: dict | None 
 
 
 @router.get("/form/yeni")
-def form_yeni(request: Request, c: Calisma = Depends(calisma_getir), k: Kullanici = Depends(gerekli("calisma.duzenle")),
+def form_yeni(request: Request, c: Calisma = Depends(calisma_getir), k: Kullanici = Depends(calisma_duzenleyen),
               db: Session = Depends(get_db)):
     request.state.kullanici = k
     sekme_kontrol(k, "tasarim", db, c)
@@ -216,7 +215,7 @@ async def _form_girdisi(request: Request, c: Calisma, f: CRF | None) -> tuple[di
 
 @router.post("/form/yeni")
 async def form_olustur(request: Request, c: Calisma = Depends(calisma_getir),
-                       k: Kullanici = Depends(gerekli("calisma.duzenle")), db: Session = Depends(get_db)):
+                       k: Kullanici = Depends(calisma_duzenleyen), db: Session = Depends(get_db)):
     request.state.kullanici = k
     taslak, hatalar = await _form_girdisi(request, c, None)
     if hatalar:
@@ -236,7 +235,7 @@ async def form_olustur(request: Request, c: Calisma = Depends(calisma_getir),
 
 @router.get("/form/{form_id}")
 def form_duzenle(request: Request, form_id: int, c: Calisma = Depends(calisma_getir),
-                 k: Kullanici = Depends(gerekli("calisma.duzenle")), db: Session = Depends(get_db)):
+                 k: Kullanici = Depends(calisma_duzenleyen), db: Session = Depends(get_db)):
     request.state.kullanici = k
     sekme_kontrol(k, "tasarim", db, c)
     return _tasarimci(request, db, c, _form(db, c, form_id))
@@ -244,7 +243,7 @@ def form_duzenle(request: Request, form_id: int, c: Calisma = Depends(calisma_ge
 
 @router.post("/form/{form_id}")
 async def form_kaydet(request: Request, form_id: int, c: Calisma = Depends(calisma_getir),
-                      k: Kullanici = Depends(gerekli("calisma.duzenle")), db: Session = Depends(get_db)):
+                      k: Kullanici = Depends(calisma_duzenleyen), db: Session = Depends(get_db)):
     request.state.kullanici = k
     f = _form(db, c, form_id)
     taslak, hatalar = await _form_girdisi(request, c, f)
@@ -275,7 +274,7 @@ async def form_kaydet(request: Request, form_id: int, c: Calisma = Depends(calis
 
 @router.post("/form/{form_id}/sil")
 def form_sil(request: Request, form_id: int, c: Calisma = Depends(calisma_getir),
-             k: Kullanici = Depends(gerekli("calisma.duzenle")), db: Session = Depends(get_db)):
+             k: Kullanici = Depends(calisma_duzenleyen), db: Session = Depends(get_db)):
     f = _form(db, c, form_id)
     if not svc.form_degistirilebilir(f):
         bilgi(request, "Veri kaydı olan form silinemez; yayından kaldırmak için durumunu 'Taslak' yapın.")
@@ -299,7 +298,7 @@ def form_onizle(request: Request, form_id: int, c: Calisma = Depends(calisma_get
 # --- Protokolden taslak -----------------------------------------------------
 
 @router.get("/protokol-taslak")
-def protokol_taslak(request: Request, c: Calisma = Depends(calisma_getir), k: Kullanici = Depends(gerekli("calisma.duzenle")),
+def protokol_taslak(request: Request, c: Calisma = Depends(calisma_getir), k: Kullanici = Depends(calisma_duzenleyen),
                     db: Session = Depends(get_db)):
     request.state.kullanici = k
     sekme_kontrol(k, "tasarim", db, c)
@@ -309,7 +308,7 @@ def protokol_taslak(request: Request, c: Calisma = Depends(calisma_getir), k: Ku
 
 @router.post("/protokol-taslak/metin")
 def protokol_taslak_metin(request: Request, c: Calisma = Depends(calisma_getir),
-                          k: Kullanici = Depends(gerekli("calisma.duzenle")), db: Session = Depends(get_db),
+                          k: Kullanici = Depends(calisma_duzenleyen), db: Session = Depends(get_db),
                           metin: str = Form("")):
     """Oneri sayfasindan metne donus: textarea gonderilen metinle dolu gelir."""
     request.state.kullanici = k
@@ -331,7 +330,7 @@ def _oneri_sayfasi(request, db, c, t, metin):
 
 @router.post("/protokol-taslak")
 def protokol_taslak_cikar(request: Request, c: Calisma = Depends(calisma_getir),
-                          k: Kullanici = Depends(gerekli("calisma.duzenle")), db: Session = Depends(get_db),
+                          k: Kullanici = Depends(calisma_duzenleyen), db: Session = Depends(get_db),
                           metin: str = Form("")):
     from ..services.bdm import BDMIstemci
 
@@ -345,7 +344,7 @@ def protokol_taslak_cikar(request: Request, c: Calisma = Depends(calisma_getir),
 
 @router.post("/protokol-taslak/dosya")
 async def protokol_taslak_dosya(request: Request, c: Calisma = Depends(calisma_getir),
-                                k: Kullanici = Depends(gerekli("calisma.duzenle")), db: Session = Depends(get_db),
+                                k: Kullanici = Depends(calisma_duzenleyen), db: Session = Depends(get_db),
                                 dosya: UploadFile | None = None):
     """PDF/DOCX protokol belgesi: metin sunucuda cikarilir, dosya saklanmaz, taslak hemen uretilir."""
     from ..services.bdm import BDMIstemci
@@ -379,7 +378,7 @@ async def protokol_taslak_dosya(request: Request, c: Calisma = Depends(calisma_g
 
 @router.post("/protokol-taslak/uygula")
 async def protokol_taslak_uygula(request: Request, c: Calisma = Depends(calisma_getir),
-                                 k: Kullanici = Depends(gerekli("calisma.duzenle")), db: Session = Depends(get_db)):
+                                 k: Kullanici = Depends(calisma_duzenleyen), db: Session = Depends(get_db)):
     from ..services.bdm import BDMIstemci
 
     gelen = await request.form()

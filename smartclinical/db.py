@@ -76,7 +76,12 @@ def tablolari_olustur():
 
 def sifirla():
     """Sadece gelistirme/test icin. Uretimde Alembic ile migrasyon kullanilir."""
+    from sqlalchemy import MetaData
+
     from . import models  # noqa: F401
 
-    Taban.metadata.drop_all(motor())
+    # Modelden kaldirilmis tablolar da (ornegin eski surumlerden kalanlar) silinsin diye mevcut sema yansitilir
+    mevcut = MetaData()
+    mevcut.reflect(bind=motor())
+    mevcut.drop_all(motor())
     Taban.metadata.create_all(motor())

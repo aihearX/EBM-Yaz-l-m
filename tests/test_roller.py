@@ -214,7 +214,7 @@ def test_sponsor_rotasi_kaldirildi(istemci):
 
 def test_kimliksizlestirme_izni(istemci):
     _giris(istemci, "arastirmaci")
-    assert istemci.get("/araclar/kimliksizlestirme").status_code == 200
+    assert istemci.get("/araclar/kimliksizlestirme").status_code == 403
     _giris(istemci, "sponsor")
     assert istemci.get("/araclar/kimliksizlestirme").status_code == 403
 
@@ -357,7 +357,7 @@ MATRIS = {
     "gonullu_form": _beklenen(("sponsor", "arastirmaci", "koordinator")),
 }
 # P2 (tasarim rotasinda calisma_duzenleyebilir) entegre olana dek; gonullu rotalari yetki.gonullu_erisimi'ni kullaniyor
-_BEKLEYEN = {("tasarim", k) for k in ("cra", "vy", "sponsor", "arastirmaci", "koordinator", "denetci")}
+_BEKLEYEN: set[tuple[str, str]] = set()
 
 
 def _parametreler():

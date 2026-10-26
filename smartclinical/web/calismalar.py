@@ -1,6 +1,6 @@
 from datetime import date
 
-from fastapi import APIRouter, Depends, Form, HTTPException, Request, UploadFile
+from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session, object_session
@@ -26,14 +26,13 @@ from ..models import (
     Rol,
     Sorgu,
 )
-from ..models._ortak import simdi
 from ..models.basvuru import BASVURU_TIPLERI, KURUMLAR
 from ..models.belge import TMF_BOLGELER
 from ..models.calisma import TUR_ETIKET
 from ..models.ekip import CalismaUyesi
-from ..models.izlem import SAPMA_KATEGORI
 from ..models.merkez import CM_DURUMLAR
 from ..services import denetim
+from ..services import randomizasyon as rnd
 from ..services.yetki import (
     MERKEZ_ROLLERI,
     calisma_duzenleyebilir,
@@ -197,6 +196,13 @@ def kontrol_listesi(db: Session, c: Calisma) -> dict[CalismaDurumu, list[dict]]:
     belgeler = db.execute(select(Belge.tmf_bolge).where(Belge.calisma_id == c.id, Belge.durum == "onayli")).all()
     onayli_bolge = {x[0] for x in belgeler}
     eksik_bolge = [kod for kod in TMF_BOLGELER if kod not in onayli_bolge]
+    # veri_islem calismalar'i ice aktardigindan burada yerel ice aktarma
+    from .veri_islem import imza_durumu
+    gonullu_imzali = bool(c.gonulluler) and all(imza_durumu(db, g)[0] in ("imzali", "bos") for g in c.gonulluler)
+    acik_major = False
+    if cm_ids:
+        acik_major = db.scalar(select(ProtokolSapmasi.id).where(ProtokolSapmasi.calisma_merkez_id.in_(cm_ids),
+                               ProtokolSapmasi.onem == "major", ProtokolSapmasi.kapali.is_(False)).limit(1)) is not None
 
     liste = {
         CalismaDurumu.TASARIM: [
@@ -222,6 +228,7 @@ def kontrol_listesi(db: Session, c: Calisma) -> dict[CalismaDurumu, list[dict]]:
         CalismaDurumu.KAYIT: [
             m("En az bir randomize gönüllü", kayitli > 0, f"{b}/gonulluler"),
             m("Hedefin yüzde 25'ine ulaşıldı", c.hedef_hasta and kayitli >= c.hedef_hasta * 0.25, f"{b}/gonulluler"),
+            m("Randomizasyon listesi hazır (>1 kol ise)", len(c.kollar) <= 1 or rnd.liste_var(db, c), f"{b}/randomizasyon"),
         ],
         CalismaDurumu.IZLEM: [
             m("14 günü geçen açık sorgu yok", not any(s.acik_gun > 14 for s in acik_sorgular), f"{b}/veri"),
@@ -230,6 +237,8 @@ def kontrol_listesi(db: Session, c: Calisma) -> dict[CalismaDurumu, list[dict]]:
         ],
         CalismaDurumu.KAPANIS: [
             m("Tüm form kayıtları kilitli", kayitlar and all(fk.durum == "kilitli" for fk in kayitlar), f"{b}/veri"),
+            m("Tüm gönüllüler araştırmacı tarafından imzalandı", gonullu_imzali, f"{b}/veri/imza"),
+            m("Açık majör sapma yok", not acik_major, f"{b}/izlem"),
         ],
         CalismaDurumu.ANALIZ: [
             m("TMF'nin 11 bölümünün her birinde onaylı belge var", not eksik_bolge, f"{b}/belgeler"),
@@ -430,6 +439,27 @@ def kriter_onayla(request: Request, kriter_id: int, c: Calisma = Depends(calisma
     return RedirectResponse(f"/calismalar/{c.id}/protokol", status_code=303)
 
 
+@router.post("/{calisma_id}/protokol/kriter/toplu-onay")
+def kriter_toplu_onayla(request: Request, c: Calisma = Depends(calisma_getir),
+                        k: Kullanici = Depends(gerekli("kriter.onayla")), db: Session = Depends(get_db)):
+    # guven esigi protokol.html'deki GUVEN_ESIGI ile ayni; onaylanmamis kriterler tek istekte onaylanir
+    esik = 0.8
+    adaylar = [kr for kr in c.kriterler if not kr.onaylandi and kr.guven is not None and kr.guven >= esik]
+    for kr in adaylar:
+        kr.onaylandi = True
+        kr.onaylayan_id = k.id
+        denetim.kaydet(db, k, "guncelle", "kriter", kr.id, eski={"onaylandi": False},
+                       yeni={"onaylandi": True, "guven": kr.guven, "toplu": True}, ip=ip(request))
+    if adaylar:
+        denetim.kaydet(db, k, "kriter_toplu_onay", "calisma", c.id,
+                       yeni={"esik": esik, "sayi": len(adaylar), "kriter_idler": [kr.id for kr in adaylar]}, ip=ip(request))
+        db.commit()
+        bilgi(request, f"Güven değeri %{int(esik * 100)} ve üzeri olan {len(adaylar)} kriter onaylandı.")
+    else:
+        bilgi(request, "Eşiğin üstünde onay bekleyen kriter yok.")
+    return RedirectResponse(f"/calismalar/{c.id}/protokol", status_code=303)
+
+
 @router.post("/{calisma_id}/protokol/kriter/{kriter_id}/sil")
 def kriter_sil(request: Request, kriter_id: int, c: Calisma = Depends(calisma_getir),
                k: Kullanici = Depends(calisma_duzenleyen), db: Session = Depends(get_db), gerekce: str = Form("")):
@@ -582,113 +612,10 @@ def guvenlik(request: Request, c: Calisma = Depends(calisma_getir), k: Kullanici
     olaylar.sort(key=lambda a: a.baslangic, reverse=True)
     soc = {}
     for a in olaylar:
-        soc[a.meddra_soc or "Kodlanmamış"] = soc.get(a.meddra_soc or "Kodlanmamış", 0) + 1
+        soc[a.meddra_soc or "SOC girilmedi"] = soc.get(a.meddra_soc or "SOC girilmedi", 0) + 1
     return goster(request, "calismalar/guvenlik.html", c=c, o=_ozet(db, c), sekme="guvenlik", olaylar=olaylar,
                   soc=sorted(soc.items(), key=lambda x: -x[1]),
                   sae=[a for a in olaylar if a.ciddi], susar=[a for a in olaylar if a.susar])
-
-
-# --- Izlem (ziyaretler, sapmalar) ------------------------------------------
-
-@router.get("/{calisma_id}/izlem")
-def izlem(request: Request, c: Calisma = Depends(calisma_getir), k: Kullanici = Depends(oturumlu),
-          db: Session = Depends(get_db)):
-    sekme_kontrol(k, "izlem")
-    cm_ids = [m.id for m in _gorunur_cm(k, c)]
-    ziyaretler = db.execute(select(IzlemZiyareti).where(IzlemZiyareti.calisma_merkez_id.in_(cm_ids))
-                            .order_by(IzlemZiyareti.planlanan.desc())).scalars().all() if cm_ids else []
-    sapmalar = db.execute(select(ProtokolSapmasi).where(ProtokolSapmasi.calisma_merkez_id.in_(cm_ids))
-                          .order_by(ProtokolSapmasi.tarih.desc())).scalars().all() if cm_ids else []
-    return goster(request, "calismalar/izlem.html", c=c, o=_ozet(db, c), sekme="izlem", ziyaretler=ziyaretler,
-                  sapmalar=sapmalar, kategoriler=SAPMA_KATEGORI, merkezler=_gorunur_cm(k, c))
-
-
-@router.post("/{calisma_id}/izlem/sapma")
-def sapma_ekle(request: Request, c: Calisma = Depends(calisma_getir), k: Kullanici = Depends(gerekli("rbm.yonet")),
-               db: Session = Depends(get_db), calisma_merkez_id: int = Form(...), gonullu_id: str = Form(""),
-               tarih: str = Form(...), kategori: str = Form(...), onem: str = Form("minor"), aciklama: str = Form(...)):
-    s = ProtokolSapmasi(calisma_merkez_id=calisma_merkez_id, gonullu_id=int(gonullu_id) if gonullu_id else None,
-                        tarih=date.fromisoformat(tarih), kategori=kategori, onem=onem, aciklama=aciklama)
-    db.add(s)
-    db.flush()
-    denetim.kaydet(db, k, "olustur", "protokol_sapmasi", s.id, yeni=denetim.varlik_sozluk(s), ip=ip(request))
-    db.commit()
-    return RedirectResponse(f"/calismalar/{c.id}/izlem", status_code=303)
-
-
-@router.post("/{calisma_id}/izlem/ziyaret")
-def ziyaret_planla(request: Request, c: Calisma = Depends(calisma_getir), k: Kullanici = Depends(gerekli("rbm.yonet")),
-                   db: Session = Depends(get_db), calisma_merkez_id: int = Form(...), tip: str = Form(...),
-                   planlanan: str = Form(...)):
-    z = IzlemZiyareti(calisma_merkez_id=calisma_merkez_id, tip=tip, planlanan=date.fromisoformat(planlanan), cra_id=k.id)
-    db.add(z)
-    db.flush()
-    denetim.kaydet(db, k, "olustur", "izlem_ziyareti", z.id, yeni=denetim.varlik_sozluk(z), ip=ip(request))
-    db.commit()
-    return RedirectResponse(f"/calismalar/{c.id}/izlem", status_code=303)
-
-
-# --- Belgeler (TMF) ---------------------------------------------------------
-
-@router.get("/{calisma_id}/belgeler")
-def belgeler(request: Request, c: Calisma = Depends(calisma_getir), k: Kullanici = Depends(oturumlu),
-             db: Session = Depends(get_db)):
-    sekme_kontrol(k, "belgeler")
-    sorgu = select(Belge).where(Belge.calisma_id == c.id).order_by(Belge.tmf_bolge, Belge.ad)
-    if _merkez_sinirli(k):
-        # merkez rolleri: calisma duzeyindeki belgeler + kendi merkezinin belgeleri
-        sorgu = sorgu.where((Belge.merkez_id.is_(None)) | (Belge.merkez_id == k.merkez_id))
-    liste = db.execute(sorgu).scalars().all()
-    bolgeler = {}
-    for b in liste:
-        bolgeler.setdefault(b.tmf_bolge, []).append(b)
-    # TMF tamlik: her bolgede en az bir onayli belge var mi
-    tamlik = {kod: any(b.durum == "onayli" for b in bolgeler.get(kod, [])) for kod in TMF_BOLGELER}
-    return goster(request, "calismalar/belgeler.html", c=c, o=_ozet(db, c), sekme="belgeler", bolgeler=bolgeler,
-                  TMF_BOLGELER=TMF_BOLGELER, tamlik=tamlik)
-
-
-@router.post("/{calisma_id}/belgeler")
-async def belge_yukle(request: Request, c: Calisma = Depends(calisma_getir), k: Kullanici = Depends(gerekli("belge.yukle")),
-                      db: Session = Depends(get_db), tmf_bolge: str = Form(...), ad: str = Form(...),
-                      versiyon: str = Form("1.0"), merkez_id: str = Form(""), dosya: UploadFile | None = None):
-    import hashlib
-
-    b = Belge(calisma_id=c.id, tmf_bolge=tmf_bolge, ad=ad, versiyon=versiyon, yukleyen_id=k.id,
-              merkez_id=int(merkez_id) if merkez_id else None)
-    if dosya and dosya.filename:
-        icerik = await dosya.read()
-        hedef = ayarlar().dosya_dizini / c.kod / tmf_bolge
-        hedef.mkdir(parents=True, exist_ok=True)
-        guvenli_ad = "".join(ch if ch.isalnum() or ch in "._-" else "_" for ch in dosya.filename)
-        yol = hedef / f"{simdi():%Y%m%d%H%M%S}_{guvenli_ad}"
-        yol.write_bytes(icerik)
-        b.dosya_adi = dosya.filename
-        b.dosya_yolu = str(yol)
-        b.sha256 = hashlib.sha256(icerik).hexdigest()
-    db.add(b)
-    db.flush()
-    denetim.kaydet(db, k, "olustur", "belge", b.id, yeni={"calisma": c.kod, "ad": ad, "bolge": tmf_bolge, "sha256": b.sha256}, ip=ip(request))
-    db.commit()
-    return RedirectResponse(f"/calismalar/{c.id}/belgeler", status_code=303)
-
-
-@router.post("/{calisma_id}/belgeler/{belge_id}/onayla")
-def belge_onayla(request: Request, belge_id: int, c: Calisma = Depends(calisma_getir),
-                 k: Kullanici = Depends(gerekli("belge.yukle")), db: Session = Depends(get_db), parola: str = Form(...)):
-    from ..services.yetki import parola_dogrula
-
-    b = db.get(Belge, belge_id)
-    if not b or b.calisma_id != c.id:
-        raise HTTPException(404)
-    if not parola_dogrula(parola, k.parola_hash):
-        bilgi(request, "E-imza için parola doğrulanamadı.")
-        return RedirectResponse(f"/calismalar/{c.id}/belgeler", status_code=303)
-    b.durum = "onayli"
-    denetim.imzala(db, k, "belge", b.id, "Onaylandı", {"ad": b.ad, "versiyon": b.versiyon, "sha256": b.sha256}, ip=ip(request))
-    db.commit()
-    bilgi(request, f"'{b.ad}' elektronik imza ile onaylandı.")
-    return RedirectResponse(f"/calismalar/{c.id}/belgeler", status_code=303)
 
 
 # --- Denetim izi (calisma) --------------------------------------------------

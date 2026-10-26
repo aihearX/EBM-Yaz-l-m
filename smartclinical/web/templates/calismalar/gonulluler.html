@@ -9,6 +9,7 @@
   <div class="kart">
     <div class="baslik-satiri" style="margin-bottom:8px"><h2>Gönüllüler</h2>
       <form method="get" class="satir"><select name="durum" onchange="this.form.submit()"><option value="">Tüm durumlar</option>{% for d in durumlar %}<option value="{{ d.value }}" {{ 'selected' if secili == d.value }}>{{ 'Çalışmaya alındı' if tek_kol and d.value == 'randomize' else d.etiket }}</option>{% endfor %}</select></form></div>
+    <div class="tablo-kaydir">
     <table>
       <tr><th>Gönüllü no</th><th>Merkez</th><th>Durum</th><th>Onam</th><th>{{ 'Çalışmaya alınma' if tek_kol else 'Randomizasyon' }}</th><th>Kol</th><th class="sag">Vizit</th><th class="sag">Açık sorgu</th><th class="sag">AE</th></tr>
       {% for g in liste %}
@@ -27,6 +28,8 @@
         {% if not aktif_merkezler %}<a href="/calismalar/{{ c.id }}/merkezler">İlk gönüllü için Merkezler sekmesinde bir merkezi Aktif yapın</a>.
         {% elif izinli(kullanici, 'hasta.goruntule') %}<a href="/calismalar/{{ c.id }}/eslestirme">Aday hastaları tarayın</a> ya da sağdaki formla elle ekleyin.{% endif %}{% endif %}</td></tr>{% endfor %}
     </table>
+    </div>
+    {% if sayfalama is defined %}{% include "_sayfalama.html" %}{% endif %}
   </div>
   <div>
     <div class="kart">

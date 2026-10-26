@@ -11,6 +11,7 @@
 <div class="izgara k3">
   <div class="kart">
     <h2>Kollar <span class="rozet kontur">{{ c.kollar|length }}</span></h2>
+    {% if c.kollar|length > 1 and izinli(kullanici, 'calisma.duzenle') %}<p class="kucuk"><a href="/calismalar/{{ c.id }}/randomizasyon">Randomizasyon listesi</a></p>{% endif %}
     {% if c.kollar %}
     <table class="sikisik"><tr><th>Kol</th><th class="sag">Oran</th><th class="sag">Gönüllü</th><th></th></tr>
       {% for kol in c.kollar %}<tr><td><b>{{ kol.ad }}</b>{% if kol.aciklama %}<br><small>{{ kol.aciklama }}</small>{% endif %}</td><td class="sayi">{{ kol.oran }}</td><td class="sayi">{{ kol_gonullu.get(kol.id, 0) }}</td>

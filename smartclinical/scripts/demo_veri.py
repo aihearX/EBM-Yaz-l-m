@@ -27,7 +27,6 @@ from ..models import (
     GonulluDurumu,
     Hasta,
     IzlemZiyareti,
-    KilometreTasi,
     Kol,
     Kriter,
     Kullanici,
@@ -43,6 +42,8 @@ from ..services import denetim, ecrf, yetki
 from ..services import kurulum as kurulum_svc
 
 R = random.Random(20260421)
+# demo sponsor kullanicisinin kurumu; calismalardaki sponsor adiyla birebir ayni olmali
+SPONSOR_KURUM = "Anadolu Biyofarma A.Ş."
 BUGUN = date.today()
 
 
@@ -63,7 +64,7 @@ KULLANICILAR = [
     ("dr.yildiz", "Dr. Nalan Yıldız", "nyildiz@hastane.example", Rol.ARASTIRMACI, "IST-02"),
     ("veri.ekibi", "Murat Koç", "murat.koc@ebm-cro.com", Rol.VERI_YONETICISI, None),
     ("fv.ekibi", "Ayça Tuncer", "ayca.tuncer@ebm-cro.com", Rol.FARMAKOVIJILANS, None),
-    ("sponsor.gorunum", "Sponsor Temsilcisi", "sponsor@firma.example", Rol.SPONSOR, None),
+    ("sponsor.gorunum", "Sponsor Temsilcisi", "sponsor@firma.example", Rol.SPONSOR, None),  # kurum: SPONSOR_KURUM
     ("denetci", "Kalite Denetçisi", "qa@ebm-cro.com", Rol.DENETCI, None),
 ]
 DEMO_PAROLA = "Demo2026!sc"
@@ -100,7 +101,7 @@ CALISMALAR = [
     dict(kod="EBM-ONK-2025-003", kisa_ad="HER2- HR+ lokal ileri meme Ca, neoadjuvan", tur=CalismaTuru.ILAC, faz="III",
          baslik="HER2-negatif, hormon reseptörü pozitif lokal ileri meme kanserinde neoadjuvan kemoterapiye eklenen "
                 "CDK4/6 inhibitörünün patolojik tam yanıt üzerine etkisini değerlendiren randomize, açık etiketli, çok merkezli faz III çalışma",
-         tasarim="Randomize (1:1), açık etiketli, çok merkezli", sponsor="Anadolu Biyofarma A.Ş.", terapotik_alan="Onkoloji",
+         tasarim="Randomize (1:1), açık etiketli, çok merkezli", sponsor=SPONSOR_KURUM, terapotik_alan="Onkoloji",
          endikasyon="Meme kanseri (HER2-, HR+)", durum=CalismaDurumu.KAYIT, hedef_hasta=120, hedef_merkez=6,
          baslangic=g(300), bitis=BUGUN + timedelta(days=420), risk="yuksek", ct="NCT0XXXX412",
          merkezler=["ANK-01", "IST-02", "IZM-03", "ADA-04", "KON-06", "SAM-09"],
@@ -344,10 +345,10 @@ def yukle(db):
     for kadi, ad, eposta, rol, mkod in KULLANICILAR:
         k = Kullanici(kullanici_adi=kadi, ad_soyad=ad, eposta=eposta, parola_hash=yetki.parola_hashle(DEMO_PAROLA), rol=rol,
                       merkez_id=merkezler[mkod].id if mkod else None, parola_degisim=simdi(),
+                      kurum=SPONSOR_KURUM if rol == Rol.SPONSOR else None,
                       son_giris=simdi() - timedelta(hours=r.randint(1, 200)))
         db.add(k)
         kullanicilar[kadi] = k
-    kullanicilar["sponsor.gorunum"].kurum = "Anadolu Biyofarma A.Ş."
     db.flush()
     kurulum_svc.ayar_yaz(db, "cro", "EBM Klinik Araştırma", None, "EBM CRO")
     admin, py, cra1, cra2 = kullanicilar["admin"], kullanicilar["pelin.aydin"], kullanicilar["burak.sen"], kullanicilar["elif.kara"]
@@ -408,11 +409,12 @@ def yukle(db):
                               onaylayan_id=ara1.id if (y.guven or 0) >= 0.6 else None))
                 sira += 1
         # eCRF formlari standart kutuphaneden (durum="yayinda"); vizit semasi calisma bazli
-        kodlar = [kod for kod in ecrf.STANDART_FORMLAR if kod != "ANKET"
+        kodlar = [kod for kod in ecrf.STANDART_FORMLAR if kod not in ("ANKET", "GAD7", "VAS")
                   and not (c.tur == CalismaTuru.KAYIT and kod in ("EX", "IE"))
                   and not (c.tur != CalismaTuru.ILAC and kod == "QS")]
         for f in ecrf.standart_formlari_ekle(db, c, kodlar):
             f.versiyon = "1.1" if c.durum.value in ("kayit", "izlem") else "1.0"
+            f.tekrarlayan = f.kod == "CM"
         ecrf.vizit_semasi_uygula(db, c, "standart")
         # calisma ekibi: CRO senaryosunda proje ekibi calismaya atanir (gorunurluk kisiti etkin)
         cra = cra1 if c.terapotik_alan in ("Onkoloji", "Endokrinoloji") else cra2
@@ -445,12 +447,6 @@ def yukle(db):
                                aktivasyon_tarihi=akt)
             db.add(cm)
             db.flush()
-            for tip, gun in (("fizibilite", 20), ("etik_onay", 75), ("sozlesme", 95), ("siv", 110), ("ilk_hasta", 140)):
-                plan = secim + timedelta(days=gun)
-                gerc = None
-                if akt and tip in ("fizibilite", "etik_onay", "sozlesme", "siv"):
-                    gerc = plan + timedelta(days=int(r.gauss(8, 15)))
-                db.add(KilometreTasi(calisma_merkez_id=cm.id, tip=tip, planlanan=plan, gerceklesen=gerc))
 
             # gonulluler
             if akt and durum in ("aktif", "kapali"):
@@ -503,25 +499,51 @@ def yukle(db):
 
             if not gecmis and durum == "aktif":
                 # izlem ziyaretleri ve sapmalar
-                db.add(IzlemZiyareti(calisma_merkez_id=cm.id, cra_id=r.choice([cra1, cra2]).id, tip="SIV", planlanan=akt - timedelta(days=3),
-                                     gerceklesen=akt - timedelta(days=3), sdv_orani=None, rapor_onay=datetime.combine(akt, datetime.min.time())))
+                db.add(IzlemZiyareti(calisma_merkez_id=cm.id, cra_id=r.choice([cra1, cra2]).id, tip="SIV", planlanan=akt - timedelta(days=7),
+                                     gerceklesen=akt - timedelta(days=5), sdv_orani=None, onaylayan_id=py.id,
+                                     katilimcilar="Baş araştırmacı, koordinatör, eczane sorumlusu",
+                                     rapor="Protokol, onam süreci ve ISF düzeni gözden geçirildi; merkez aktivasyona hazır.",
+                                     rapor_onay=datetime.combine(akt, datetime.min.time())))
                 t = akt + timedelta(days=45)
+                ilk_imv = True
                 while t < BUGUN:
-                    db.add(IzlemZiyareti(calisma_merkez_id=cm.id, cra_id=r.choice([cra1, cra2]).id, tip=r.choice(["IMV", "IMV", "uzaktan"]),
-                                         planlanan=t, gerceklesen=t + timedelta(days=r.randint(0, 4)), sdv_orani=r.choice([20, 50, 100]),
-                                         bulgular=[{"konu": r.choice(["Onam formunda tarih eksik", "İlaç sayım kaydı gecikmiş", "Kaynak belge-eCRF uyumsuzluğu"]),
-                                                    "onem": r.choice(["minor", "major"]), "kapali": r.random() < 0.7}] if r.random() < 0.6 else []))
+                    z = IzlemZiyareti(calisma_merkez_id=cm.id, cra_id=r.choice([cra1, cra2]).id, tip=r.choice(["IMV", "IMV", "uzaktan"]),
+                                      planlanan=t, gerceklesen=t + timedelta(days=r.randint(0, 4)), sdv_orani=r.choice([20, 50, 100]),
+                                      bulgular=[{"konu": r.choice(["Onam formunda tarih eksik", "İlaç sayım kaydı gecikmiş", "Kaynak belge-eCRF uyumsuzluğu"]),
+                                                 "onem": r.choice(["minor", "major"]), "kapali": r.random() < 0.7}] if r.random() < 0.6 else [])
+                    if ilk_imv:
+                        # ilk IMV ziyareti: rapor, proje yoneticisi onayi ve e-imza
+                        z.katilimcilar = "Baş araştırmacı, koordinatör"
+                        z.kontrol_listesi = {"onam": True, "isf": True, "ilac": True, "sapma": True}
+                        z.rapor = "Onam formları ve ISF incelendi; iki kaynak belge uyumsuzluğu düzeltildi."
+                        z.rapor_onay = datetime.combine(z.gerceklesen + timedelta(days=3), datetime.min.time())
+                        z.onaylayan_id = py.id
+                        db.add(z)
+                        db.flush()
+                        denetim.imzala(db, py, "izlem_ziyareti", z.id, "Ziyaret raporu onaylandı",
+                                       {"rapor": z.rapor, "bulgular": z.bulgular})
+                        ilk_imv = False
+                    else:
+                        db.add(z)
                     t += timedelta(days=r.randint(40, 75))
                 db.add(IzlemZiyareti(calisma_merkez_id=cm.id, cra_id=r.choice([cra1, cra2]).id, tip="IMV", planlanan=BUGUN + timedelta(days=r.randint(5, 40))))
                 for g_ in cm.gonulluler:
                     if r.random() < (0.3 if j == 3 else 0.05):
+                        kapali = r.random() < 0.6
+                        onem = "major" if r.random() < 0.15 else "minor"
                         db.add(ProtokolSapmasi(calisma_merkez_id=cm.id, gonullu_id=g_.id, tarih=(g_.randomizasyon_tarihi or g_.onam_tarihi) + timedelta(days=r.randint(5, 80)),
                                                kategori=r.choice(["vizit", "vizit", "belge", "onam", "ilac", "prosedur"]),
-                                               onem="major" if r.random() < 0.15 else "minor",
+                                               onem=onem,
                                                aciklama=r.choice(["V3 viziti pencere dışında yapıldı (+6 gün)", "Onam formunda hasta imza tarihi eksik",
                                                                   "Protokolde tanımlı EKG çekilmedi", "Doz azaltımı kaydı gecikmeli girildi",
                                                                   "Yeni onam sürümü imzalatılmadan tedaviye devam edildi"]),
-                                               kapali=r.random() < 0.6))
+                                               kapali=kapali,
+                                               kok_neden="Vizit planlaması takip edilmedi" if kapali else None,
+                                               duzeltici_faaliyet="Koordinatör hatırlatma listesi" if kapali else None,
+                                               sorumlu_id=cra1.id if kapali else None,
+                                               hedef_tarih=BUGUN - timedelta(days=5) if kapali else BUGUN + timedelta(days=14),
+                                               etik_bildirim=(BUGUN - timedelta(days=10)) if (kapali and onem == "major") else None,
+                                               kapanis_tarihi=BUGUN - timedelta(days=3) if kapali else None))
         # basvurular
         if not gecmis:
             _basvurular(db, c, cdef, merkezler, r)
@@ -572,7 +594,7 @@ def _vizit_ve_formlar(db, c, gn, cm, r, son_gun, kullanicilar):
             kayma = int(r.gauss(0, 1.4 if not gecikmeli_merkez else 4))
             v.gerceklesen = plan + timedelta(days=kayma)
             v.durum = "pencere_disi" if abs(kayma) > pencere else "yapildi"
-            if r.random() < 0.015:
+            if r.random() < 0.08:
                 v.gerceklesen, v.durum = None, "kacirildi"
         db.add(v)
         db.flush()
@@ -590,6 +612,7 @@ def _vizit_ve_formlar(db, c, gn, cm, r, son_gun, kullanicilar):
                 elif r.random() < 0.08:
                     durum = "taslak"
                 fk = FormKaydi(gonullu_id=gn.id, form_id=f.id, vizit_id=v.id, veriler=veriler, durum=durum, giren_id=koord.id,
+                               form_versiyon=f.versiyon, tekrar_no=1,
                                olusturma=datetime.combine(v.gerceklesen + timedelta(days=gecikme), datetime.min.time()) + timedelta(hours=10),
                                sdv_yapan_id=cra.id if durum in ("sdv", "kilitli") else None,
                                sdv_zamani=datetime.combine(v.gerceklesen + timedelta(days=gecikme + 20), datetime.min.time()) if durum in ("sdv", "kilitli") else None)
@@ -599,13 +622,15 @@ def _vizit_ve_formlar(db, c, gn, cm, r, son_gun, kullanicilar):
                 if r.random() < (0.22 if gecikmeli_merkez else 0.07):
                     alan = r.choice([a["kod"] for a in f.alanlar])
                     acilis = fk.olusturma + timedelta(days=r.randint(1, 10))
+                    if acilis.date() > BUGUN:
+                        continue
                     kapali = r.random() < (0.55 if gecikmeli_merkez else 0.8)
                     db.add(Sorgu(form_kaydi_id=fk.id, alan=alan, soru=r.choice([
                         f"'{alan}' değeri kaynak belgeyle uyumsuz; lütfen doğrulayın.",
                         f"'{alan}' beklenen aralığın dışında. Ölçüm tekrarlandı mı?",
                         f"'{alan}' boş bırakılmış; zorunlu alan.",
                     ]), kaynak=r.choice(["otomatik", "manuel"]), durum="kapali" if kapali else "acik",
-                        acan_id=cra.id, acilis=acilis, kapanis=acilis + timedelta(days=r.randint(2, 12)) if kapali else None,
+                        acan_id=cra.id, acilis=acilis, kapanis=min(acilis + timedelta(days=r.randint(2, 12)), simdi()) if kapali else None,
                         cevap="Kaynak belgeye göre düzeltildi." if kapali else None))
 
 
