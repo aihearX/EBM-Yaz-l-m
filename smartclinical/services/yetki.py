@@ -2,18 +2,44 @@
 import hashlib
 import hmac
 import os
+from datetime import timedelta
 
 from fastapi import Depends, HTTPException, Request, status
 from sqlalchemy import false, func, select
 from sqlalchemy.orm import Session
 
+from ..config import ayarlar
 from ..db import get_db
-from ..models import Calisma, CalismaMerkez, Kullanici, Rol
+from ..models import Calisma, CalismaMerkez, Gonullu, Kullanici, Rol
 from ..models._ortak import simdi
 from ..models.ekip import CalismaUyesi
 
 ITERASYON = 200_000
 MAKS_HATALI_GIRIS = 5
+KILIT_DAKIKA = 15          # ilk kilit suresi; her yeni kilitte iki katina cikar
+PAROLA_GECMISI = 5         # yeniden kullanilamayan son parola sayisi
+# parola degisimi zorunluyken bu yollar acik kalir
+_PAROLA_SERBEST = ("/hesap", "/cikis", "/giris", "/static", "/api/")
+
+
+def _ayar(ad: str, env: str, varsayilan: int) -> int:
+    """config.Ayarlar'da alan varsa onu, yoksa ortam degiskenini okur."""
+    # TODO(entegrasyon): config.py'ye parola_min / parola_gun alanlari eklenince env dali yalnizca yedek kalir
+    v = getattr(ayarlar(), ad, None)
+    if v is None:
+        v = os.environ.get(env, varsayilan)
+    try:
+        return int(v)
+    except (TypeError, ValueError):
+        return varsayilan
+
+
+def parola_min() -> int:
+    return _ayar("parola_min", "SC_PAROLA_MIN", 12)
+
+
+def parola_gun() -> int:
+    return _ayar("parola_gun", "SC_PAROLA_GUN", 90)
 
 
 def parola_hashle(parola: str) -> str:
@@ -33,27 +59,81 @@ def parola_dogrula(parola: str, kayit: str) -> bool:
 
 def parola_politikasi(parola: str) -> str | None:
     """Hata mesaji dondurur, uygunsa None. URS-SEC-04."""
-    if len(parola) < 10:
-        return "Parola en az 10 karakter olmalı."
+    en_az = parola_min()
+    if len(parola) < en_az:
+        return f"Parola en az {en_az} karakter olmalı."
     if parola.isdigit() or parola.isalpha():
         return "Parola harf ve rakam içermeli."
     return None
 
 
-def giris_yap(db: Session, kullanici_adi: str, parola: str) -> Kullanici | None:
+def parola_suresi_doldu(k: Kullanici) -> bool:
+    """Son degisimden bu yana SC_PAROLA_GUN gecmisse True. Tarihi bilinmeyen hesaplarda zorlama yok."""
+    return bool(k.parola_degisim and (simdi() - k.parola_degisim).days >= parola_gun())
+
+
+def parola_degisimi_gerekli(k: Kullanici) -> bool:
+    return bool(k.ilk_giris_degisim) or parola_suresi_doldu(k)
+
+
+def kilit_suresi(hatali_giris: int) -> timedelta:
+    """5. hatada 15 dk, 10. hatada 30 dk, 15. hatada 60 dk ... (her yeni kilitte iki kat)."""
+    kat = max(1, hatali_giris // MAKS_HATALI_GIRIS)
+    return timedelta(minutes=KILIT_DAKIKA * (2 ** (kat - 1)))
+
+
+def giris_yap(db: Session, kullanici_adi: str, parola: str, ip: str | None = None) -> Kullanici | None:
+    """Basarili giriste kullaniciyi doner. Hatali giris sayaci her MAKS_HATALI_GIRIS'te sureli kilit koyar;
+    kilit suresi dolunca dogru parola kabul edilir. Kilitlenme denetim izine 'kilit' olarak yazilir."""
+    from . import denetim
+
     k = db.execute(select(Kullanici).where(Kullanici.kullanici_adi == kullanici_adi)).scalar_one_or_none()
     if not k or not k.aktif:
         return None
-    if k.hatali_giris >= MAKS_HATALI_GIRIS:
-        return None  # hesap kilitli; yonetici acar
+    if k.kilitli:
+        return None
     if not parola_dogrula(parola, k.parola_hash):
         k.hatali_giris += 1
+        if k.hatali_giris % MAKS_HATALI_GIRIS == 0:
+            sure = kilit_suresi(k.hatali_giris)
+            k.kilit_bitis = simdi() + sure
+            denetim.kaydet(db, None, "kilit", "kullanici", k.id,
+                           yeni={"kullanici_adi": k.kullanici_adi, "hatali_giris": k.hatali_giris,
+                                 "dakika": int(sure.total_seconds() // 60), "kilit_bitis": k.kilit_bitis.isoformat()}, ip=ip)
         db.commit()
         return None
     k.hatali_giris = 0
+    k.kilit_bitis = None
     k.son_giris = simdi()
     db.commit()
     return k
+
+
+def kilit_ac(db: Session, k: Kullanici) -> None:
+    """Sayac ve sureli kilidi sifirlar; denetim kaydini cagiran yazar."""
+    k.hatali_giris = 0
+    k.kilit_bitis = None
+
+
+def parola_degistir(db: Session, k: Kullanici, eski: str, yeni: str) -> str | None:
+    """Hata mesaji dondurur, basariliysa None. Son PAROLA_GECMISI parola yeniden kullanilamaz. Commit etmez."""
+    if not parola_dogrula(eski, k.parola_hash):
+        return "Mevcut parola doğrulanamadı."
+    h = parola_politikasi(yeni)
+    if h:
+        return h
+    if eski == yeni:
+        return "Yeni parola mevcut parolayla aynı olamaz."
+    gecmis = list(k.parola_gecmisi or [])
+    for kayit in [k.parola_hash] + gecmis:
+        if parola_dogrula(yeni, kayit):
+            return f"Son {PAROLA_GECMISI} paroladan biri yeniden kullanılamaz."
+    gecmis = ([k.parola_hash] + gecmis)[:PAROLA_GECMISI]
+    k.parola_gecmisi = gecmis
+    k.parola_hash = parola_hashle(yeni)
+    k.parola_degisim = simdi()
+    k.ilk_giris_degisim = False
+    return None
 
 
 def api_anahtari_uret() -> str:
@@ -92,6 +172,9 @@ def mevcut_kullanici(request: Request, db: Session = Depends(get_db)) -> Kullani
     if not k or not k.aktif:
         request.session.clear()
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Oturum geçersiz")
+    # ilk giris / suresi dolmus parola: web sayfalari /hesap/parola'ya yonlenir (401 -> /giris -> /hesap/parola)
+    if parola_degisimi_gerekli(k) and not request.url.path.startswith(_PAROLA_SERBEST):
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Devam etmek için parolanızı değiştirin")
     return k
 
 
@@ -102,8 +185,9 @@ def mevcut_kullanici_opsiyonel(request: Request, db: Session = Depends(get_db)) 
 
 # Rol -> izin verilen islemler. Rol globaldir; calisma bazli gorunurluk icin bkz. calisma_erisimi (#142)
 IZINLER: dict[str, set[Rol]] = {
-    "calisma.olustur": {Rol.YONETICI, Rol.SPONSOR, Rol.PROJE_YONETICISI},
-    "calisma.duzenle": {Rol.YONETICI, Rol.SPONSOR, Rol.PROJE_YONETICISI},
+    # sponsor salt okunur; arastirmaci kendi kurdugu calismayi duzenler (bkz. calisma_duzenleyebilir)
+    "calisma.olustur": {Rol.YONETICI, Rol.PROJE_YONETICISI, Rol.ARASTIRMACI},
+    "calisma.duzenle": {Rol.YONETICI, Rol.PROJE_YONETICISI, Rol.ARASTIRMACI},
     "kriter.onayla": {Rol.YONETICI, Rol.PROJE_YONETICISI, Rol.ARASTIRMACI},
     "eslestirme.calistir": {Rol.YONETICI, Rol.ARASTIRMACI, Rol.KOORDINATOR, Rol.PROJE_YONETICISI},
     "eslestirme.incele": {Rol.YONETICI, Rol.ARASTIRMACI, Rol.KOORDINATOR},
@@ -155,11 +239,15 @@ def kisit_aktif(db: Session) -> bool:
     return (db.scalar(select(func.count(CalismaUyesi.id))) or 0) > 0
 
 
+def _kurum(k: Kullanici) -> str:
+    return (k.kurum or "").casefold().strip()
+
+
 def calisma_erisimi(db: Session, k: Kullanici, c: Calisma) -> bool:
     if k.rol in (Rol.YONETICI, Rol.DENETCI):
         return True
     if k.rol == Rol.SPONSOR:
-        return c.sponsor == (k.kurum or "")
+        return bool(_kurum(k)) and (c.sponsor or "").casefold().strip() == _kurum(k)
     if k.rol in MERKEZ_ROLLERI:
         # merkezi tanimsiz arastirmaci/koordinator icin mevcut davranis korunur (kisit yok)
         return not k.merkez_id or any(cm.merkez_id == k.merkez_id for cm in c.merkezler)
@@ -179,7 +267,9 @@ def calisma_filtresi(db: Session, k: Kullanici, sorgu):
     if k.rol in (Rol.YONETICI, Rol.DENETCI):
         return sorgu
     if k.rol == Rol.SPONSOR:
-        return sorgu.where(Calisma.sponsor == (k.kurum or ""))
+        if not _kurum(k):
+            return sorgu.where(false())
+        return sorgu.where(func.lower(func.trim(Calisma.sponsor)) == _kurum(k))
     if k.rol in MERKEZ_ROLLERI:
         if not k.merkez_id:
             return sorgu
@@ -190,3 +280,37 @@ def calisma_filtresi(db: Session, k: Kullanici, sorgu):
         uyelik = select(CalismaUyesi.calisma_id).where(CalismaUyesi.kullanici_id == k.id)
         return sorgu.where(Calisma.id.in_(uyelik))
     return sorgu.where(false())
+
+
+def calisma_duzenleyebilir(db: Session, k: Kullanici, c: Calisma) -> bool:
+    """Tasarim ve duzenleme: yonetici/PY her zaman; arastirmaci yalnizca kendi kurdugu ya da
+    bas arastirmacisi kendi merkezinden olan calismada."""
+    if k.rol in (Rol.YONETICI, Rol.PROJE_YONETICISI):
+        return True
+    if k.rol != Rol.ARASTIRMACI:
+        return False
+    if c.olusturan_id and c.olusturan_id == k.id:
+        return True
+    if not k.merkez_id:
+        return False
+    return any(cm.bas_arastirmaci and cm.bas_arastirmaci.merkez_id == k.merkez_id for cm in c.merkezler)
+
+
+def merkez_erisimi(k: Kullanici, merkez_id: int | None) -> bool:
+    """Hasta havuzu ve HBYS islemleri merkez sinirlidir: yonetici her merkeze, merkez rolleri kendi merkezine."""
+    if k.rol == Rol.YONETICI:
+        return True
+    if k.rol in MERKEZ_ROLLERI:
+        return bool(k.merkez_id) and k.merkez_id == merkez_id
+    return False
+
+
+def gonullu_erisimi(db: Session, k: Kullanici, g: Gonullu) -> bool:
+    """Gonullu detay/form: calisma erisimi + sponsor haric + merkez rolleri yalnizca kendi merkezinin gonullusu."""
+    if k.rol == Rol.SPONSOR:
+        return False
+    if not calisma_erisimi(db, k, g.calisma):
+        return False
+    if k.rol in MERKEZ_ROLLERI and k.merkez_id:
+        return bool(g.calisma_merkez) and g.calisma_merkez.merkez_id == k.merkez_id
+    return True

@@ -1,0 +1,9 @@
+{# Sayfalama: baglamda sayfalama = {sayfa, toplam_sayfa, toplam, sorgu}; sorgu diger filtre parametreleri (a=b&c=d) #}
+{% if sayfalama and sayfalama.toplam_sayfa > 1 %}
+<div class="sayfalama">
+  {% set ek = ('&' ~ sayfalama.sorgu) if sayfalama.sorgu else '' %}
+  {% if sayfalama.sayfa > 1 %}<a class="btn kucuk" href="?sayfa={{ sayfalama.sayfa - 1 }}{{ ek }}">Önceki</a>{% endif %}
+  <small>Sayfa {{ sayfalama.sayfa }} / {{ sayfalama.toplam_sayfa }} · {{ sayfalama.toplam }} kayıt</small>
+  {% if sayfalama.sayfa < sayfalama.toplam_sayfa %}<a class="btn kucuk" href="?sayfa={{ sayfalama.sayfa + 1 }}{{ ek }}">Sonraki</a>{% endif %}
+</div>
+{% endif %}

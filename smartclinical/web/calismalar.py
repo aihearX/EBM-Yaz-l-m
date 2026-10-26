@@ -3,7 +3,7 @@ from datetime import date
 from fastapi import APIRouter, Depends, Form, HTTPException, Request, UploadFile
 from fastapi.responses import RedirectResponse
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, object_session
 
 from ..config import ayarlar
 from ..db import get_db
@@ -30,46 +30,64 @@ from ..models._ortak import simdi
 from ..models.basvuru import BASVURU_TIPLERI, KURUMLAR
 from ..models.belge import TMF_BOLGELER
 from ..models.calisma import TUR_ETIKET
+from ..models.ekip import CalismaUyesi
 from ..models.izlem import SAPMA_KATEGORI
 from ..models.merkez import CM_DURUMLAR
 from ..services import denetim
-from ..services.yetki import calisma_filtresi, gerekli, izinli
-from ._ortak import bilgi, calisma_getir, ip, oturumlu
+from ..services.yetki import MERKEZ_ROLLERI, calisma_duzenleyebilir, calisma_filtresi, gerekli, izinli, kisit_aktif
+from ._ortak import bilgi, calisma_duzenleyen, calisma_getir, ip, oturumlu, sayfala
 from .sablon import goster, sablonlar
 
 router = APIRouter(prefix="/calismalar")
 
-# Sekme gorunurlugu rol izinlerine baglidir; ayni kurallar rotalarda 403 icin kullanilir.
+SAYFA_BOYUTU = 50
+
+# Sekme gorunurlugu rol izinlerine baglidir; ayni kurallar rotalarda 403 icin kullanilir (docs/roller.md ile ayni liste).
 # Calisma bazli gorunurluk (ekip uyeligi, merkez, sponsor kurumu) calisma_getir icinde yetki.calisma_erisimi ile uygulanir.
-_SEKMELER = [
-    ("ozet", "Özet", ""),
-    ("tasarim", "Tasarım", "/tasarim"),
-    ("protokol", "Protokol ve Kriterler", "/protokol"),
-    ("merkezler", "Merkezler", "/merkezler"),
-    ("basvurular", "Etik / TİTCK", "/basvurular"),
-    ("eslestirme", "Hasta Eşleştirme", "/eslestirme"),
-    ("gonulluler", "Gönüllüler", "/gonulluler"),
-    ("veri", "Veri (eCRF)", "/veri"),
-    ("guvenlik", "Güvenlik", "/guvenlik"),
-    ("merkez-zekasi", "Merkez Zekâsı", "/merkez-zekasi"),
-    ("rbm", "Risk Bazlı İzlem", "/rbm"),
-    ("izlem", "Ziyaret ve Sapmalar", "/izlem"),
-    ("belgeler", "TMF", "/belgeler"),
-    ("analiz", "Analiz", "/analiz"),
-    ("ekip", "Ekip", "/ekip"),
-    ("denetim", "Denetim İzi", "/denetim"),
+# Sekmeler calismanin yasam dongusune gore dort grupta gosterilir.
+SEKME_GRUPLARI = [
+    ("Kurulum", [
+        ("ozet", "Özet", ""),
+        ("tasarim", "Tasarım", "/tasarim"),
+        ("protokol", "Protokol ve Kriterler", "/protokol"),
+        ("merkezler", "Merkezler", "/merkezler"),
+        ("basvurular", "Etik / TİTCK", "/basvurular"),
+        ("ekip", "Ekip", "/ekip"),
+    ]),
+    ("Yürütme", [
+        ("gonulluler", "Gönüllüler", "/gonulluler"),
+        ("veri", "Veri (eCRF)", "/veri"),
+        ("guvenlik", "Güvenlik", "/guvenlik"),
+        ("eslestirme", "Hasta Eşleştirme", "/eslestirme"),
+    ]),
+    ("İzlem", [
+        ("rbm", "Risk Bazlı İzlem", "/rbm"),
+        ("merkez-zekasi", "Merkez Zekâsı", "/merkez-zekasi"),
+        ("izlem", "Ziyaret ve Sapmalar", "/izlem"),
+        ("belgeler", "TMF", "/belgeler"),
+    ]),
+    ("Kapanış", [
+        ("analiz", "Analiz", "/analiz"),
+        ("denetim", "Denetim İzi", "/denetim"),
+    ]),
 ]
+_SEKMELER = [(anahtar, etiket, yol, grup) for grup, liste in SEKME_GRUPLARI for anahtar, etiket, yol in liste]
+SEKME_ETIKET = {anahtar: etiket for anahtar, etiket, _, _ in _SEKMELER}
 
 
-def sekme_gorunur(k: Kullanici, anahtar: str) -> bool:
+def sekme_gorunur(k: Kullanici, anahtar: str, db: Session | None = None, c: Calisma | None = None) -> bool:
+    """Rol x sekme kurali. 'tasarim' calisma bazlidir (calisma_duzenleyebilir); db ve c verilmezse rol dusunulur."""
     rol = k.rol
     sponsor = rol == Rol.SPONSOR
     if anahtar in ("ozet", "protokol", "merkezler", "guvenlik"):
         return True
     if anahtar == "tasarim":
-        return izinli(k, "calisma.duzenle") and not sponsor
+        if db is not None and c is not None:
+            return calisma_duzenleyebilir(db, k, c)
+        return rol in (Rol.YONETICI, Rol.PROJE_YONETICISI, Rol.ARASTIRMACI)
     if anahtar == "basvurular":
-        return izinli(k, "calisma.duzenle") or rol in (Rol.DENETCI, Rol.SPONSOR)
+        # CRA salt okunur izler; karar formu calisma.duzenle ister
+        return izinli(k, "calisma.duzenle") or rol in (Rol.DENETCI, Rol.SPONSOR, Rol.CRA)
     if anahtar == "eslestirme":
         return izinli(k, "hasta.goruntule")
     if anahtar in ("gonulluler", "veri"):
@@ -79,9 +97,10 @@ def sekme_gorunur(k: Kullanici, anahtar: str) -> bool:
     if anahtar == "merkez-zekasi":
         return izinli(k, "rbm.goruntule") and not sponsor
     if anahtar == "izlem":
-        return (izinli(k, "rbm.goruntule") and not sponsor) or rol == Rol.KOORDINATOR
+        # merkez rolleri yalnizca kendi merkezinin ziyaret ve sapmalarini gorur (rota filtreler)
+        return (izinli(k, "rbm.goruntule") and not sponsor) or rol in MERKEZ_ROLLERI
     if anahtar == "belgeler":
-        return izinli(k, "belge.yukle") or rol in (Rol.DENETCI, Rol.SPONSOR)
+        return izinli(k, "belge.yukle") or rol in (Rol.DENETCI, Rol.SPONSOR, Rol.ARASTIRMACI, Rol.VERI_YONETICISI)
     if anahtar == "analiz":
         return izinli(k, "analiz.goruntule")
     if anahtar == "ekip":
@@ -91,13 +110,13 @@ def sekme_gorunur(k: Kullanici, anahtar: str) -> bool:
     return False
 
 
-def sekme_kontrol(k: Kullanici, anahtar: str) -> None:
-    if not sekme_gorunur(k, anahtar):
+def sekme_kontrol(k: Kullanici, anahtar: str, db: Session | None = None, c: Calisma | None = None) -> None:
+    if not sekme_gorunur(k, anahtar, db, c):
         raise HTTPException(403, "Bu sayfa rolünüze açık değil")
 
 
 def gorunur_sekmeler(k: Kullanici, c: Calisma, o: dict) -> list[dict]:
-    """_baslik.html icin sekme listesi: etiket, adres ve sayac."""
+    """_baslik.html icin sekme listesi: grup, etiket, adres ve sayac."""
     sayaclar = {
         "protokol": (len(c.kriterler) or None, ""),
         "merkezler": (f"{o['aktif_merkez']}/{o['toplam_merkez']}", ""),
@@ -107,13 +126,14 @@ def gorunur_sekmeler(k: Kullanici, c: Calisma, o: dict) -> list[dict]:
         "guvenlik": (o["bekleyen_sae"] or None, "kirmizi"),
         "rbm": (o["acik_uyari"] or None, "kirmizi" if o["aksiyon_uyari"] else ""),
     }
+    db = object_session(c)
     liste = []
-    for anahtar, etiket, yol in _SEKMELER:
-        if not sekme_gorunur(k, anahtar):
+    for anahtar, etiket, yol, grup in _SEKMELER:
+        if not sekme_gorunur(k, anahtar, db, c):
             continue
         sayac, sinif = sayaclar.get(anahtar, (None, ""))
         liste.append({"anahtar": anahtar, "etiket": etiket, "url": f"/calismalar/{c.id}{yol}",
-                      "sayac": sayac, "sinif": sinif})
+                      "sayac": sayac, "sinif": sinif, "grup": grup})
     return liste
 
 
@@ -122,7 +142,19 @@ sablonlar.env.globals["sekmeler"] = gorunur_sekmeler
 # TITCK basvurusu gerektiren calisma turleri; gozlemsel/akademik/kayit calismalarinda yalnizca etik kurul
 TITCK_GEREKEN = {CalismaTuru.ILAC, CalismaTuru.BIYOBENZER, CalismaTuru.TIBBI_CIHAZ, CalismaTuru.IVD,
                  CalismaTuru.BIYOESDEGERLIK, CalismaTuru.ILERI_TEDAVI}
+# "kayitli" sayisinin tek tanimi; genel bakis (pano.py) ve calisma listesi ayni kumeyi kullanir
 KAYITLI_DURUMLAR = (GonulluDurumu.RANDOMIZE, GonulluDurumu.TEDAVIDE, GonulluDurumu.TAKIPTE, GonulluDurumu.TAMAMLADI)
+
+
+def _merkez_sinirli(k: Kullanici) -> bool:
+    return k.rol in MERKEZ_ROLLERI and bool(k.merkez_id)
+
+
+def _gorunur_cm(k: Kullanici, c: Calisma) -> list[CalismaMerkez]:
+    """Merkez rolleri yalnizca kendi merkezinin kayitlarini gorur; diger roller tum merkezleri."""
+    if _merkez_sinirli(k):
+        return [cm for cm in c.merkezler if cm.merkez_id == k.merkez_id]
+    return list(c.merkezler)
 
 
 def kontrol_listesi(db: Session, c: Calisma) -> dict[CalismaDurumu, list[dict]]:
@@ -146,7 +178,9 @@ def kontrol_listesi(db: Session, c: Calisma) -> dict[CalismaDurumu, list[dict]]:
     if cm_ids:
         siv = db.scalar(select(IzlemZiyareti.id).where(IzlemZiyareti.calisma_merkez_id.in_(cm_ids),
                         IzlemZiyareti.tip == "SIV", IzlemZiyareti.gerceklesen.isnot(None)).limit(1)) is not None
-        siv = siv or any(t.tip == "siv" and t.gerceklesen for cm in c.merkezler for t in cm.kilometre_taslari)
+    ekip_var = None
+    if kisit_aktif(db):
+        ekip_var = db.scalar(select(CalismaUyesi.id).where(CalismaUyesi.calisma_id == c.id).limit(1)) is not None
     kayitli = sum(1 for g in c.gonulluler if g.durum in KAYITLI_DURUMLAR)
     kayitlar = [fk for g in c.gonulluler for fk in g.form_kayitlari]
     acik_sorgular = [s for fk in kayitlar for s in fk.sorgular if s.durum == "acik"]
@@ -164,7 +198,7 @@ def kontrol_listesi(db: Session, c: Calisma) -> dict[CalismaDurumu, list[dict]]:
             m("En az bir çalışma kolu tanımlı", c.kollar, f"{b}/tasarim"),
             m("Vizit şeması tanımlı", c.vizit_tanimlari, f"{b}/tasarim"),
             m("En az bir eCRF formu tanımlı", c.formlar, f"{b}/tasarim"),
-        ],
+        ] + ([m("Proje ekibi atandı", ekip_var, f"{b}/ekip")] if ekip_var is not None else []),
         CalismaDurumu.FIZIBILITE: [
             m("En az bir aday merkez eklendi", c.merkezler, f"{b}/merkezler"),
             m("Merkez zekâsı puanı hesaplandı", any(x.fizibilite_puani is not None for x in c.merkezler), f"{b}/merkez-zekasi"),
@@ -200,8 +234,7 @@ def kontrol_listesi(db: Session, c: Calisma) -> dict[CalismaDurumu, list[dict]]:
 
 def _ozet(db: Session, c: Calisma) -> dict:
     g = c.gonulluler
-    kayitli = [x for x in g if x.durum in (GonulluDurumu.RANDOMIZE, GonulluDurumu.TEDAVIDE, GonulluDurumu.TAKIPTE,
-                                           GonulluDurumu.TAMAMLADI)]
+    kayitli = [x for x in g if x.durum in KAYITLI_DURUMLAR]
     on_tarama = [x for x in g if x.durum in (GonulluDurumu.ADAY, GonulluDurumu.ON_TARAMA)]
     tarama_bas = [x for x in g if x.durum == GonulluDurumu.TARAMA_BASARISIZ]
     ayrilan = [x for x in g if x.durum == GonulluDurumu.AYRILDI]
@@ -266,7 +299,7 @@ def yeni(request: Request, k: Kullanici = Depends(gerekli("calisma.olustur")), d
                 faz=faz or None, sponsor=sponsor, terapotik_alan=terapotik_alan, endikasyon=endikasyon or None,
                 hedef_hasta=hedef_hasta, hedef_merkez=hedef_merkez, tasarim=tasarim or None,
                 baslangic=date.fromisoformat(baslangic) if baslangic else None,
-                planlanan_bitis=date.fromisoformat(planlanan_bitis) if planlanan_bitis else None)
+                planlanan_bitis=date.fromisoformat(planlanan_bitis) if planlanan_bitis else None, olusturan_id=k.id)
     db.add(c)
     db.flush()
     # varsayilan KRI/QTL setini bagla
@@ -299,14 +332,20 @@ def detay(request: Request, c: Calisma = Depends(calisma_getir), k: Kullanici = 
             egri.append({"t": t.strftime("%m/%y"), "plan": plan, "gercek": gercek})
             gun += 30
     kontrol = kontrol_listesi(db, c).get(c.durum, [])
-    son_denetim = db.execute(select(DenetimKaydi).where(DenetimKaydi.varlik.in_(["calisma", "kriter", "basvuru", "calisma_merkez"]),
-                             DenetimKaydi.varlik_id == c.id).order_by(DenetimKaydi.id.desc()).limit(6)).scalars().all()
+    # sponsor salt okunur ozet gorur; islem gecmisi gosterilmez
+    son_denetim = []
+    if k.rol != Rol.SPONSOR:
+        cm_ids = [m.id for m in c.merkezler] or [0]
+        son_denetim = db.execute(select(DenetimKaydi).where(
+            ((DenetimKaydi.varlik.in_(["calisma", "eslestirme"])) & (DenetimKaydi.varlik_id == c.id)) |
+            ((DenetimKaydi.varlik == "calisma_merkez") & (DenetimKaydi.varlik_id.in_(cm_ids)))
+        ).order_by(DenetimKaydi.id.desc()).limit(6)).scalars().all()
     return goster(request, "calismalar/detay.html", c=c, o=o, egri=egri, kontrol=kontrol, son_denetim=son_denetim,
-                  sekme="ozet")
+                  sekme="ozet", duzenleyebilir=calisma_duzenleyebilir(db, k, c))
 
 
 @router.post("/{calisma_id}/durum")
-def durum_degistir(request: Request, c: Calisma = Depends(calisma_getir), k: Kullanici = Depends(gerekli("calisma.duzenle")),
+def durum_degistir(request: Request, c: Calisma = Depends(calisma_getir), k: Kullanici = Depends(calisma_duzenleyen),
                    db: Session = Depends(get_db), durum: str = Form(...), gerekce: str = Form("")):
     if not gerekce.strip():
         bilgi(request, "UYARI: Aşama değişikliği için gerekçe zorunludur; işlem yapılmadı.")
@@ -325,11 +364,11 @@ def durum_degistir(request: Request, c: Calisma = Depends(calisma_getir), k: Kul
 def protokol(request: Request, c: Calisma = Depends(calisma_getir), k: Kullanici = Depends(oturumlu),
              db: Session = Depends(get_db)):
     return goster(request, "calismalar/protokol.html", c=c, o=_ozet(db, c), sekme="protokol",
-                  bdm=ayarlar().bdm_saglayici, bdm_model=ayarlar().bdm_model)
+                  bdm=ayarlar().bdm_saglayici, bdm_model=ayarlar().bdm_model, duzenleyebilir=calisma_duzenleyebilir(db, k, c))
 
 
 @router.post("/{calisma_id}/protokol/versiyon")
-def versiyon_ekle(request: Request, c: Calisma = Depends(calisma_getir), k: Kullanici = Depends(gerekli("calisma.duzenle")),
+def versiyon_ekle(request: Request, c: Calisma = Depends(calisma_getir), k: Kullanici = Depends(calisma_duzenleyen),
                   db: Session = Depends(get_db), versiyon: str = Form(...), tarih: str = Form(...),
                   ozet: str = Form(""), degisiklik_notu: str = Form(""), metin: str = Form("")):
     v = ProtokolVersiyon(calisma_id=c.id, versiyon=versiyon, tarih=date.fromisoformat(tarih), ozet=ozet or None,
@@ -343,7 +382,7 @@ def versiyon_ekle(request: Request, c: Calisma = Depends(calisma_getir), k: Kull
 
 
 @router.post("/{calisma_id}/protokol/kriter")
-def kriter_ekle(request: Request, c: Calisma = Depends(calisma_getir), k: Kullanici = Depends(gerekli("calisma.duzenle")),
+def kriter_ekle(request: Request, c: Calisma = Depends(calisma_getir), k: Kullanici = Depends(calisma_duzenleyen),
                 db: Session = Depends(get_db), tip: str = Form(...), metin: str = Form(...)):
     from ..services.bdm import BDMIstemci
 
@@ -390,7 +429,7 @@ def kriter_onayla(request: Request, kriter_id: int, c: Calisma = Depends(calisma
 
 @router.post("/{calisma_id}/protokol/kriter/{kriter_id}/sil")
 def kriter_sil(request: Request, kriter_id: int, c: Calisma = Depends(calisma_getir),
-               k: Kullanici = Depends(gerekli("calisma.duzenle")), db: Session = Depends(get_db), gerekce: str = Form("")):
+               k: Kullanici = Depends(calisma_duzenleyen), db: Session = Depends(get_db), gerekce: str = Form("")):
     kr = db.get(Kriter, kriter_id)
     if kr and kr.calisma_id == c.id:
         denetim.kaydet(db, k, "sil", "kriter", kr.id, eski=denetim.varlik_sozluk(kr), gerekce=gerekce, ip=ip(request))
@@ -446,11 +485,11 @@ def basvurular(request: Request, c: Calisma = Depends(calisma_getir), k: Kullani
                db: Session = Depends(get_db)):
     sekme_kontrol(k, "basvurular")
     return goster(request, "calismalar/basvurular.html", c=c, o=_ozet(db, c), sekme="basvurular",
-                  kurumlar=KURUMLAR, tipler=BASVURU_TIPLERI)
+                  kurumlar=KURUMLAR, tipler=BASVURU_TIPLERI, duzenleyebilir=calisma_duzenleyebilir(db, k, c))
 
 
 @router.post("/{calisma_id}/basvurular")
-def basvuru_ekle(request: Request, c: Calisma = Depends(calisma_getir), k: Kullanici = Depends(gerekli("calisma.duzenle")),
+def basvuru_ekle(request: Request, c: Calisma = Depends(calisma_getir), k: Kullanici = Depends(calisma_duzenleyen),
                  db: Session = Depends(get_db), kurum: str = Form(...), tip: str = Form("ilk"),
                  merkez_id: str = Form(""), referans_no: str = Form(""), gonderim_tarihi: str = Form(""),
                  karar: str = Form("beklemede"), karar_tarihi: str = Form(""), notlar: str = Form("")):
@@ -468,7 +507,7 @@ def basvuru_ekle(request: Request, c: Calisma = Depends(calisma_getir), k: Kulla
 
 @router.post("/{calisma_id}/basvurular/{basvuru_id}/karar")
 def basvuru_karar(request: Request, basvuru_id: int, c: Calisma = Depends(calisma_getir),
-                  k: Kullanici = Depends(gerekli("calisma.duzenle")), db: Session = Depends(get_db),
+                  k: Kullanici = Depends(calisma_duzenleyen), db: Session = Depends(get_db),
                   karar: str = Form(...), karar_tarihi: str = Form(""), notlar: str = Form("")):
     b = db.get(Basvuru, basvuru_id)
     if not b or b.calisma_id != c.id:
@@ -487,34 +526,37 @@ def basvuru_karar(request: Request, basvuru_id: int, c: Calisma = Depends(calism
 
 @router.get("/{calisma_id}/gonulluler")
 def gonulluler(request: Request, c: Calisma = Depends(calisma_getir), k: Kullanici = Depends(oturumlu),
-               db: Session = Depends(get_db), durum: str | None = None):
+               db: Session = Depends(get_db), durum: str | None = None, sayfa: int = 1):
     sekme_kontrol(k, "gonulluler")
-    liste = sorted(c.gonulluler, key=lambda g: g.gonullu_no)
-    if durum:
-        liste = [g for g in liste if g.durum.value == durum]
+    # merkez rolleri yalnizca kendi merkezinin gonullulerini gorur
+    cm_ids = {cm.id for cm in _gorunur_cm(k, c)}
+    tumu = sorted((g for g in c.gonulluler if g.calisma_merkez_id in cm_ids), key=lambda g: g.gonullu_no)
+    liste = [g for g in tumu if g.durum.value == durum] if durum else tumu
     huni = {}
-    for g in c.gonulluler:
+    for g in tumu:
         huni[g.durum_etiket] = huni.get(g.durum_etiket, 0) + 1
+    liste, sayfalama = sayfala(liste, sayfa, SAYFA_BOYUTU, f"durum={durum}" if durum else "")
     return goster(request, "calismalar/gonulluler.html", c=c, o=_ozet(db, c), sekme="gonulluler", liste=liste,
-                  huni=huni, durumlar=GonulluDurumu, secili=durum)
+                  huni=huni, durumlar=GonulluDurumu, secili=durum, sayfalama=sayfalama)
 
 
 # --- Veri (EDC) -------------------------------------------------------------
 
 @router.get("/{calisma_id}/veri")
 def veri(request: Request, c: Calisma = Depends(calisma_getir), k: Kullanici = Depends(oturumlu),
-         db: Session = Depends(get_db)):
+         db: Session = Depends(get_db), sayfa: int = 1):
     sekme_kontrol(k, "veri")
     formlar = sorted(c.formlar, key=lambda f: f.sira)
-    kayitlar = [fk for g in c.gonulluler for fk in g.form_kayitlari]
+    merkezler = _gorunur_cm(k, c)
+    kayitlar = [fk for cm in merkezler for g in cm.gonulluler for fk in g.form_kayitlari]
     durum_sayilari = {}
     for fk in kayitlar:
         durum_sayilari[fk.durum] = durum_sayilari.get(fk.durum, 0) + 1
     sorgular = [s for fk in kayitlar for s in fk.sorgular]
-    acik = [s for s in sorgular if s.durum == "acik"]
+    acik = sorted((s for s in sorgular if s.durum == "acik"), key=lambda s: s.acilis)
     # merkez bazli veri giris durumu
     merkez_satir = []
-    for cm in c.merkezler:
+    for cm in merkezler:
         fks = [fk for g in cm.gonulluler for fk in g.form_kayitlari]
         merkez_satir.append({
             "cm": cm, "toplam": len(fks),
@@ -522,9 +564,10 @@ def veri(request: Request, c: Calisma = Depends(calisma_getir), k: Kullanici = D
             "sdv": sum(1 for f in fks if f.durum in ("sdv", "kilitli")),
             "acik_sorgu": sum(1 for f in fks for s in f.sorgular if s.durum == "acik"),
         })
+    acik_sayfa, sayfalama = sayfala(acik, sayfa, SAYFA_BOYUTU)
     return goster(request, "calismalar/veri.html", c=c, o=_ozet(db, c), sekme="veri", formlar=formlar,
-                  durum_sayilari=durum_sayilari, toplam_kayit=len(kayitlar), acik_sorgular=acik,
-                  merkez_satir=merkez_satir)
+                  durum_sayilari=durum_sayilari, toplam_kayit=len(kayitlar), acik_sorgular=acik_sayfa,
+                  acik_sorgu_toplam=len(acik), merkez_satir=merkez_satir, sayfalama=sayfalama)
 
 
 # --- Guvenlik ---------------------------------------------------------------
@@ -548,13 +591,13 @@ def guvenlik(request: Request, c: Calisma = Depends(calisma_getir), k: Kullanici
 def izlem(request: Request, c: Calisma = Depends(calisma_getir), k: Kullanici = Depends(oturumlu),
           db: Session = Depends(get_db)):
     sekme_kontrol(k, "izlem")
-    cm_ids = [m.id for m in c.merkezler]
+    cm_ids = [m.id for m in _gorunur_cm(k, c)]
     ziyaretler = db.execute(select(IzlemZiyareti).where(IzlemZiyareti.calisma_merkez_id.in_(cm_ids))
                             .order_by(IzlemZiyareti.planlanan.desc())).scalars().all() if cm_ids else []
     sapmalar = db.execute(select(ProtokolSapmasi).where(ProtokolSapmasi.calisma_merkez_id.in_(cm_ids))
                           .order_by(ProtokolSapmasi.tarih.desc())).scalars().all() if cm_ids else []
     return goster(request, "calismalar/izlem.html", c=c, o=_ozet(db, c), sekme="izlem", ziyaretler=ziyaretler,
-                  sapmalar=sapmalar, kategoriler=SAPMA_KATEGORI)
+                  sapmalar=sapmalar, kategoriler=SAPMA_KATEGORI, merkezler=_gorunur_cm(k, c))
 
 
 @router.post("/{calisma_id}/izlem/sapma")
@@ -588,7 +631,11 @@ def ziyaret_planla(request: Request, c: Calisma = Depends(calisma_getir), k: Kul
 def belgeler(request: Request, c: Calisma = Depends(calisma_getir), k: Kullanici = Depends(oturumlu),
              db: Session = Depends(get_db)):
     sekme_kontrol(k, "belgeler")
-    liste = db.execute(select(Belge).where(Belge.calisma_id == c.id).order_by(Belge.tmf_bolge, Belge.ad)).scalars().all()
+    sorgu = select(Belge).where(Belge.calisma_id == c.id).order_by(Belge.tmf_bolge, Belge.ad)
+    if _merkez_sinirli(k):
+        # merkez rolleri: calisma duzeyindeki belgeler + kendi merkezinin belgeleri
+        sorgu = sorgu.where((Belge.merkez_id.is_(None)) | (Belge.merkez_id == k.merkez_id))
+    liste = db.execute(sorgu).scalars().all()
     bolgeler = {}
     for b in liste:
         bolgeler.setdefault(b.tmf_bolge, []).append(b)

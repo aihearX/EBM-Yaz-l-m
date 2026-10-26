@@ -118,10 +118,14 @@
   </div>
   <div>
     <div class="kart">
-      <h2>Planlanan izlem ziyaretleri</h2>
-      {% if ziyaretler %}
-      <ul class="liste-sade">{% for z in ziyaretler %}<li><a href="/calismalar/{{ z.calisma_merkez.calisma_id }}/izlem">{{ z.calisma_merkez.calisma.kod }} · {{ z.calisma_merkez.merkez.sehir }}</a> <span class="rozet">{{ z.tip }}</span><br><small>{{ z.planlanan|tarih }}{% if z.cra %} · {{ z.cra.ad_soyad }}{% endif %}</small></li>{% endfor %}</ul>
-      {% else %}<p class="kucuk">Planlı ziyaret yok.</p>{% endif %}
+      <h2>Bana atanan ziyaretler <small style="font-weight:400;color:var(--gri-500)">{{ sayilar.bana_atanan }}</small></h2>
+      {% if bana_atanan %}
+      <ul class="liste-sade">{% for z in bana_atanan %}<li><a href="/calismalar/{{ z.calisma_merkez.calisma_id }}/izlem">{{ z.calisma_merkez.calisma.kod }} · {{ z.calisma_merkez.merkez.sehir }}</a> <span class="rozet">{{ z.tip }}</span><br><small>{{ z.planlanan|tarih }}</small></li>{% endfor %}</ul>
+      {% else %}<p class="kucuk">Size atanmış planlı ziyaret yok.</p>{% endif %}
+      <h2 style="margin-top:12px">Çalışmalarımdaki diğer ziyaretler <small style="font-weight:400;color:var(--gri-500)">{{ sayilar.ziyaret - sayilar.bana_atanan }}</small></h2>
+      {% if merkez_ziyaretleri %}
+      <ul class="liste-sade">{% for z in merkez_ziyaretleri %}<li><a href="/calismalar/{{ z.calisma_merkez.calisma_id }}/izlem">{{ z.calisma_merkez.calisma.kod }} · {{ z.calisma_merkez.merkez.sehir }}</a> <span class="rozet">{{ z.tip }}</span><br><small>{{ z.planlanan|tarih }}{% if z.cra %} · {{ z.cra.ad_soyad }}{% else %} · atanmadı{% endif %}</small></li>{% endfor %}</ul>
+      {% else %}<p class="kucuk">Başka planlı ziyaret yok.</p>{% endif %}
     </div>
     <div class="kart">
       <h2>Bildirim süresi işleyen SAE</h2>
@@ -145,7 +149,7 @@
 </div>
 <div class="kart">
   <div class="baslik-satiri" style="margin-bottom:8px"><h2>Çalışma portföyü</h2><div class="sag"><a class="btn" href="javascript:print()">Yazdır</a></div></div>
-  <table>
+  <div class="tablo-kaydir"><table>
     <tr><th>Protokol</th><th>Aşama</th><th class="sag">Merkez</th><th class="sag">Randomize / hedef</th><th style="width:140px">İlerleme</th><th class="sag">Hız (h/ay)</th><th class="sag">Hedefe kalan</th><th>Takvim</th><th class="sag">Uyarı</th><th class="sag">SAE</th><th>En riskli merkez</th><th></th></tr>
     {% for s in satirlar %}
     <tr>
@@ -154,7 +158,7 @@
       <td class="sayi">{{ s.aktif_merkez }}/{{ s.c.merkezler|length }}</td>
       <td class="sayi">{{ s.kayitli }} / {{ s.c.hedef_hasta }}</td>
       <td><div class="cubuk"><span class="{{ 'kirmizi' if s.takvim == 'risk' else ('sari' if s.oran < 70 and s.c.durum.value in ('kayit','izlem')) }}" style="width:{{ [s.oran,100]|min }}%"></span></div><small>{{ s.oran|yuzde }}</small></td>
-      <td class="sayi">{{ s.hiz|sayi(2) if s.hiz else '—' }}</td>
+      <td class="sayi">{% if s.takvim == 'arsiv' %}{% else %}{{ s.hiz|sayi(2) if s.hiz else '—' }}{% endif %}</td>
       <td class="sayi">{% if s.tahmini_ay is not none %}{{ s.tahmini_ay|sayi(1) }} ay{% else %}—{% endif %}{% if s.plan_ay is not none %}<br><small>plan {{ s.plan_ay|sayi(1) }} ay</small>{% endif %}</td>
       <td>{% if s.takvim == 'zamaninda' %}<span class="rozet yesil">zamanında</span>{% elif s.takvim == 'risk' %}<span class="rozet kirmizi">gecikme riski</span>{% else %}<span class="rozet">—</span>{% endif %}</td>
       <td class="sayi">{% if s.aksiyon %}<span class="rozet kirmizi">{{ s.uyari }}</span>{% elif s.uyari %}<span class="rozet sari">{{ s.uyari }}</span>{% else %}0{% endif %}</td>
@@ -163,7 +167,7 @@
       <td><a class="btn kucuk" href="/calismalar/{{ s.c.id }}/merkez-zekasi/rapor" target="_blank">Fizibilite raporu</a></td>
     </tr>
     {% endfor %}
-  </table>
+  </table></div>
 </div>
 <div class="izgara k21">
   <div>

@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import RedirectResponse
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from ..config import ayarlar
@@ -21,7 +21,7 @@ from ..models import (
 )
 from ..models._ortak import simdi
 from ..services import denetim
-from ..services.yetki import gerekli
+from ..services.yetki import MERKEZ_ROLLERI, gerekli
 from ._ortak import bilgi, calisma_getir, ip, oturumlu
 from .calismalar import _ozet, sekme_kontrol
 from .sablon import goster
@@ -38,24 +38,32 @@ def eslestirme(request: Request, c: Calisma = Depends(calisma_getir), k: Kullani
     sorgu = select(EslestirmeSonucu).where(EslestirmeSonucu.calisma_id == c.id).order_by(EslestirmeSonucu.skor.desc())
     if karar:
         sorgu = sorgu.where(EslestirmeSonucu.karar == karar)
+    # merkez rolleri yalnizca kendi merkezinin hastalarini ve havuzunu gorur
+    merkez_sinirli = k.rol in MERKEZ_ROLLERI and bool(k.merkez_id)
+    cmler = [m for m in c.merkezler if not merkez_sinirli or m.merkez_id == k.merkez_id]
+    if merkez_sinirli:
+        sorgu = sorgu.join(EslestirmeSonucu.hasta).where(Hasta.merkez_id == k.merkez_id)
     sonuclar = db.execute(sorgu).scalars().all()
     if merkez:
         sonuclar = [s for s in sonuclar if s.hasta.merkez_id == merkez]
-    # arastirmaci sadece kendi merkezini gorur
-    if k.rol.value in ("arastirmaci", "koordinator") and k.merkez_id:
-        sonuclar = [s for s in sonuclar if s.hasta.merkez_id == k.merkez_id]
     ozet = {"uygun": 0, "olasi": 0, "belirsiz": 0, "uygun_degil": 0}
-    for s in db.execute(select(EslestirmeSonucu).where(EslestirmeSonucu.calisma_id == c.id)).scalars():
+    ozet_sorgu = select(EslestirmeSonucu).where(EslestirmeSonucu.calisma_id == c.id)
+    if merkez_sinirli:
+        ozet_sorgu = ozet_sorgu.join(EslestirmeSonucu.hasta).where(Hasta.merkez_id == k.merkez_id)
+    for s in db.execute(ozet_sorgu).scalars():
         ozet[s.karar] = ozet.get(s.karar, 0) + 1
-    hasta_havuzu = len(db.execute(select(Hasta.id).where(Hasta.merkez_id.in_([m.merkez_id for m in c.merkezler]))).all()) if c.merkezler else 0
+    merkez_ids = [m.merkez_id for m in cmler]
+    hasta_havuzu = db.scalar(select(func.count(Hasta.id)).where(Hasta.merkez_id.in_(merkez_ids))) if merkez_ids else 0
     son_tarama = db.scalar(select(EslestirmeSonucu.olusturma).where(EslestirmeSonucu.calisma_id == c.id)
                            .order_by(EslestirmeSonucu.olusturma.desc()).limit(1))
     onaysiz_kriter = sum(1 for kr in c.kriterler if not kr.onaylandi)
-    ilk_merkez = next((m for m in c.merkezler if m.durum == "aktif"), None) or (c.merkezler[0] if c.merkezler else None)
+    ilk_merkez = next((m for m in cmler if m.durum == "aktif"), None) or (cmler[0] if cmler else None)
+    aktif_merkez_var = any(m.durum == "aktif" for m in cmler)
     a = ayarlar()
     return goster(request, "eslestirme/liste.html", c=c, o=_ozet(db, c), sekme="eslestirme", sonuclar=sonuclar,
                   ozet=ozet, hasta_havuzu=hasta_havuzu, son_tarama=son_tarama, karar=karar, merkez=merkez,
-                  onaysiz_kriter=onaysiz_kriter, ilk_merkez=ilk_merkez, bdm=a.bdm_saglayici, bdm_model=a.bdm_model)
+                  onaysiz_kriter=onaysiz_kriter, ilk_merkez=ilk_merkez, aktif_merkez_var=aktif_merkez_var,
+                  merkezler=cmler, bdm=a.bdm_saglayici, bdm_model=a.bdm_model)
 
 
 @router.post("/eslestirme/calistir")

@@ -10,7 +10,7 @@ from ..models.ekip import CalismaUyesi
 from ..services import denetim
 from ..services.yetki import ATANABILIR_ROLLER, MERKEZ_ROLLERI, gerekli, kisit_aktif
 from ._ortak import bilgi, calisma_getir, ip, oturumlu
-from .calismalar import _ozet
+from .calismalar import _ozet, sekme_kontrol
 from .sablon import goster
 
 router = APIRouter(prefix="/calismalar/{calisma_id}/ekip")
@@ -26,6 +26,7 @@ def _uye(db: Session, c: Calisma, uye_id: int) -> CalismaUyesi:
 @router.get("")
 def sayfa(request: Request, c: Calisma = Depends(calisma_getir), k: Kullanici = Depends(oturumlu),
           db: Session = Depends(get_db), q: str = ""):
+    sekme_kontrol(k, "ekip")
     uyeler = db.execute(select(CalismaUyesi).join(CalismaUyesi.kullanici).where(CalismaUyesi.calisma_id == c.id)
                         .order_by(Kullanici.ad_soyad)).scalars().all()
     uye_kid = {u.kullanici_id for u in uyeler}

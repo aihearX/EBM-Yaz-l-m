@@ -19,7 +19,7 @@
     <div class="ikili"><div class="alan"><label>Kullanıcı adı</label><input type="text" name="koord_kullanici_adi" value="{{ veri.koordinator.kullanici_adi if veri.koordinator else '' }}"></div>
       <div class="alan"><label>Ad Soyad</label><input type="text" name="koord_ad_soyad" value="{{ veri.koordinator.ad_soyad if veri.koordinator else '' }}"></div></div>
     <div class="ikili"><div class="alan"><label>E-posta</label><input type="email" name="koord_eposta" value="{{ veri.koordinator.eposta if veri.koordinator else '' }}"></div>
-      <div class="alan"><label>Geçici parola</label><input type="password" name="koord_parola" autocomplete="new-password"><div class="yardim">En az 10 karakter, harf ve rakam.</div></div></div>
+      <div class="alan"><label>Geçici parola</label><input type="password" name="koord_parola" autocomplete="new-password"><div class="yardim">En az 12 karakter, harf ve rakam; ilk girişte değiştirmesi istenir.</div></div></div>
   </details>
 {% elif mod == 'universite' %}
   <div class="izgara k2">
@@ -39,6 +39,14 @@
       <td><input type="number" name="hedef_{{ m.id }}" min="0" value="{{ secili.get(m.id, 0) }}"></td></tr>{% else %}<tr><td colspan="4" class="kucuk">Henüz merkez kaydı yok.</td></tr>{% endfor %}
   </table>
   <label style="font-weight:400;margin-top:8px"><input type="checkbox" name="sonra" value="1" {{ 'checked' if veri.sonra }}> Merkezleri sonra ekle</label>
+  <div class="ayrac"></div>
+  <h2>Proje ekibi</h2>
+  <div class="yardim" style="margin-bottom:8px">Çalışmaya atanacak proje yöneticisi, CRA ve veri yöneticilerini işaretleyin.{% if kurucu_uye %} Siz ({{ k.rol_etiket }}) kendiliğinden ekipte olursunuz.{% endif %} Atama kısıtı etkinken yalnızca ekiptekiler çalışmayı görür; sonradan Ekip sekmesinden değiştirilebilir.</div>
+  {% if ekip_adaylari %}
+  <table class="sikisik"><tr><th></th><th>Ad Soyad</th><th>Rol</th><th>Kurum</th></tr>
+    {% for u in ekip_adaylari %}<tr><td><input type="checkbox" name="ekip" value="{{ u.id }}" {{ 'checked' if u.id in secili_ekip }}></td><td>{{ u.ad_soyad }}<br><small>{{ u.kullanici_adi }}</small></td><td>{{ u.rol_etiket }}</td><td>{{ u.kurum or '—' }}</td></tr>{% endfor %}
+  </table>
+  {% else %}<p class="kucuk">Atanabilecek proje yöneticisi, CRA veya veri yöneticisi hesabı yok; <a href="/yonetim/kullanicilar">Kullanıcılar</a> sayfasından açılabilir.</p>{% endif %}
 {% endif %}
   <div style="margin-top:14px"><a class="btn" href="/sihirbaz/2">Geri</a> <button class="btn birincil">Devam</button></div>
 </form>

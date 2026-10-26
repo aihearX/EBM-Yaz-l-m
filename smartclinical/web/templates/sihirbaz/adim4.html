@@ -26,7 +26,7 @@
       <tr><th>Protokol</th><td><b>{{ a1.kod }}</b> · {{ a1.kisa_ad }}</td></tr>
       <tr><th>Başlık</th><td>{{ a1.baslik }}</td></tr>
       <tr><th>Tür / faz</th><td>{{ tur_etiket }}{% if a1.faz %} · Faz {{ a1.faz }}{% endif %}</td></tr>
-      <tr><th>Sponsor</th><td>{{ a1.sponsor }}</td></tr>
+      <tr><th>{{ 'Destekleyici / sorumlu kurum' if kurum_turu else 'Sponsor' }}</th><td>{{ a1.sponsor }}</td></tr>
       <tr><th>Terapötik alan</th><td>{{ a1.terapotik_alan }}</td></tr>
       <tr><th>Hedef gönüllü</th><td>{{ a1.hedef_hasta }}</td></tr>
       <tr><th>Kollar</th><td>{% for kol in a2.kollar %}{{ kol.ad }}{% if a2.kollar|length > 1 %} ({{ kol.oran }}){% endif %}{{ ', ' if not loop.last }}{% endfor %}</td></tr>
@@ -34,6 +34,7 @@
       <tr><th>Kriterler</th><td>{{ a2.dahil.splitlines()|select|list|length }} dahil, {{ a2.haric.splitlines()|select|list|length }} hariç{% if a2.protokol_var %} · protokol metninden tamamlanacak{% endif %}</td></tr>
       {% if mod == 'cro' %}
       <tr><th>Merkezler</th><td>{% for m in a3.merkezler %}{{ merkez_adlari.get(m.id, m.id) }} (hedef {{ m.hedef }}){{ ', ' if not loop.last }}{% else %}sonra eklenecek{% endfor %}</td></tr>
+      <tr><th>Proje ekibi</th><td>{% if kullanici.rol.value in ('proje_yoneticisi','cra','veri_yoneticisi','istatistikci','farmakovijilans') %}{{ kullanici.ad_soyad }} (siz){{ ', ' if ekip_adlari }}{% endif %}{{ ekip_adlari|join(', ') }}{% if not ekip_adlari and kullanici.rol.value == 'yonetici' %}<span class="rozet sari">atanmadı</span>{% endif %}</td></tr>
       {% else %}
       <tr><th>Merkez</th><td>{{ merkez_adlari.get(a3.merkez_id, '—') }}{% if a3.bolum %} · {{ a3.bolum }}{% endif %}</td></tr>
       <tr><th>Baş araştırmacı</th><td>{{ a3.bas_arastirmaci_ad or '—' }}</td></tr>

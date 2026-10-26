@@ -2,8 +2,9 @@
 
 HBYS'den gelen Bundle -> Hasta (kimliksizlestirilmis) ve tersi. Kimlik tasiyan alanlar
 (Patient.name, address, telecom, identifier, photo, contact) hicbir kosulda icerige alinmaz;
-kayit_no identifier degerinin SHA-256 ozetinden turetilir ve merkezdeki anahtar listesi
-disinda geri cozulemez.
+kayit_no identifier degerinin HMAC-SHA256 ozetinden turetilir (anahtar: SC_TAKMA_AD_ANAHTARI) ve
+merkezdeki anahtar listesi disinda geri cozulemez. Anahtar degisirse scripts/yeniden_anahtarla.py
+mevcut kayitlari eski->yeni eslemeyle gunceller.
 
 Desteklenen kaynaklar: Patient, Condition, MedicationStatement, MedicationRequest, Observation,
 DocumentReference, DiagnosticReport, ResearchStudy, ResearchSubject.
@@ -11,7 +12,10 @@ DocumentReference, DiagnosticReport, ResearchStudy, ResearchSubject.
 
 import base64
 import hashlib
+import hmac
+import os
 
+from ...config import ayarlar
 from ...models._ortak import simdi
 from ..kimliksizlestirme import kimliksizlestir
 
@@ -54,15 +58,32 @@ def _tarih(deger: str | None) -> str | None:
     return deger[:10]  # dateTime -> YYYY-MM-DD; saat bilgisini tutmuyoruz
 
 
-def takma_kayit_no(identifier: list | None, kaynak_id: str | None, merkez_id: int) -> str:
-    """Patient.identifier (veya id) -> geri cozulemez takma ad."""
+def takma_anahtari() -> bytes:
+    """HMAC anahtari. Uretimde SC_TAKMA_AD_ANAHTARI zorunlu; gelistirmede secret_key'den turetilir."""
+    # TODO(entegrasyon): config.py'ye takma_ad_anahtari alani eklenince env dali yalnizca yedek kalir
+    a = ayarlar()
+    anahtar = getattr(a, "takma_ad_anahtari", None) or os.environ.get("SC_TAKMA_AD_ANAHTARI", "")
+    if anahtar:
+        return anahtar.encode("utf-8")
+    if a.uretim:
+        raise RuntimeError("Uretim ortaminda SC_TAKMA_AD_ANAHTARI tanimlanmali")
+    return hashlib.sha256(f"takma-ad:{a.secret_key}".encode("utf-8")).digest()
+
+
+def takma_kayit_no(identifier: list | None, kaynak_id: str | None, merkez_id: int,
+                   anahtar: bytes | str | None = None) -> str:
+    """Patient.identifier (veya id) -> geri cozulemez, anahtara bagli takma ad (HMAC-SHA256)."""
     ham = ""
     for i in identifier or []:
         if i.get("value"):
             ham = f"{i.get('system', '')}|{i['value']}"
             break
     ham = ham or f"id|{kaynak_id or ''}"
-    ozet = hashlib.sha256(f"m{merkez_id}:{ham}".encode("utf-8")).hexdigest()
+    if anahtar is None:
+        anahtar = takma_anahtari()
+    elif isinstance(anahtar, str):
+        anahtar = anahtar.encode("utf-8")
+    ozet = hmac.new(anahtar, f"m{merkez_id}:{ham}".encode("utf-8"), hashlib.sha256).hexdigest()
     return f"P-{ozet[:12].upper()}"
 
 
@@ -312,4 +333,4 @@ def gonullu_to_research_subject(gonullu) -> dict:
 
 
 __all__ = ["bundle_to_hasta", "hasta_to_fhir", "calisma_to_research_study", "gonullu_to_research_subject",
-           "takma_kayit_no", "FHIRHatasi"]
+           "takma_kayit_no", "takma_anahtari", "FHIRHatasi"]

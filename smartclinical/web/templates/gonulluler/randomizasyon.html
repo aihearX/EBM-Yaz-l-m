@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block baslik %}{{ c.kod }} · Randomizasyon{% endblock %}
+{% block yol %}<a href="/calismalar">Çalışmalar</a> › <a href="/calismalar/{{ c.id }}">{{ c.kod }}</a> › <a href="/calismalar/{{ c.id }}/tasarim">Tasarım</a> › Randomizasyon{% endblock %}
+{% block icerik %}
+{% set liste_var = ayar and ayar.imza_zamani %}
+{% set kullanilan = ozet|sum(attribute='kullanilan') %}
+<div class="baslik-satiri">
+  <div><h1>Randomizasyon listesi</h1><small>{{ c.kod }} · {{ c.kollar|length }} kol{% if c.kollar %}: {% for k in c.kollar %}{{ k.ad }} ({{ k.oran }}){% if not loop.last %}, {% endif %}{% endfor %}{% endif %}</small></div>
+  <div class="sag">{% if liste_var %}<span class="rozet yesil">Liste hazır</span>{% else %}<span class="rozet sari">Liste yok</span>{% endif %}</div>
+</div>
+<div class="izgara k21">
+  <div>
+    <div class="kart">
+      <h2>Özet</h2>
+      {% if liste_var %}
+      <table class="sikisik"><tr><th>Strata</th><th class="sag">Kayıt</th><th class="sag">Kullanılan</th><th class="sag">Kalan</th></tr>
+        {% for s in ozet %}<tr><td>{{ 'Tek liste' if s.strata == '*' else 'Merkez ' ~ s.strata }}</td><td class="sayi">{{ s.toplam }}</td><td class="sayi">{{ s.kullanilan }}</td><td class="sayi {{ 'kirmizi' if s.kalan == 0 }}">{{ s.kalan }}</td></tr>{% endfor %}
+      </table>
+      <p class="kucuk" style="margin-top:8px">Blok boyutu {{ ayar.blok_boyutu }} · strata: {{ ayar.strata_etiket }} · üreten: {{ ayar.olusturan.ad_soyad if ayar.olusturan else '—' }} · {{ ayar.imza_zamani|tarih }}{% if son_tahsis %} · son tahsis {{ son_tahsis|tarih }}{% endif %}</p>
+      {% else %}
+      <p class="kucuk">Henüz liste üretilmedi. Birden fazla kollu çalışmada liste üretildiğinde gönüllü çalışmaya alınırken kol otomatik ve sırayla atanır; koordinatör kolu seçemez ve sıradaki kolu göremez.</p>
+      {% endif %}
+    </div>
+    <div class="not">Kol dizilimi ve sıradaki tahsis hiçbir ekranda gösterilmez; yalnızca sayılar görünür. Liste üretimi e-imza ile denetim izine yazılır. Tahsis yapılmış liste yeniden üretilemez; kayıt tükenirse yeni çalışma kodu ile ek liste için veri yöneticisine başvurun.</div>
+  </div>
+  <div>
+    <div class="kart">
+      <h2>{{ 'Listeyi yeniden üret' if liste_var else 'Liste üret' }}</h2>
+      {% if c.kollar|length < 2 %}
+      <p class="kucuk">Tek kollu çalışmada randomizasyon listesi gerekmez; gönüllüler doğrudan çalışmaya alınır. Kolları <a href="/calismalar/{{ c.id }}/tasarim">tasarım sayfasında</a> tanımlayın.</p>
+      {% elif kullanilan %}
+      <p class="kucuk">{{ kullanilan }} tahsis yapıldı; liste artık değiştirilemez.</p>
+      {% else %}
+      <form method="post" action="/calismalar/{{ c.id }}/randomizasyon/uret">
+        <div class="alan"><label>Blok boyutu</label><input type="number" name="blok_boyutu" value="{{ ayar.blok_boyutu if ayar else toplam_oran * 2 }}" min="{{ toplam_oran }}" max="24" step="{{ toplam_oran }}"><div class="yardim">Kol oranları toplamının ({{ toplam_oran }}) katı olmalı; küçük bloklar tahmin edilebilirliği artırır, 4–8 yaygındır.</div></div>
+        <div class="alan"><label>Strata</label><select name="strata">{% for k, v in STRATA_ETIKET.items() %}<option value="{{ k }}" {{ 'selected' if ayar and ayar.strata == k }}>{{ v }}</option>{% endfor %}</select><div class="yardim">Merkeze göre strata: her merkez kendi dengeli listesini kullanır.</div></div>
+        <div class="alan"><label>Kayıt sayısı</label><input type="number" name="kayit_sayisi" placeholder="boş: hedef x 1,2 + bir blok" min="2"></div>
+        <div class="alan"><label>E-imza parolası</label><input type="password" name="parola" required autocomplete="current-password"></div>
+        <button class="btn birincil">{{ 'Yeniden üret ve imzala' if liste_var else 'Üret ve imzala' }}</button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

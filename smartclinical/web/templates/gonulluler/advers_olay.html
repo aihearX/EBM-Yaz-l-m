@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block baslik %}{{ g.gonullu_no }} · Advers olay{% endblock %}
+{% block yol %}<a href="/calismalar/{{ g.calisma_id }}">{{ g.calisma.kod }}</a> › <a href="/gonulluler/{{ g.id }}">{{ g.gonullu_no }}</a> › Advers olay{% endblock %}
+{% block icerik %}
+{% set duzenle = izinli(kullanici, 'guvenlik.bildir') %}
+<div class="baslik-satiri">
+  <div><h1>{{ a.terim }}</h1><small>Gönüllü {{ g.gonullu_no }} · {{ g.calisma.kod }} · başlangıç {{ a.baslangic|tarih }}</small></div>
+  <div class="sag">{% if a.ciddi %}<span class="rozet kirmizi" style="font-size:13px">SAE</span>{% if a.susar %}<span class="rozet kirmizi">SUSAR</span>{% endif %}{% endif %}
+    {% if a.ciddi and a.bildirim_suresi_gun is not none and not a.titck_bildirim %}<span class="rozet {{ 'kirmizi' if a.bildirim_suresi_gun < 0 else 'sari' }}">TİTCK bildirimi: {{ a.bildirim_suresi_gun }} gün</span>{% endif %}
+    <button class="btn" onclick="window.print()">Yazdır</button></div>
+</div>
+{% if hata %}<div class="mesaj uyari">{{ hata }}</div>{% endif %}
+<div class="izgara k21">
+  <div>
+    <div class="kart">
+      <h2>Olay özeti</h2>
+      <table class="sikisik">
+        <tr><th>Terim</th><td>{{ a.terim }}{% if a.meddra_pt %} · PT: {{ a.meddra_pt }}{% endif %}</td><th>Sistem-organ sınıfı</th><td>{{ a.meddra_soc or 'SOC girilmedi' }}</td></tr>
+        <tr><th>Başlangıç</th><td>{{ a.baslangic|tarih }}</td><th>Bitiş</th><td>{{ a.bitis|tarih }}</td></tr>
+        <tr><th>Derece</th><td>{{ a.siddet_etiket }}</td><th>Nedensellik</th><td>{{ a.nedensellik_etiket }}</td></tr>
+        <tr><th>Ciddi</th><td>{{ 'Evet' if a.ciddi else 'Hayır' }}{% if a.ciddiyet_olcutu %} · {{ a.ciddiyet_etiket }}{% endif %}</td><th>Beklenen</th><td>{{ 'Evet' if a.beklenen else 'Hayır' }}</td></tr>
+        <tr><th>Sonuç</th><td>{{ a.sonuc or '—' }}</td><th>Alınan önlem</th><td>{{ a.alinan_onlem or '—' }}</td></tr>
+        {% if a.ciddi %}<tr><th>Farkındalık</th><td>{{ a.farkindalik_tarihi|tarih }}</td><th>Bildirimler</th><td>Sponsor {{ a.sponsor_bildirim|tarih }} · TİTCK {{ a.titck_bildirim|tarih }} · EK {{ a.etik_bildirim|tarih }}</td></tr>{% endif %}
+      </table>
+      {% if a.anlatim %}<p style="margin-top:8px"><b>Anlatım.</b> {{ a.anlatim }}</p>{% endif %}
+      {% if a.takip_notu %}<h3 style="margin-top:10px">Takip notları</h3><pre style="white-space:pre-wrap;font:inherit;margin:0">{{ a.takip_notu }}</pre>{% endif %}
+    </div>
+    {% if duzenle %}
+    <form method="post" class="kart">
+      <h2>Güncelle</h2>
+      <div class="izgara k3">
+        <div class="alan"><label>Bitiş</label><input type="date" name="bitis" value="{{ a.bitis.isoformat() if a.bitis else '' }}"></div>
+        <div class="alan"><label>Sonuç</label><select name="sonuc"><option value="">—</option>{% for s in SONUC_LISTESI %}<option {{ 'selected' if a.sonuc == s }}>{{ s }}</option>{% endfor %}</select></div>
+        <div class="alan"><label>Derece (CTCAE)</label><select name="siddet">{% for k, v in SIDDET.items() %}<option value="{{ k }}" {{ 'selected' if a.siddet == k }}>{{ v }}</option>{% endfor %}</select></div>
+      </div>
+      <div class="izgara k3">
+        <div class="alan"><label>Nedensellik</label><select name="nedensellik">{% for k, v in NEDENSELLIK.items() %}<option value="{{ k }}" {{ 'selected' if a.nedensellik == k }}>{{ v }}</option>{% endfor %}</select></div>
+        <div class="alan"><label>Ciddi</label>{% if a.ciddi %}<input type="text" value="Evet (SAE) — geri alınamaz" disabled><input type="hidden" name="ciddi" value="1">{% else %}<select name="ciddi"><option value="0">Hayır</option><option value="1">Evet — SAE'ye yükselt</option></select>{% endif %}</div>
+        <div class="alan"><label>Ciddiyet ölçütü</label><select name="ciddiyet_olcutu"><option value="">—</option>{% for k, v in CIDDIYET.items() %}<option value="{{ k }}" {{ 'selected' if a.ciddiyet_olcutu == k }}>{{ v }}</option>{% endfor %}</select></div>
+      </div>
+      <div class="izgara k3">
+        <div class="alan"><label>Sistem-organ sınıfı (MedDRA SOC)</label><select name="meddra_soc"><option value="">—</option>{% for s in SOC_LISTESI %}<option {{ 'selected' if a.meddra_soc == s }}>{{ s }}</option>{% endfor %}</select></div>
+        <div class="alan"><label>MedDRA tercih edilen terim (PT)</label><input type="text" name="meddra_pt" value="{{ a.meddra_pt or '' }}" placeholder="Neutropenia"></div>
+        <div class="alan"><label>Farkındalık tarihi (SAE)</label><input type="date" name="farkindalik_tarihi" value="{{ a.farkindalik_tarihi.isoformat() if a.farkindalik_tarihi else '' }}"><div class="yardim">Boş bırakılırsa SAE'ye yükseltmede bugün yazılır.</div></div>
+      </div>
+      <div class="alan"><label>Takip notu</label><textarea name="takip_notu" style="min-height:50px" placeholder="Klinik seyir, yeni bulgu, alınan karar"></textarea></div>
+      <div class="alan"><label>Değişiklik gerekçesi (zorunlu)</label><input type="text" name="gerekce" required placeholder="Takip vizitinde bitiş tarihi öğrenildi"></div>
+      <button class="btn birincil">Kaydet</button> <a class="btn" href="/gonulluler/{{ g.id }}">Geri</a>
+    </form>
+    {% endif %}
+  </div>
+  <div>
+    <div class="not">Her güncelleme gerekçesiyle denetim izine eski/yeni değerleriyle yazılır. Ciddiyet yalnızca yükseltilebilir; SAE'ye yükseltildiğinde farkındalık tarihinden itibaren TİTCK bildirim süresi işler (ölüm / yaşamı tehdit: 7 gün, diğer: 15 gün). Bildirim tarihleri gönüllü sayfasındaki 'bildir' düğmeleriyle girilir.</div>
+    {% if not duzenle %}<p class="kucuk"><a class="btn" href="/gonulluler/{{ g.id }}">Geri</a></p>{% endif %}
+  </div>
+</div>
+{% endblock %}

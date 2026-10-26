@@ -16,7 +16,7 @@
     <pre>kayit_no;dogum_yili;cinsiyet;icd10;metin
 HBYS-48213;1962;K;C50.9,E11.9;"58 yaşında kadın hasta ... ER (+) %90, HER2 negatif ..."</pre>
     <ul class="liste-sade">
-      <li><b>kayit_no</b>: HBYS hasta/protokol numarası; sistemde SHA-256 ile takma ada çevrilir, ham değer saklanmaz.</li>
+      <li><b>kayit_no</b>: HBYS hasta/protokol numarası; sistemde anahtara bağlı özetle (HMAC-SHA256) takma ada çevrilir, ham değer saklanmaz.</li>
       <li><b>icd10</b>: virgülle ayrılmış tanı kodları (ön filtre ve yapısal değerlendirme için).</li>
       <li><b>metin</b>: epikriz/patoloji metni; kimliksizleştirme ikinci geçişinde şüpheli kalıp kalırsa satır reddedilir.</li>
     </ul>

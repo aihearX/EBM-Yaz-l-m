@@ -1,7 +1,10 @@
-from sqlalchemy import ForeignKey, Integer, String
+from datetime import datetime
+
+from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..db import Taban
+from ._ortak import simdi
 
 MODLAR = [
     ("tekil", "Tekil araştırmacı"),
@@ -28,3 +31,16 @@ class KurulumAyari(Taban):
     @property
     def mod_etiket(self) -> str:
         return MOD_ETIKET.get(self.mod, self.mod)
+
+
+class CalismaTaslagi(Taban):
+    """Calisma sihirbazinin yarim kalan taslagi. Kullanici basina tek kayit; calisma olusunca silinir."""
+
+    __tablename__ = "calisma_taslagi"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    kullanici_id: Mapped[int] = mapped_column(ForeignKey("kullanici.id"), unique=True, index=True)
+    veri: Mapped[dict] = mapped_column(JSON, default=dict)
+    guncelleme: Mapped[datetime] = mapped_column(DateTime, default=simdi, onupdate=simdi, nullable=False)
+
+    kullanici = relationship("Kullanici")

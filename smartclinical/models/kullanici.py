@@ -1,7 +1,7 @@
 import enum
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Integer, String
+from sqlalchemy import JSON, Boolean, DateTime, Enum, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..db import Taban
@@ -50,12 +50,21 @@ class Kullanici(Taban, ZamanDamgasi):
     hatali_giris: Mapped[int] = mapped_column(Integer, default=0)
     parola_degisim: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     kurum: Mapped[str | None] = mapped_column(String(160), nullable=True)  # sponsor/CRO kullanicilari icin kurum adi
+    kilit_bitis: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)  # sureli kilit; None = kilitli degil
+    parola_gecmisi: Mapped[list | None] = mapped_column(JSON, nullable=True, default=list)  # son 5 hash
+    # yonetici gecici parola belirledi: ilk giriste degistirilmesi zorunlu. Kullanicinin kendi sectigi
+    # parolayla acilan hesaplarda (kurulum, komut satiri) False.
+    ilk_giris_degisim: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     merkez = relationship("Merkez", foreign_keys=[merkez_id])
 
     @property
     def rol_etiket(self) -> str:
         return ROL_ETIKET.get(self.rol, self.rol.value)
+
+    @property
+    def kilitli(self) -> bool:
+        return bool(self.kilit_bitis and self.kilit_bitis > simdi())
 
 
 class ApiAnahtari(Taban):

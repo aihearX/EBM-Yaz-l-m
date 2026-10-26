@@ -15,6 +15,7 @@
   </div>
 </div>
 <div class="kart">
+<div class="tablo-kaydir">
 <table>
   <tr><th>Protokol</th>{% if not sade %}<th>Tür</th>{% endif %}<th>Faz</th>{% if not sade %}<th>Sponsor</th>{% endif %}<th>Alan</th><th>Aşama</th><th class="sag">Merkez</th><th class="sag">Kayıt</th><th class="sag">Açık sorgu</th><th class="sag">Uyarı</th><th>Başlangıç</th></tr>
   {% for s in satirlar %}
@@ -33,5 +34,6 @@
     {% elif izinli(kullanici, 'calisma.olustur') %}Henüz çalışma yok. <a href="/sihirbaz">İlk çalışmanızı oluşturun</a>
     {% else %}Henüz size atanmış çalışma yok; proje yöneticinizle görüşün.{% endif %}</td></tr>{% endfor %}
 </table>
+</div>
 </div>
 {% endblock %}

@@ -5,7 +5,7 @@
 {% include "calismalar/_baslik.html" %}
 <div class="kart">
   <h2>Çalışma merkezleri</h2>
-  <table>
+  <div class="tablo-kaydir"><table>
     <tr><th>No</th><th>Merkez</th><th>Baş araştırmacı</th><th>Durum</th><th>Seçim</th><th>Aktivasyon</th><th>İlk hasta</th><th class="sag">Hedef</th><th class="sag">Randomize</th><th class="sag">Tahmin (h/ay)</th><th class="sag">Gecikme riski</th><th class="sag">Risk puanı</th><th></th></tr>
     {% for cm in c.merkezler|sort(attribute='merkez_no') %}
     {% set rand = cm.gonulluler|selectattr('randomizasyon_tarihi')|list|length %}
@@ -26,7 +26,7 @@
     </tr>
     {% else %}<tr><td colspan="13" class="kucuk">Bu çalışmaya henüz merkez eklenmedi.
       {% if izinli(kullanici, 'merkez.yonet') %}{% if adaylar %}<a href="#merkez-ekle">Merkez ekle</a>{% else %}<a href="/merkezler">Önce merkez kayıt defterine merkez ekleyin</a>{% endif %}{% else %}Merkez seçimini proje yöneticisi yapar.{% endif %}</td></tr>{% endfor %}
-  </table>
+  </table></div>
 </div>
 {% if izinli(kullanici, 'merkez.yonet') %}
 <div class="kart" style="max-width:700px" id="merkez-ekle">

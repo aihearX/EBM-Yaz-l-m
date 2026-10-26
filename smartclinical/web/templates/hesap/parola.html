@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block baslik %}Parola değiştir{% endblock %}
+{% block yol %}Hesap › Parola{% endblock %}
+{% block icerik %}
+<div class="baslik-satiri"><div><h1>Parola değiştir</h1><small>{{ kullanici.kullanici_adi }} · {{ kullanici.rol_etiket }}</small></div></div>
+{% if zorunlu %}<div class="mesaj uyari">Devam etmek için parolanızı değiştirmeniz gerekiyor.</div>{% endif %}
+{% if hata %}<div class="mesaj hata">{{ hata }}</div>{% endif %}
+<form method="post" action="/hesap/parola" class="kart" style="max-width:520px">
+  <div class="alan"><label>Mevcut parola</label><input type="password" name="eski" autocomplete="current-password" required autofocus></div>
+  <div class="alan"><label>Yeni parola</label><input type="password" name="yeni" autocomplete="new-password" required minlength="{{ en_az }}">
+    <div class="yardim">En az {{ en_az }} karakter, harf ve rakam. Son {{ gecmis }} parola yeniden kullanılamaz; parola {{ gun }} günde bir yenilenir.</div></div>
+  <div class="alan"><label>Yeni parola (tekrar)</label><input type="password" name="yeni_tekrar" autocomplete="new-password" required></div>
+  <button class="btn birincil">Kaydet</button>{% if not zorunlu %} <a class="btn" href="/">Vazgeç</a>{% endif %}
+</form>
+{% endblock %}

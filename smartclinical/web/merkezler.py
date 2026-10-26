@@ -6,10 +6,10 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..db import get_db
-from ..models import Arastirmaci, Hasta, Kullanici, Merkez
+from ..models import Arastirmaci, Calisma, Hasta, Kullanici, Merkez
 from ..services import denetim
 from ..services import kurulum as kurulum_svc
-from ..services.yetki import gerekli
+from ..services.yetki import calisma_filtresi, gerekli, merkez_erisimi
 from ._ortak import bilgi, ip, oturumlu
 from .sablon import goster
 
@@ -75,7 +75,11 @@ def detay(request: Request, mid: int, k: Kullanici = Depends(oturumlu), db: Sess
     if not m:
         raise HTTPException(404)
     hasta_n = len(db.execute(select(Hasta.id).where(Hasta.merkez_id == m.id)).all())
-    return goster(request, "merkezler/detay.html", m=m, p=_performans(m), hasta_n=hasta_n)
+    # calisma gecmisi kullanicinin gorebildigi calismalarla sinirli (sponsor kendi kurumu, merkez rolleri kendi merkezi)
+    gorunur = set(db.execute(calisma_filtresi(db, k, select(Calisma.id))).scalars().unique().all())
+    gecmis = sorted((cm for cm in m.calismalar if cm.calisma_id in gorunur), key=lambda cm: cm.calisma.kod)
+    return goster(request, "merkezler/detay.html", m=m, p=_performans(m), hasta_n=hasta_n, gecmis=gecmis,
+                  hasta_yukleyebilir=merkez_erisimi(k, m.id))
 
 
 @router.post("")
@@ -133,24 +137,28 @@ def hasta_yukle_form(request: Request, mid: int, k: Kullanici = Depends(gerekli(
     m = db.get(Merkez, mid)
     if not m:
         raise HTTPException(404)
+    if not merkez_erisimi(k, m.id):
+        raise HTTPException(403, "Bu merkezin hasta havuzuna erişiminiz yok")
     return goster(request, "merkezler/hasta_yukle.html", m=m, sonuc=None)
 
 
 @router.post("/{mid}/hasta-yukle")
 async def hasta_yukle(request: Request, mid: int, k: Kullanici = Depends(gerekli("hasta.goruntule")), db: Session = Depends(get_db)):
     """CSV kolonlari: kayit_no;dogum_yili;cinsiyet;icd10;metin  (icd10 virgulle ayrilmis).
-    kayit_no HBYS kimligi ise sha256 ile takma ada cevrilir; metinler kimliksizlestirilir."""
+    kayit_no HBYS kimligi ise anahtara bagli takma ada cevrilir (fhir.takma_kayit_no); metinler kimliksizlestirilir."""
     import csv
-    import hashlib
     import io
 
     from ..models._ortak import simdi
+    from ..services.fhir import takma_kayit_no
     from ..services.kimliksizlestirme import kimliksizlestir, metni_dogrula
 
     request.state.kullanici = k
     m = db.get(Merkez, mid)
     if not m:
         raise HTTPException(404)
+    if not merkez_erisimi(k, m.id):
+        raise HTTPException(403, "Bu merkezin hasta havuzuna erişiminiz yok")
     form = await request.form()
     dosya = form.get("dosya")
     icerik = (await dosya.read()).decode("utf-8-sig") if dosya else ""
@@ -161,7 +169,7 @@ async def hasta_yukle(request: Request, mid: int, k: Kullanici = Depends(gerekli
         ham = (satir.get("kayit_no") or "").strip()
         if not ham:
             continue
-        kayit_no = "P-" + hashlib.sha256(f"{mid}:{ham}".encode()).hexdigest()[:12]
+        kayit_no = takma_kayit_no([{"system": "hbys", "value": ham}], None, mid)
         metin = (satir.get("metin") or "").strip()
         metinler = []
         if metin:

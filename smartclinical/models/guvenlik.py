@@ -10,6 +10,37 @@ SIDDET = {"1": "Hafif (Derece 1)", "2": "Orta (Derece 2)", "3": "Ağır (Derece 
           "4": "Yaşamı tehdit eden (Derece 4)", "5": "Ölüm (Derece 5)"}
 NEDENSELLIK = {"iliskisiz": "İlişkisiz", "olasi_degil": "Olası değil", "olasi": "Olası",
                "muhtemel": "Muhtemel", "kesin": "Kesin"}
+SONUC_LISTESI = ["İyileşti", "Sekelle iyileşti", "Devam ediyor", "Ölüm", "Bilinmiyor"]
+# MedDRA sistem-organ siniflari (27), Turkce karsiliklari; SOC kodlamasi elle secilir
+SOC_LISTESI = [
+    "Kan ve lenf sistemi hastalıkları",
+    "Kardiyak hastalıklar",
+    "Konjenital, ailesel ve genetik hastalıklar",
+    "Kulak ve labirent hastalıkları",
+    "Endokrin hastalıklar",
+    "Göz hastalıkları",
+    "Gastrointestinal hastalıklar",
+    "Genel bozukluklar ve uygulama bölgesi durumları",
+    "Hepatobiliyer hastalıklar",
+    "Bağışıklık sistemi hastalıkları",
+    "Enfeksiyonlar ve enfestasyonlar",
+    "Yaralanma, zehirlenme ve işleme bağlı komplikasyonlar",
+    "Araştırmalar (laboratuvar ve ölçüm bulguları)",
+    "Metabolizma ve beslenme hastalıkları",
+    "Kas-iskelet ve bağ dokusu hastalıkları",
+    "Neoplazmlar (iyi huylu, kötü huylu, tanımlanmamış)",
+    "Sinir sistemi hastalıkları",
+    "Gebelik, lohusalık ve perinatal durumlar",
+    "Ürün sorunları",
+    "Psikiyatrik hastalıklar",
+    "Böbrek ve idrar yolu hastalıkları",
+    "Üreme sistemi ve meme hastalıkları",
+    "Solunum, göğüs ve mediasten hastalıkları",
+    "Deri ve deri altı doku hastalıkları",
+    "Sosyal koşullar",
+    "Cerrahi ve tıbbi işlemler",
+    "Vasküler hastalıklar",
+]
 CIDDIYET_OLCUTU = {"olum": "Ölüm", "yasam_tehdidi": "Yaşamı tehdit", "hastaneye_yatis": "Hastaneye yatış / uzama",
                    "sakatlik": "Kalıcı sakatlık", "konjenital": "Konjenital anomali", "tibbi_onemli": "Tıbbi açıdan önemli"}
 
@@ -36,6 +67,7 @@ class AdversOlay(Taban, ZamanDamgasi):
     titck_bildirim: Mapped[date | None] = mapped_column(Date, nullable=True)
     etik_bildirim: Mapped[date | None] = mapped_column(Date, nullable=True)
     anlatim: Mapped[str | None] = mapped_column(Text, nullable=True)
+    takip_notu: Mapped[str | None] = mapped_column(Text, nullable=True)  # izlem guncellemeleri (tarih + not)
 
     gonullu = relationship("Gonullu", back_populates="advers_olaylar")
 
@@ -59,3 +91,7 @@ class AdversOlay(Taban, ZamanDamgasi):
     @property
     def nedensellik_etiket(self) -> str:
         return NEDENSELLIK.get(self.nedensellik, self.nedensellik)
+
+    @property
+    def ciddiyet_etiket(self) -> str | None:
+        return CIDDIYET_OLCUTU.get(self.ciddiyet_olcutu or "", self.ciddiyet_olcutu)

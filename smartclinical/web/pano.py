@@ -1,5 +1,5 @@
 """Genel bakis: rol bazli uc gorunum (merkez, izlem, portfoy)."""
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy import func, select
@@ -14,7 +14,6 @@ from ..models import (
     EslestirmeSonucu,
     FormKaydi,
     Gonullu,
-    GonulluDurumu,
     Hasta,
     IzlemZiyareti,
     Kullanici,
@@ -25,11 +24,11 @@ from ..models import (
 )
 from ..services.yetki import calisma_filtresi, izinli
 from ._ortak import oturumlu
+from .calismalar import KAYITLI_DURUMLAR as KAYITLI
 from .sablon import goster
 
 router = APIRouter()
 
-KAYITLI = (GonulluDurumu.RANDOMIZE, GonulluDurumu.TEDAVIDE, GonulluDurumu.TAKIPTE, GonulluDurumu.TAMAMLADI)
 SORGU_GECIKME_GUN = 14
 # aktif calismalar once, arsiv en sonda
 _SIRA = {CalismaDurumu.KAYIT: 0, CalismaDurumu.IZLEM: 0, CalismaDurumu.AKTIVASYON: 1, CalismaDurumu.BASVURU: 2,
@@ -89,20 +88,42 @@ def _merkez_gorunumu(db: Session, k: Kullanici, bugun: date) -> dict:
                         "sorgu": len(sorgular), "eslestirme": len(eslestirmeler)}}
 
 
-def _izlem_gorunumu(db: Session, bugun: date) -> dict:
-    uyarilar = db.execute(select(RiskUyarisi).where(RiskUyarisi.durum == "acik")
-                          .order_by(RiskUyarisi.seviye.desc(), RiskUyarisi.olusturma.desc())).scalars().all()
-    acik = db.execute(select(Sorgu).where(Sorgu.durum == "acik").order_by(Sorgu.acilis)).scalars().all()
-    gecikmis = [s for s in acik if s.acik_gun > SORGU_GECIKME_GUN]
-    sdv_bekleyen = db.execute(select(FormKaydi).where(FormKaydi.durum == "tamamlandi")
-                              .order_by(FormKaydi.guncelleme)).scalars().all()
-    ziyaretler = db.execute(select(IzlemZiyareti).where(IzlemZiyareti.gerceklesen.is_(None))
-                            .order_by(IzlemZiyareti.planlanan)).scalars().all()
-    saeler = _saeler(db)
-    return {"uyarilar": uyarilar[:10], "gecikmis_sorgular": gecikmis[:10], "sdv_bekleyen": sdv_bekleyen[:10],
-            "ziyaretler": ziyaretler[:10], "saeler": saeler[:10],
-            "sayilar": {"uyari": len(uyarilar), "aksiyon": sum(1 for u in uyarilar if u.seviye == "aksiyon"),
-                        "gecikmis_sorgu": len(gecikmis), "sdv": len(sdv_bekleyen), "ziyaret": len(ziyaretler),
+def _sayi(db: Session, sorgu) -> int:
+    return db.scalar(select(func.count()).select_from(sorgu.order_by(None).subquery())) or 0
+
+
+def _izlem_gorunumu(db: Session, k: Kullanici, bugun: date) -> dict:
+    """CRA / veri yoneticisi / farmakovijilans: yalnizca erisebildigi calismalarin kayitlari (calisma_filtresi)."""
+    calisma_ids = calisma_filtresi(db, k, select(Calisma.id)).subquery()
+    uyari_s = (select(RiskUyarisi).where(RiskUyarisi.durum == "acik", RiskUyarisi.calisma_id.in_(select(calisma_ids)))
+               .order_by(RiskUyarisi.seviye.desc(), RiskUyarisi.olusturma.desc()))
+    uyarilar = db.execute(uyari_s.limit(10)).scalars().all()
+    uyari_n = _sayi(db, uyari_s)
+    aksiyon_n = _sayi(db, uyari_s.where(RiskUyarisi.seviye == "aksiyon"))
+    # gecikmis sorgu: acilis tarihi esikten eski olan acik sorgular (SQL tarafinda)
+    esik = datetime.combine(bugun - timedelta(days=SORGU_GECIKME_GUN), datetime.min.time())
+    sorgu_s = (select(Sorgu).join(Sorgu.form_kaydi).join(FormKaydi.gonullu)
+               .where(Sorgu.durum == "acik", Sorgu.acilis < esik, Gonullu.calisma_id.in_(select(calisma_ids)))
+               .order_by(Sorgu.acilis))
+    gecikmis = db.execute(sorgu_s.limit(10)).scalars().all()
+    sdv_s = (select(FormKaydi).join(FormKaydi.gonullu)
+             .where(FormKaydi.durum == "tamamlandi", Gonullu.calisma_id.in_(select(calisma_ids)))
+             .order_by(FormKaydi.guncelleme))
+    sdv_bekleyen = db.execute(sdv_s.limit(10)).scalars().all()
+    ziyaret_s = (select(IzlemZiyareti).join(IzlemZiyareti.calisma_merkez)
+                 .where(IzlemZiyareti.gerceklesen.is_(None), CalismaMerkez.calisma_id.in_(select(calisma_ids)))
+                 .order_by(IzlemZiyareti.planlanan))
+    bana = ziyaret_s.where(IzlemZiyareti.cra_id == k.id)
+    merkezlerim = ziyaret_s.where((IzlemZiyareti.cra_id != k.id) | (IzlemZiyareti.cra_id.is_(None)))
+    sae_s = (select(AdversOlay).join(AdversOlay.gonullu)
+             .where(AdversOlay.ciddi.is_(True), AdversOlay.titck_bildirim.is_(None), Gonullu.calisma_id.in_(select(calisma_ids))))
+    saeler = db.execute(sae_s).scalars().all()
+    saeler = sorted(saeler, key=lambda a: (a.bildirim_suresi_gun if a.bildirim_suresi_gun is not None else 99))
+    return {"uyarilar": uyarilar, "gecikmis_sorgular": gecikmis, "sdv_bekleyen": sdv_bekleyen,
+            "bana_atanan": db.execute(bana.limit(10)).scalars().all(),
+            "merkez_ziyaretleri": db.execute(merkezlerim.limit(10)).scalars().all(), "saeler": saeler[:10],
+            "sayilar": {"uyari": uyari_n, "aksiyon": aksiyon_n, "gecikmis_sorgu": _sayi(db, sorgu_s),
+                        "sdv": _sayi(db, sdv_s), "ziyaret": _sayi(db, ziyaret_s), "bana_atanan": _sayi(db, bana),
                         "sae": len(saeler), "gec_sae": sum(1 for a in saeler if (a.bildirim_suresi_gun or 0) < 0)}}
 
 
@@ -115,7 +136,11 @@ def _portfoy_satiri(db: Session, c: Calisma, bugun: date) -> dict:
     plan_ay = ((c.planlanan_bitis - bugun).days / 30.4) if c.planlanan_bitis else None
     uyarilar = db.execute(select(RiskUyarisi).where(RiskUyarisi.calisma_id == c.id, RiskUyarisi.durum == "acik")).scalars().all()
     sae = [a for g in c.gonulluler for a in g.advers_olaylar if a.ciddi]
-    if tahmini_ay is None or plan_ay is None:
+    if c.durum == CalismaDurumu.ARSIV:
+        # arsivdeki calismada takvim sutunlari bos
+        tahmini_ay = plan_ay = None
+        takvim = "arsiv"
+    elif tahmini_ay is None or plan_ay is None:
         takvim = "belirsiz"
     else:
         takvim = "zamaninda" if tahmini_ay <= plan_ay else "risk"
@@ -157,7 +182,7 @@ def pano(request: Request, k: Kullanici = Depends(oturumlu), db: Session = Depen
     if g == "merkez":
         baglam.update(_merkez_gorunumu(db, k, bugun))
     elif g == "izlem":
-        baglam.update(_izlem_gorunumu(db, bugun))
+        baglam.update(_izlem_gorunumu(db, k, bugun))
     else:
         satirlar = [_portfoy_satiri(db, c, bugun) for c in calismalar]
         baglam["satirlar"] = satirlar

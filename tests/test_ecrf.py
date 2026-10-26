@@ -208,6 +208,9 @@ def test_randomizasyonda_vizitler_tanimdan_uretilir(istemci):
                      follow_redirects=False)
     assert r.status_code == 303
     gid = int(r.headers["location"].rsplit("/", 1)[1])
+    # onam -> tarama -> randomize (gecis sozlugu: services/gonullu.GECISLER)
+    assert istemci.post(f"/gonulluler/{gid}/durum", data={"durum": "tarama", "tarih": "2024-03-02"},
+                        follow_redirects=False).status_code == 303
     assert istemci.post(f"/gonulluler/{gid}/durum", data={"durum": "randomize", "tarih": "2024-03-10", "kol_id": kol_id},
                         follow_redirects=False).status_code == 303
     db = oturum_fabrikasi()()
@@ -218,7 +221,7 @@ def test_randomizasyonda_vizitler_tanimdan_uretilir(istemci):
     assert v3.planlanan.isoformat() == "2024-05-05" and v3.pencere_gun == 3
     db.close()
     r = istemci.get(f"/gonulluler/{gid}")
-    assert r.status_code == 200 and "Randomize</option>" in r.text and "Vizit şeması tanımlı değil" not in r.text
+    assert r.status_code == 200 and "Çalışmaya alındı" in r.text and "Vizit şeması tanımlı değil" not in r.text
     # form matrisi: VS yalnizca V1/V2/V3'te, DM yalnizca Taramada
     fid = _form_id(cid, "VS")
     assert r.text.count(f"/form/{fid}?vizit_id=") == 3

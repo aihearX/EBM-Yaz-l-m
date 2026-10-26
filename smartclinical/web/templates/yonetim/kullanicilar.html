@@ -2,22 +2,24 @@
 {% block baslik %}Kullanıcılar{% endblock %}
 {% block yol %}Yönetim › Kullanıcılar ve Roller{% endblock %}
 {% block icerik %}
-<div class="baslik-satiri"><div><h1>Kullanıcılar ve roller</h1><small>Rol bazlı erişim denetimi (URS-SEC-01). Hesaplar 5 hatalı girişte kilitlenir; parolalar PBKDF2-SHA256 ile saklanır.</small></div></div>
+<div class="baslik-satiri"><div><h1>Kullanıcılar ve roller</h1><small>Rol bazlı erişim denetimi (URS-SEC-01). Hesaplar 5 hatalı girişte 15 dakika kilitlenir (her yeni kilitte süre iki katına çıkar); parolalar PBKDF2-SHA256 ile saklanır.</small></div></div>
 <div class="izgara k21">
   <div class="kart">
-    <table><tr><th>Kullanıcı adı</th><th>Ad Soyad</th><th>Rol</th><th>Merkez</th><th>Son giriş</th><th>Durum</th><th></th></tr>
-      {% for u in liste %}<tr><td><b>{{ u.kullanici_adi }}</b></td><td>{{ u.ad_soyad }}<br><small>{{ u.eposta }}</small></td><td>{{ u.rol_etiket }}</td><td>{{ u.merkez.sehir if u.merkez else '—' }}</td><td>{{ u.son_giris|tarih }}</td>
-        <td>{% if not u.aktif %}<span class="rozet">pasif</span>{% elif u.hatali_giris >= 5 %}<span class="rozet kirmizi">kilitli</span>{% else %}<span class="rozet yesil">aktif</span>{% endif %}</td>
-        <td><form method="post" action="/yonetim/kullanicilar/{{ u.id }}/durum" class="inline">{% if u.hatali_giris >= 5 %}<button class="btn kucuk" name="islem" value="kilit_ac">Kilidi aç</button>{% endif %}{% if u.aktif %}<button class="btn kucuk" name="islem" value="pasif">Pasifleştir</button>{% else %}<button class="btn kucuk" name="islem" value="aktif">Aktifleştir</button>{% endif %}</form></td></tr>{% endfor %}
+    <div class="tablo-kaydir">
+    <table><tr><th>Kullanıcı adı</th><th>Ad Soyad</th><th>Rol</th><th>Merkez / kurum</th><th>Son giriş</th><th>Durum</th><th></th></tr>
+      {% for u in liste %}{% set kilitli = u.kilit_bitis and u.kilit_bitis > simdi %}<tr><td><b>{{ u.kullanici_adi }}</b></td><td>{{ u.ad_soyad }}<br><small>{{ u.eposta }}</small></td><td>{{ u.rol_etiket }}</td><td>{{ u.merkez.sehir if u.merkez else (u.kurum or '—') }}</td><td>{{ u.son_giris|tarih }}</td>
+        <td>{% if not u.aktif %}<span class="rozet">pasif</span>{% elif kilitli %}<span class="rozet kirmizi" title="{{ u.kilit_bitis|tarih }} (UTC) sonuna kadar">kilitli</span>{% elif u.ilk_giris_degisim %}<span class="rozet sari">parola bekliyor</span>{% else %}<span class="rozet yesil">aktif</span>{% endif %}</td>
+        <td><form method="post" action="/yonetim/kullanicilar/{{ u.id }}/durum" class="inline">{% if kilitli or u.hatali_giris %}<button class="btn kucuk" name="islem" value="kilit_ac">Kilidi aç</button>{% endif %}{% if u.aktif %}<button class="btn kucuk" name="islem" value="pasif">Pasifleştir</button>{% else %}<button class="btn kucuk" name="islem" value="aktif">Aktifleştir</button>{% endif %}</form></td></tr>{% endfor %}
     </table>
+    </div>
   </div>
   <div class="kart">
     <h2>Kullanıcı ekle</h2>
     <form method="post" action="/yonetim/kullanicilar">
       <div class="ikili"><div class="alan"><label>Kullanıcı adı</label><input type="text" name="kullanici_adi" required></div><div class="alan"><label>Ad Soyad</label><input type="text" name="ad_soyad" required></div></div>
       <div class="alan"><label>E-posta</label><input type="email" name="eposta" required></div>
-      <div class="alan"><label>Geçici parola</label><input type="password" name="parola" required><div class="yardim">En az 10 karakter, harf ve rakam. İlk girişte değiştirilmesi istenir.</div></div>
-      <div class="ikili"><div class="alan"><label>Rol</label><select name="rol">{% for r in roller %}<option value="{{ r.value }}">{{ ROL_ETIKET[r] }}</option>{% endfor %}</select>
+      <div class="alan"><label>Geçici parola</label><input type="password" name="parola" required minlength="{{ en_az }}"><div class="yardim">En az {{ en_az }} karakter, harf ve rakam. İlk girişte değiştirilmesi zorunludur.</div></div>
+      <div class="ikili"><div class="alan"><label>Rol</label><select name="rol" id="rol-secimi">{% for r in roller %}<option value="{{ r.value }}">{{ ROL_ETIKET[r] }}</option>{% endfor %}</select>
         {% if ayar.mod != 'cro' %}<div class="yardim">Roller {{ ayar.mod_etiket }} moduna göre sadeleştirildi; tümü için Ayarlar'dan modu değiştirin.</div>{% endif %}</div>
         {% if ayar.mod == 'tekil' and ayar.varsayilan_merkez_id %}
         <input type="hidden" name="merkez_id" value="{{ ayar.varsayilan_merkez_id }}">
@@ -25,8 +27,21 @@
         {% else %}
         <div class="alan"><label>Merkez</label><select name="merkez_id"><option value="">—</option>{% for m in merkezler %}<option value="{{ m.id }}" {{ 'selected' if ayar.varsayilan_merkez_id == m.id }}>{{ m.ad }}</option>{% endfor %}</select></div>
         {% endif %}</div>
+      <div class="alan" id="kurum-alani"><label>Kurum <small id="kurum-not" style="font-weight:400;color:var(--gri-500)">(sponsor için zorunlu)</small></label>
+        <input type="text" name="kurum" id="kurum" list="sponsor-liste" placeholder="Çalışmalardaki sponsor adıyla birebir aynı"><datalist id="sponsor-liste">{% for s in sponsorlar %}<option value="{{ s }}">{% endfor %}</datalist>
+        <div class="yardim">Sponsor kullanıcısı yalnızca bu kurum adıyla kayıtlı çalışmaları görür (büyük/küçük harf ayrımı yok).</div></div>
       <button class="btn birincil">Ekle</button>
     </form>
   </div>
 </div>
+{% endblock %}
+{% block script %}
+<script>
+(function () {
+  var rol = document.getElementById('rol-secimi'), kurum = document.getElementById('kurum');
+  function guncelle() { kurum.required = rol.value === 'sponsor'; }
+  rol.addEventListener('change', guncelle);
+  guncelle();
+})();
+</script>
 {% endblock %}

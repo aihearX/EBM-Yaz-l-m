@@ -7,14 +7,18 @@
   <div class="sag"><form method="post" action="/yonetim/denetim/dogrula"><button class="btn">Zincir bütünlüğünü doğrula</button></form></div>
 </div>
 <div class="kart">
-  <form method="get" class="satir" style="margin-bottom:10px">
-    <select name="varlik"><option value="">Tüm varlıklar</option>{% for v in varliklar %}<option {{ 'selected' if v == varlik }}>{{ v }}</option>{% endfor %}</select>
-    <select name="islem"><option value="">Tüm işlemler</option>{% for v in islemler %}<option {{ 'selected' if v == islem }}>{{ v }}</option>{% endfor %}</select>
+  <form method="get" class="satir" style="margin-bottom:10px;flex-wrap:wrap">
+    <select name="varlik"><option value="">Tüm varlıklar</option>{% for v in varliklar %}<option value="{{ v }}" {{ 'selected' if v == varlik }}>{{ VARLIK_ETIKET.get(v, v) }}</option>{% endfor %}</select>
+    <select name="islem"><option value="">Tüm işlemler</option>{% for v in islemler %}<option value="{{ v }}" {{ 'selected' if v == islem }}>{{ ISLEM_ETIKET.get(v, v) }}</option>{% endfor %}</select>
     <input type="text" name="kullanici" value="{{ kullanici_f }}" placeholder="kullanıcı adı" style="width:150px">
+    <input type="date" name="baslangic" value="{{ baslangic }}" title="başlangıç"> <input type="date" name="bitis" value="{{ bitis }}" title="bitiş">
     <button class="btn">Filtrele</button>
+    {% if sorgu_dizgisi %}<a class="btn kucuk" href="/yonetim/denetim">Temizle</a>{% endif %}
+    <a class="btn" href="/yonetim/denetim?bicim=csv{% if sorgu_dizgisi %}&{{ sorgu_dizgisi }}{% endif %}">CSV indir</a>
   </form>
-  {% include "yonetim/_denetim_tablo.html" %}
-  <div style="margin-top:10px">{% if sayfa > 1 %}<a class="btn kucuk" href="?sayfa={{ sayfa-1 }}&varlik={{ varlik }}&islem={{ islem }}&kullanici={{ kullanici_f }}">Önceki</a>{% endif %} <small>Sayfa {{ sayfa }}</small> {% if kayitlar|length == boyut %}<a class="btn kucuk" href="?sayfa={{ sayfa+1 }}&varlik={{ varlik }}&islem={{ islem }}&kullanici={{ kullanici_f }}">Sonraki</a>{% endif %}</div>
+  <div class="tablo-kaydir">{% include "yonetim/_denetim_tablo.html" %}</div>
+  {% set sayfalama = {"sayfa": sayfa, "toplam_sayfa": ((toplam - 1) // boyut + 1) if toplam else 1, "toplam": toplam, "sorgu": sorgu_dizgisi} %}
+  {% include "_sayfalama.html" %}
 </div>
 <div class="kart">
   <h2>Son elektronik imzalar</h2>

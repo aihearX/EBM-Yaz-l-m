@@ -4,21 +4,39 @@
 {% block icerik %}
 {% set onizleme = onizleme is defined and onizleme %}
 {% set kilitli = (kayit and kayit.durum == 'kilitli') or onizleme %}
+{% set sorun_alan = sorun_alan if sorun_alan is defined else {} %}
+{% set satirlar = satirlar if satirlar is defined else [] %}
+{% set onay_bekliyor = onay_bekliyor is defined and onay_bekliyor %}
+{% set yeni_satir = yeni_satir is defined and yeni_satir %}
+{% set KAYIT_ETIKET = KAYIT_DURUM_ETIKET if KAYIT_DURUM_ETIKET is defined else {} %}
+{% set SORGU_ET = SORGU_ETIKET if SORGU_ETIKET is defined else {} %}
 <div class="baslik-satiri">
   <div><h1>{{ f.ad }} <small style="font-weight:400">({{ f.kod }} v{{ f.versiyon }})</small></h1>
-    <small>{% if onizleme %}Önizleme: veri kaydedilmez{% else %}Gönüllü {{ g.gonullu_no }}{% if vizit %} · {{ vizit.ad }}{% endif %}{% endif %}{% if f.aciklama %} · {{ f.aciklama }}{% endif %}</small></div>
-  <div class="sag">{% if kayit %}<span class="rozet {{ 'yesil' if kayit.durum in ('sdv','kilitli') else ('mavi' if kayit.durum == 'tamamlandi' else 'sari') }}">{{ kayit.durum }}</span>{% if kayit.sdv_zamani %}<small>SDV: {{ kayit.sdv_zamani|tarih }}</small>{% endif %}{% endif %}</div>
+    <small>{% if onizleme %}Önizleme: veri kaydedilmez{% else %}Gönüllü {{ g.gonullu_no }}{% if vizit %} · {{ vizit.ad }}{% endif %}{% if f.tekrarlayan %} · {% if kayit %}{{ kayit.tekrar_no }}. satır{% else %}yeni satır{% endif %}{% endif %}{% endif %}{% if f.aciklama %} · {{ f.aciklama }}{% endif %}</small></div>
+  <div class="sag">{% if kayit %}<span class="rozet {{ 'yesil' if kayit.durum in ('sdv','kilitli') else ('mavi' if kayit.durum == 'tamamlandi' else 'sari') }}">{{ KAYIT_ETIKET.get(kayit.durum, kayit.durum) }}</span>{% if kayit.sdv_zamani %}<small>SDV: {{ kayit.sdv_zamani|tarih }}</small>{% endif %}{% endif %}</div>
 </div>
-{% for alan, s in sorunlar %}<div class="mesaj uyari">{{ s }}</div>{% endfor %}
+{% for alan, s in sorunlar if not alan %}<div class="mesaj uyari">{{ s }}</div>{% endfor %}
+{% if onay_bekliyor %}
+<div class="mesaj uyari"><b>{{ sorun_alan|length }} alan sorgulu.</b> Aşağıda işaretli alanları düzeltip yeniden <i>Tamamla</i> deyin ya da değerler kaynak belgeyle uyumluysa <i>Yine de tamamla</i> ile formu kapatın; işaretli alanlar için otomatik sorgu açılır.</div>
+{% endif %}
+{% if f.tekrarlayan and not onizleme %}
+<div class="kart sikisik" style="margin-bottom:12px">
+  <b>Satırlar{% if vizit %} · {{ vizit.ad }}{% endif %}</b>
+  {% for s in satirlar %}<a href="/gonulluler/{{ g.id }}/form/{{ f.id }}?vizit_id={{ vizit.id if vizit else '' }}&tekrar_no={{ s.tekrar_no }}" class="rozet {{ 'mavi' if kayit and s.id == kayit.id else 'kontur' }}" style="margin-left:6px">{{ s.tekrar_no }}. {{ (s.veriler.values()|list|first) or '—' }} · {{ KAYIT_ETIKET.get(s.durum, s.durum) }}</a>{% else %}<span class="kucuk" style="margin-left:6px">Henüz satır yok.</span>{% endfor %}
+  {% if izinli(kullanici, 'veri.gir') and not yeni_satir %}<a href="/gonulluler/{{ g.id }}/form/{{ f.id }}?vizit_id={{ vizit.id if vizit else '' }}&yeni=1" class="btn kucuk" style="margin-left:10px">Yeni satır</a>{% endif %}
+</div>
+{% endif %}
 <div class="izgara k21">
   <form method="post" class="kart" {% if kilitli %}onsubmit="return false"{% endif %}>
     <input type="hidden" name="vizit_id" value="{{ vizit.id if vizit else '' }}">
+    {% if f.tekrarlayan %}<input type="hidden" name="tekrar_no" value="{{ kayit.tekrar_no if kayit else '' }}"><input type="hidden" name="yeni" value="{{ '1' if not kayit else '' }}">{% endif %}
     {% set ns = namespace(bolum=None) %}
     <div class="izgara k2">
     {% for a in f.alanlar %}
       {% if a.bolum and a.bolum != ns.bolum %}{% set ns.bolum = a.bolum %}<h3 style="grid-column:1 / -1;margin:6px 0 0;padding-top:6px;border-top:1px solid var(--gri-200)">{{ a.bolum }}</h3>{% endif %}
       {% set v = veriler.get(a.kod, '') %}
-      <div class="alan" {% if a.kosul and a.kosul.alan %}data-kosul-alan="{{ a.kosul.alan }}" data-kosul-deger="{{ a.kosul.deger }}"{% endif %}>
+      {% set sorun = sorun_alan.get(a.kod) %}
+      <div class="alan" {% if a.kosul and a.kosul.alan %}data-kosul-alan="{{ a.kosul.alan }}" data-kosul-deger="{{ a.kosul.deger }}"{% endif %}{% if sorun %} style="border-left:3px solid var(--sari);padding-left:8px"{% endif %}>
         <label>{{ a.etiket }}{% if a.zorunlu %} *{% endif %}{% if a.birim %} <small>({{ a.birim }})</small>{% endif %}</label>
         {% if a.tip == 'secim' %}
           <select name="{{ a.kod }}" {{ 'disabled' if kilitli }}><option value="">—</option>{% for s in a.secenekler %}<option {{ 'selected' if v == s }}>{{ s }}</option>{% endfor %}</select>
@@ -31,7 +49,8 @@
         {% elif a.tip == 'sayi' %}<input type="text" name="{{ a.kod }}" value="{{ v }}" inputmode="decimal" {{ 'disabled' if kilitli }}>
         {% elif a.tip == 'metin_uzun' %}<textarea name="{{ a.kod }}" {{ 'disabled' if kilitli }}>{{ v }}</textarea>
         {% else %}<input type="text" name="{{ a.kod }}" value="{{ v }}" {{ 'disabled' if kilitli }}>{% endif %}
-        {% if a.min is not none or a.max is not none %}<div class="yardim">Beklenen aralık: {{ a.min if a.min is not none else '…' }} – {{ a.max if a.max is not none else '…' }}</div>{% endif %}
+        {% if sorun %}<div class="yardim" style="color:var(--sari)">{{ sorun }}</div>
+        {% elif a.min is not none or a.max is not none %}<div class="yardim">Beklenen aralık: {{ a.min if a.min is not none else '…' }} – {{ a.max if a.max is not none else '…' }}</div>{% endif %}
       </div>
     {% else %}<p class="kucuk">Bu formda henüz alan tanımlı değil.</p>
     {% endfor %}
@@ -40,9 +59,10 @@
       <a class="btn" href="{{ geri }}">Tasarımcıya dön</a>
     {% else %}
       {% if not kilitli and izinli(kullanici, 'veri.gir') %}
-        {% if kayit and kayit.durum in ('tamamlandi','sdv') %}<div class="alan"><label>Değişiklik gerekçesi (zorunlu)</label><input type="text" name="gerekce" placeholder="Kaynak belgeye göre düzeltme"></div>{% endif %}
+        {% if kayit and kayit.durum in ('tamamlandi','sdv') %}<div class="alan"><label>Değişiklik gerekçesi (zorunlu)</label><input type="text" name="gerekce" value="{{ gerekce if gerekce is defined else '' }}" placeholder="Kaynak belgeye göre düzeltme"></div>{% endif %}
         <button class="btn" name="islem" value="kaydet">Taslak kaydet</button>
-        <button class="btn birincil" name="islem" value="tamamla">Tamamla</button>
+        <button class="btn birincil" name="islem" value="tamamla">{{ 'Düzelttim, tamamla' if onay_bekliyor else 'Tamamla' }}</button>
+        {% if onay_bekliyor %}<button class="btn" name="islem" value="tamamla_onayla">Yine de tamamla ({{ sorun_alan|length }} sorgu açılır)</button>{% endif %}
       {% endif %}
       <a class="btn" href="/gonulluler/{{ g.id }}">Geri</a>
     {% endif %}
@@ -51,11 +71,11 @@
     {% if kayit %}
     <div class="kart">
       <h2>Kayıt bilgisi</h2>
-      <table class="sikisik"><tr><th>Giren</th><td>{{ kayit.giren_id }}</td></tr><tr><th>Son güncelleme</th><td>{{ kayit.guncelleme|tarih }}</td></tr><tr><th>Durum</th><td>{{ kayit.durum }}</td></tr>{% if kayit.kilit_zamani %}<tr><th>Kilit</th><td>{{ kayit.kilit_zamani|tarih }}</td></tr>{% endif %}</table>
+      <table class="sikisik"><tr><th>Giren</th><td>{{ kayit.giren.ad_soyad if kayit.giren else '—' }}</td></tr><tr><th>Son güncelleme</th><td>{{ kayit.guncelleme|tarih }}</td></tr><tr><th>Durum</th><td>{{ KAYIT_ETIKET.get(kayit.durum, kayit.durum) }}</td></tr><tr><th>Form sürümü</th><td>v{{ kayit.form_versiyon or f.versiyon }}</td></tr>{% if kayit.sdv_yapan %}<tr><th>SDV</th><td>{{ kayit.sdv_yapan.ad_soyad }} · {{ kayit.sdv_zamani|tarih }}</td></tr>{% endif %}{% if kayit.kilit_zamani %}<tr><th>Kilit</th><td>{{ kayit.kilit_zamani|tarih }}</td></tr>{% endif %}</table>
       {% if kayit.durum == 'tamamlandi' and izinli(kullanici, 'veri.sdv') %}<form method="post" action="/gonulluler/{{ g.id }}/form-kaydi/{{ kayit.id }}/sdv" style="margin-top:8px"><button class="btn">Kaynak belge doğrulaması (SDV) yapıldı</button></form>{% endif %}
       {% if kayit.durum in ('tamamlandi','sdv') and izinli(kullanici, 'veri.kilitle') %}<form method="post" action="/gonulluler/{{ g.id }}/form-kaydi/{{ kayit.id }}/kilitle" class="satir" style="margin-top:8px"><input type="password" name="parola" placeholder="e-imza parolası" required><button class="btn">Kilitle</button></form>{% endif %}
       <h3 style="margin-top:12px">Sorgular</h3>
-      <ul class="liste-sade">{% for s in kayit.sorgular %}<li><b>{{ s.alan }}</b> <span class="rozet {{ 'sari' if s.durum == 'acik' else '' }}">{{ s.durum }}</span><br>{{ s.soru }}{% if s.cevap %}<br><small>↳ {{ s.cevap }}</small>{% endif %}</li>{% else %}<li class="kucuk">Sorgu yok.</li>{% endfor %}</ul>
+      <ul class="liste-sade">{% for s in kayit.sorgular %}<li><b>{{ s.alan }}</b> <span class="rozet {{ 'turkuaz' if s.kaynak == 'otomatik' else '' }}">{{ SORGU_ET.get(s.kaynak, s.kaynak) }}</span> <span class="rozet {{ 'sari' if s.durum == 'acik' else '' }}">{{ SORGU_ET.get(s.durum, s.durum) }}</span><br>{{ s.soru }}{% if s.cevap %}<br><small>↳ {{ s.cevap }}</small>{% endif %}</li>{% else %}<li class="kucuk">Sorgu yok.</li>{% endfor %}</ul>
       {% if izinli(kullanici, 'sorgu.ac') %}<form method="post" action="/gonulluler/{{ g.id }}/sorgu" style="margin-top:8px"><input type="hidden" name="form_kaydi_id" value="{{ kayit.id }}">
         <div class="ikili"><select name="alan">{% for a in f.alanlar %}<option value="{{ a.kod }}">{{ a.etiket }}</option>{% endfor %}</select><input type="text" name="soru" placeholder="Sorgu metni" required></div><button class="btn kucuk" style="margin-top:4px">Sorgu aç</button></form>{% endif %}
     </div>
@@ -63,7 +83,7 @@
     {% if onizleme %}
     <div class="kart"><h2>Önizleme</h2><p class="kucuk">Form, veri girişi yapanın göreceği biçimde gösteriliyor. Koşullu alanlar, koşul alanının değerine göre açılıp kapanır. Alanların sırası ve bölüm başlıkları tasarımcıdaki sırayı izler.</p></div>
     {% endif %}
-    <div class="not">Zorunlu alanlar (*) boş bırakıldığında ve aralık dışı değerlerde kayıt engellenmez, otomatik sorgu açılır. SDTM dışa aktarımı veri yöneticisi tarafından çalışma kilidinden sonra yapılır.</div>
+    <div class="not">Taslak kayıtta denetim yapılmaz. <i>Tamamla</i> dendiğinde zorunlu alanlar ve beklenen aralıklar kontrol edilir; sorun varsa formda kalırsınız, düzeltir ya da <i>yine de tamamla</i> ile sorgu açarsınız. SDTM dışa aktarımı veri yöneticisi tarafından çalışma kilidinden sonra yapılır.</div>
   </div>
 </div>
 {% endblock %}

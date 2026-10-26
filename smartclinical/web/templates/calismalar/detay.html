@@ -45,7 +45,7 @@
         {% else %}<li class="kucuk">Bu aşama için kontrol maddesi yok.</li>{% endfor %}
       </ul>
       <small>Maddeler çalışma verisinden hesaplanır; aşama kararı proje yöneticisinindir.</small>
-      {% if izinli(kullanici, 'calisma.duzenle') %}
+      {% if duzenleyebilir %}
       <div class="ayrac"></div>
       <form method="post" action="/calismalar/{{ c.id }}/durum" data-onay="Çalışma aşamasını değiştirmek istediğinize emin misiniz? İşlem denetim izine yazılır.">
         <div class="alan"><label>Aşamayı güncelle</label><select name="durum">{% for d in DURUM_SIRASI %}<option value="{{ d.value }}" {{ 'selected' if d == c.durum }}>{{ DURUM_ETIKET[d] }}</option>{% endfor %}</select></div>
@@ -54,10 +54,13 @@
       </form>
       {% endif %}
     </div>
+    {% if kullanici.rol.value != 'sponsor' %}
     <div class="kart">
       <h2>Son işlemler</h2>
-      <ul class="liste-sade">{% for d in son_denetim %}<li><small>{{ d.zaman|tarih }} · {{ d.kullanici_adi or 'sistem' }}</small><br>{{ d.islem }} · {{ d.varlik }}{% if d.gerekce %} – <i>{{ d.gerekce }}</i>{% endif %}</li>{% else %}<li class="kucuk">Kayıt yok</li>{% endfor %}</ul>
+      <ul class="liste-sade">{% for d in son_denetim %}<li><small>{{ d.zaman|tarih }} · {{ d.kullanici_adi or 'sistem' }}</small><br>{{ denetim_cumle(d) }}{% if d.gerekce %} – <i>{{ d.gerekce }}</i>{% endif %}</li>{% else %}<li class="kucuk">Kayıt yok</li>{% endfor %}</ul>
+      {% if izinli(kullanici, 'denetim.goruntule') %}<small><a href="/calismalar/{{ c.id }}/denetim">Tüm denetim izi</a></small>{% endif %}
     </div>
+    {% endif %}
   </div>
 </div>
 {% endblock %}

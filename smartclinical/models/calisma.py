@@ -83,7 +83,9 @@ class Calisma(Taban, ZamanDamgasi):
     eudract_no: Mapped[str | None] = mapped_column(String(32), nullable=True)
     risk_sinifi: Mapped[str | None] = mapped_column(String(16), nullable=True)  # dusuk/orta/yuksek (RBM)
     notlar: Mapped[str | None] = mapped_column(Text, nullable=True)
+    olusturan_id: Mapped[int | None] = mapped_column(ForeignKey("kullanici.id"), nullable=True)
 
+    olusturan = relationship("Kullanici", foreign_keys=[olusturan_id])
     versiyonlar = relationship("ProtokolVersiyon", back_populates="calisma", cascade="all, delete-orphan",
                                order_by="ProtokolVersiyon.id")
     kriterler = relationship("Kriter", back_populates="calisma", cascade="all, delete-orphan",

@@ -54,6 +54,10 @@ class GonulluDurumu(str, enum.Enum):
     TAMAMLADI = "tamamladi"
     AYRILDI = "ayrildi"
 
+    @property
+    def etiket(self) -> str:
+        return GD_ETIKET.get(self, self.value)
+
 
 GD_ETIKET = {
     GonulluDurumu.ADAY: "Aday",
@@ -97,6 +101,9 @@ class Gonullu(Taban, ZamanDamgasi):
 
     @property
     def durum_etiket(self) -> str:
+        # tek kollu / kolsuz calismada "randomize" kelimesi yaniltici; bkz. services/gonullu.gonullu_durum_etiketleri
+        if self.durum == GonulluDurumu.RANDOMIZE and self.calisma is not None and len(self.calisma.kollar) <= 1:
+            return "Çalışmaya alındı"
         return GD_ETIKET.get(self.durum, self.durum.value)
 
 
@@ -112,6 +119,7 @@ class Vizit(Taban):
     pencere_gun: Mapped[int] = mapped_column(Integer, default=3)
     gerceklesen: Mapped[date | None] = mapped_column(Date, nullable=True)
     durum: Mapped[str] = mapped_column(String(16), default="planli")  # planli | yapildi | kacirildi | pencere_disi
+    kacirilma_nedeni: Mapped[str | None] = mapped_column(String(200), nullable=True)
 
     gonullu = relationship("Gonullu", back_populates="vizitler")
     vizit_tanimi = relationship("VizitTanimi")

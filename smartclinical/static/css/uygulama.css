@@ -93,6 +93,9 @@ td.sag, th.sag { text-align: right; }
 td.sayi { text-align: right; font-variant-numeric: tabular-nums; }
 table.sikisik th, table.sikisik td { padding: 4px 6px; font-size: 12.5px; }
 
+.tablo-kaydir { overflow-x: auto; }
+.sayfalama { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+
 /* rozetler */
 .rozet { display: inline-block; font-size: 11.5px; padding: 2px 8px; border-radius: 10px; background: var(--gri-200); color: var(--gri-700); white-space: nowrap; font-weight: 500; }
 .rozet.yesil { background: var(--yesil-acik); color: var(--yesil); }
@@ -126,8 +129,10 @@ fieldset { border: var(--kenar); border-radius: var(--yaricap); padding: 10px 14
 legend { font-size: 12.5px; font-weight: 600; color: var(--lacivert); padding: 0 6px; }
 
 /* sekmeler */
-.sekmeler { display: flex; gap: 2px; border-bottom: 2px solid var(--gri-200); margin-bottom: 16px; overflow-x: auto; }
-.sekmeler a { padding: 8px 12px; font-size: 13px; color: var(--gri-700); border-bottom: 2px solid transparent; margin-bottom: -2px; white-space: nowrap; }
+.sekmeler { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 2px; border-bottom: 2px solid var(--gri-200); margin-bottom: 16px; }
+.sekmeler a { padding: 8px 10px; font-size: 13px; color: var(--gri-700); border-bottom: 2px solid transparent; margin-bottom: -2px; white-space: nowrap; }
+.sekmeler .sekme-grup { font-size: 10.5px; text-transform: uppercase; letter-spacing: .04em; color: var(--gri-500); padding: 0 6px 9px 10px; margin-left: 8px; border-left: 1px solid var(--gri-200); white-space: nowrap; }
+.sekmeler .sekme-grup:first-child { margin-left: 0; border-left: 0; padding-left: 0; }
 .sekmeler a:hover { text-decoration: none; color: var(--lacivert); }
 .sekmeler a.aktif { color: var(--lacivert); border-bottom-color: var(--lacivert); font-weight: 600; }
 .sekmeler a .sayac { background: var(--gri-200); border-radius: 8px; padding: 0 6px; font-size: 11px; margin-left: 4px; }

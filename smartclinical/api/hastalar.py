@@ -7,7 +7,7 @@ from ..db import get_db
 from ..models import Hasta, Kullanici
 from ..models._ortak import simdi
 from ..services import denetim
-from ..services.yetki import gerekli
+from ..services.yetki import gerekli, merkez_erisimi
 from . import semalar
 
 router = APIRouter(prefix="/hastalar")
@@ -18,6 +18,8 @@ def hasta_ekle(g: semalar.HastaGirdi, db: Session = Depends(get_db), k: Kullanic
     """Kimliksizlestirilmis hasta kaydi ekler. Metinler kaydedilmeden once tekrar kimliksizlestirme suzgecinden gecer."""
     from ..services.kimliksizlestirme import kimliksizlestir, metni_dogrula
 
+    if not merkez_erisimi(k, g.merkez_id):
+        raise HTTPException(403, "Bu merkezin hasta havuzuna erişiminiz yok")
     metinler = []
     for m in g.metinler:
         s = kimliksizlestir(m.get("metin", ""), mod="maske")
@@ -40,6 +42,8 @@ def hasta(hid: int, db: Session = Depends(get_db), k: Kullanici = Depends(gerekl
     h = db.get(Hasta, hid)
     if not h:
         raise HTTPException(404)
+    if not merkez_erisimi(k, h.merkez_id):
+        raise HTTPException(403, "Bu merkezin hasta kaydına erişiminiz yok")
     denetim.kaydet(db, k, "goruntule", "hasta", h.id, yeni={"api": True})
     db.commit()
     return {"id": h.id, "kayit_no": h.kayit_no, "merkez_id": h.merkez_id, "yas": h.yas, "cinsiyet": h.cinsiyet,

@@ -9,7 +9,7 @@ from ..db import get_db
 from ..models import Calisma, Gonullu, Hasta, Kullanici, Merkez
 from ..models._ortak import simdi
 from ..services import denetim
-from ..services.yetki import calisma_erisimi, gerekli
+from ..services.yetki import calisma_erisimi, gerekli, merkez_erisimi
 
 router = APIRouter()
 
@@ -43,6 +43,8 @@ def bundle_al(bundle: dict, merkez_id: int, db: Session = Depends(get_db), k: Ku
     """HBYS'den gelen FHIR Bundle'i kimliksizlestirip Hasta tablosuna yazar."""
     from ..services.fhir import FHIRHatasi, bundle_to_hasta
 
+    if not merkez_erisimi(k, merkez_id):
+        raise HTTPException(403, "Bu merkezin hasta havuzuna erişiminiz yok")
     try:
         veri = bundle_to_hasta(bundle, merkez_id)
     except FHIRHatasi as e:
@@ -68,6 +70,8 @@ def hbys_senkron(merkez_id: int, tani_kodlari: list[str], son_ay: int = 12, db: 
     m = db.get(Merkez, merkez_id)
     if not m:
         raise HTTPException(404, "Merkez bulunamadı")
+    if not merkez_erisimi(k, merkez_id):
+        raise HTTPException(403, "Bu merkezin HBYS eşitlemesini tetikleme yetkiniz yok")
     a = ayarlar()
     adaptor = adaptor_olustur(m.fhir_uc_noktasi or a.fhir_sunucu_url, a.fhir_token)
     try:

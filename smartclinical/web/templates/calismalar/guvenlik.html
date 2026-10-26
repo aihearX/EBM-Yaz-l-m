@@ -13,18 +13,19 @@
 <div class="kart">
   <h2>Ciddi advers olaylar (SAE)</h2>
   <table>
-    <tr><th>Olay (MedDRA PT)</th><th>Başlangıç</th><th>Derece</th><th>Nedensellik</th><th>Sonuç</th><th>Bildirimler</th></tr>
+    <tr><th>Olay (MedDRA PT)</th><th>Sistem-organ sınıfı</th><th>Başlangıç</th><th>Derece</th><th>Nedensellik</th><th>Sonuç</th><th>Bildirimler</th></tr>
     {% for a in sae %}
     <tr>
-      <td>{{ a.terim }}{% if a.meddra_pt %}<br><small>{{ a.meddra_pt }} · {{ a.meddra_soc }}</small>{% endif %}</td>
+      <td>{{ a.terim }}{% if a.meddra_pt %}<br><small>PT: {{ a.meddra_pt }}</small>{% endif %}</td>
+      <td>{{ a.meddra_soc or 'SOC girilmedi' }}</td>
       <td>{{ a.baslangic|tarih }}</td>
-      <td><span class="rozet {{ 'kirmizi' if a.siddet in ('4','5') else ('sari' if a.siddet == '3' else '') }}">{{ a.siddet }}</span></td>
+      <td><span class="rozet {{ 'kirmizi' if a.siddet in ('4','5') else ('sari' if a.siddet == '3' else '') }}">{{ a.siddet_etiket }}</span></td>
       <td>{{ a.nedensellik_etiket }}{% if a.susar %} <span class="rozet kirmizi">SUSAR</span>{% endif %}</td>
       <td>{{ a.sonuc or '—' }}</td>
       <td>{% if a.titck_bildirim %}<span class="rozet yesil">TİTCK {{ a.titck_bildirim|tarih }}</span>{% else %}<span class="rozet {{ 'kirmizi' if a.bildirim_suresi_gun is not none and a.bildirim_suresi_gun < 0 else 'sari' }}">TİTCK bekliyor{% if a.bildirim_suresi_gun is not none %} ({{ a.bildirim_suresi_gun }} gün){% endif %}</span>{% endif %}
         {% if a.etik_bildirim %}<span class="rozet yesil">EK</span>{% endif %}</td>
     </tr>
-    {% else %}<tr><td colspan="6" class="kucuk">Bu çalışmada ciddi advers olay bildirilmedi.</td></tr>{% endfor %}
+    {% else %}<tr><td colspan="7" class="kucuk">Bu çalışmada ciddi advers olay bildirilmedi.</td></tr>{% endfor %}
   </table>
   <small>Sponsor görünümü gönüllü kimliği ve olay anlatımı içermez.</small>
 </div>
@@ -33,13 +34,14 @@
   <div class="kart">
     <h2>Advers olaylar</h2>
     <table>
-      <tr><th>Gönüllü</th><th>Olay (MedDRA PT)</th><th>Başlangıç</th><th>Derece</th><th>Nedensellik</th><th>Ciddi</th><th>Sonuç</th><th>Bildirimler</th></tr>
+      <tr><th>Gönüllü</th><th>Olay (MedDRA PT)</th><th>Sistem-organ sınıfı</th><th>Başlangıç</th><th>Derece</th><th>Nedensellik</th><th>Ciddi</th><th>Sonuç</th><th>Bildirimler</th><th></th></tr>
       {% for a in olaylar %}
       <tr>
         <td><a href="/gonulluler/{{ a.gonullu_id }}">{{ a.gonullu.gonullu_no }}</a></td>
-        <td>{{ a.terim }}{% if a.meddra_pt %}<br><small>{{ a.meddra_pt }} · {{ a.meddra_soc }}</small>{% endif %}</td>
+        <td>{{ a.terim }}{% if a.meddra_pt %}<br><small>PT: {{ a.meddra_pt }}</small>{% endif %}</td>
+        <td>{{ a.meddra_soc or 'SOC girilmedi' }}</td>
         <td>{{ a.baslangic|tarih }}</td>
-        <td><span class="rozet {{ 'kirmizi' if a.siddet in ('4','5') else ('sari' if a.siddet == '3' else '') }}">{{ a.siddet }}</span></td>
+        <td><span class="rozet {{ 'kirmizi' if a.siddet in ('4','5') else ('sari' if a.siddet == '3' else '') }}">{{ a.siddet_etiket }}</span></td>
         <td>{{ a.nedensellik_etiket }}</td>
         <td>{% if a.ciddi %}<span class="rozet kirmizi">SAE</span>{% if a.susar %} <span class="rozet kirmizi">SUSAR</span>{% endif %}{% else %}—{% endif %}</td>
         <td>{{ a.sonuc or '—' }}</td>
@@ -47,8 +49,9 @@
           {% if a.titck_bildirim %}<span class="rozet yesil">TİTCK {{ a.titck_bildirim|tarih }}</span>{% else %}<span class="rozet {{ 'kirmizi' if a.bildirim_suresi_gun is not none and a.bildirim_suresi_gun < 0 else 'sari' }}">TİTCK bekliyor{% if a.bildirim_suresi_gun is not none %} ({{ a.bildirim_suresi_gun }} gün){% endif %}</span>{% endif %}
           {% if a.etik_bildirim %}<span class="rozet yesil">EK</span>{% endif %}
           {% else %}—{% endif %}</td>
+        <td><a href="/gonulluler/{{ a.gonullu_id }}/advers-olay/{{ a.id }}" class="btn kucuk">{{ 'Güncelle' if izinli(kullanici, 'guvenlik.bildir') else 'Görüntüle' }}</a></td>
       </tr>
-      {% else %}<tr><td colspan="8" class="kucuk">Bu çalışmada henüz advers olay bildirilmedi.
+      {% else %}<tr><td colspan="10" class="kucuk">Bu çalışmada henüz advers olay bildirilmedi.
         {% if izinli(kullanici, 'guvenlik.bildir') and o.toplam_gonullu %}Bildirim gönüllü sayfasından yapılır: <a href="/calismalar/{{ c.id }}/gonulluler">Gönüllüler</a>{% endif %}</td></tr>{% endfor %}
     </table>
   </div>
@@ -59,4 +62,4 @@
 </div>
 {% endif %}
 {% endblock %}
-{% block script %}{% if kullanici.rol.value != 'sponsor' %}<script>SCGrafik.cubuk(document.getElementById("g-soc"), [{% for k, v in soc %}{etiket: {{ k|tojson }}, deger: {{ v }}, renk: "#16325c"},{% endfor %}]);</script>{% endif %}{% endblock %}
+{% block script %}{% if kullanici.rol.value != 'sponsor' %}<script>SCGrafik.cubuk(document.getElementById("g-soc"), [{% for k, v in soc %}{etiket: {{ ('SOC girilmedi' if k == 'Kodlanmamış' else k)|tojson }}, deger: {{ v }}, renk: "#16325c"},{% endfor %}]);</script>{% endif %}{% endblock %}

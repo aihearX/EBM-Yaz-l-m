@@ -1,4 +1,4 @@
-{# Calisma sayfalarinin ortak basligi ve sekmeleri; sekme listesi rol izinlerine gore web/calismalar.py'de kurulur #}
+{# Calisma sayfalarinin ortak basligi ve sekmeleri; sekme listesi rol izinlerine gore web/calismalar.py'de kurulur (docs/roller.md) #}
 <div class="baslik-satiri">
   <div>
     <h1>{{ c.kod }} <span style="font-weight:400;color:var(--gri-500)">· {{ c.kisa_ad }}</span></h1>
@@ -10,7 +10,9 @@
   </div>
 </div>
 <div class="sekmeler">
+  {% set ns = namespace(grup=none) %}
   {% for s in sekmeler(kullanici, c, o) %}
+  {% if s.grup != ns.grup %}{% set ns.grup = s.grup %}<span class="sekme-grup">{{ s.grup }}</span>{% endif %}
   <a href="{{ s.url }}" class="{{ 'aktif' if sekme == s.anahtar }}">{{ s.etiket }}{% if s.sayac is not none %}<span class="sayac {{ s.sinif }}">{{ s.sayac }}</span>{% endif %}</a>
   {% endfor %}
 </div>

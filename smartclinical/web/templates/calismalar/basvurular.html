@@ -6,7 +6,7 @@
 <div class="izgara k21">
   <div class="kart">
     <h2>Etik kurul, TİTCK ve kurum başvuruları</h2>
-    <table>
+    <div class="tablo-kaydir"><table>
       <tr><th>Kurum</th><th>Tip</th><th>Merkez</th><th>Referans</th><th>Gönderim</th><th>Karar</th><th>Karar tarihi</th><th class="sag">Süre (gün)</th><th></th></tr>
       {% for b in c.basvurular|sort(attribute='id', reverse=true) %}
       <tr>
@@ -15,7 +15,7 @@
         <td><span class="rozet {{ 'yesil' if b.karar == 'onay' else ('sari' if b.karar in ('beklemede','sartli_onay') else ('kirmizi' if b.karar == 'red' else '')) }}">{{ {'beklemede':'Beklemede','onay':'Onay','sartli_onay':'Şartlı onay','red':'Red','geri_cekildi':'Geri çekildi'}[b.karar] }}</span></td>
         <td>{{ b.karar_tarihi|tarih }}</td>
         <td class="sayi">{% if b.sure_gun is not none %}{{ b.sure_gun }}{% if b.karar == 'beklemede' and b.sure_gun > 60 %} <span class="rozet sari">uzun</span>{% endif %}{% else %}—{% endif %}</td>
-        <td>{% if b.karar == 'beklemede' and izinli(kullanici, 'calisma.duzenle') %}
+        <td>{% if b.karar == 'beklemede' and duzenleyebilir %}
           <details><summary class="kucuk">karar gir</summary>
           <form method="post" action="/calismalar/{{ c.id }}/basvurular/{{ b.id }}/karar" style="margin-top:6px">
             <select name="karar"><option value="onay">Onay</option><option value="sartli_onay">Şartlı onay</option><option value="red">Red</option><option value="geri_cekildi">Geri çekildi</option></select>
@@ -23,11 +23,12 @@
             <button class="btn kucuk" style="margin-top:4px">Kaydet</button></form></details>{% endif %}</td>
       </tr>
       {% else %}<tr><td colspan="9" class="kucuk">Bu çalışma için henüz etik kurul veya TİTCK başvurusu kaydedilmedi.
-        {% if izinli(kullanici, 'calisma.duzenle') %}<a href="#basvuru-kaydet">Başvuru kaydet</a>{% endif %}</td></tr>{% endfor %}
-    </table>
+        {% if duzenleyebilir %}<a href="#basvuru-kaydet">Başvuru kaydet</a>{% endif %}</td></tr>{% endfor %}
+    </table></div>
+    {% if kullanici.rol.value == 'cra' %}<small>Başvuru kayıtları ve kararlar proje yöneticisi tarafından girilir; bu sayfa izleme amaçlıdır.</small>{% endif %}
   </div>
   <div>
-    {% if izinli(kullanici, 'calisma.duzenle') %}
+    {% if duzenleyebilir %}
     <div class="kart" id="basvuru-kaydet">
       <h2>Başvuru kaydet</h2>
       <form method="post" action="/calismalar/{{ c.id }}/basvurular">
