@@ -8,9 +8,17 @@ const {
   VerticalAlign, TabStopType,
 } = D;
 
-const KOK = "/home/user/EBM-Yaz-l-m";
-const GORSEL = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
-const CIKTI = process.argv[3];
+// Kullanim: node dokuman_uret.js [cikti.docx]
+const KOK = path.resolve(__dirname, "../../..");
+const CIKTI = process.argv[2] || path.join(KOK, "docs/tanitim/EBM_SmartClinical_Tanitim_Dokumani.docx");
+// Gorsel boyutlari PNG basligindan okunur (ekran/ ve sekil/ klasorleri)
+const GORSEL = {};
+for (const d of ["docs/tanitim/ekran", "docs/tanitim/sekil"]) {
+  for (const ad of fs.readdirSync(path.join(KOK, d)).filter(x => x.endsWith(".png"))) {
+    const yol = path.join(KOK, d, ad), b = fs.readFileSync(yol);
+    GORSEL[ad] = { yol, w: b.readUInt32BE(16), h: b.readUInt32BE(20) };
+  }
+}
 
 const LACIVERT = "16325C", TURKUAZ = "0E8A8A", GRI = "595959", ACIK = "EEF2F8", ACIK_TURKUAZ = "E3F3F3", KENAR = "BFC5CF";
 const FONT = "Calibri";
@@ -98,7 +106,7 @@ function sekil(ad, altyazi, maksGenislikInch = 6.5) {
 }
 function bosluk(n = 1) { return Array.from({ length: n }, () => new Paragraph({ spacing: { after: 120 } })); }
 
-// ---------------------------------------------------------------- icerik (v2.0)
+// ---------------------------------------------------------------- icerik
 const icerik = [];
 const ekle = (...x) => x.flat().forEach(e => icerik.push(e));
 // Her ana bolumun basinda uzman olmayan okuyucu icin sade bir ozet kutusu
@@ -112,28 +120,21 @@ function kisaca(metin) {
   });
 }
 let BENCH = null;
-try { BENCH = JSON.parse(fs.readFileSync(process.argv[4], "utf8")); } catch (e) { BENCH = null; }
+try { BENCH = JSON.parse(fs.readFileSync(path.join(__dirname, "bench_ozet.json"), "utf8")); } catch (e) { BENCH = null; }
 
 // Kapak
 ekle(...bosluk(6));
 ekle(new Paragraph({ children: [run("EBM SmartClinical", { size: 56, bold: true, color: LACIVERT })], alignment: AlignmentType.LEFT, spacing: { after: 120 } }));
 ekle(new Paragraph({ children: [run("Klinik Araştırma Yönetimi ve Türkçe Klinik Karar Destek Platformu", { size: 30, color: TURKUAZ })], spacing: { after: 600 } }));
 ekle(new Paragraph({ children: [run("Ürün Tanıtım, Teknik Özet ve Yatırım Dokümanı", { size: 26, bold: true })], spacing: { after: 120 } }));
-ekle(new Paragraph({ children: [run("Yazılım sürümü 1.5.0  ·  Doküman sürümü 2.1  ·  Ekim 2026", { size: 22, color: GRI })], spacing: { after: 1800 } }));
+ekle(...bosluk(6));
 ekle(new Paragraph({ children: [run("Hazırlayan: EBM Klinik Araştırma Hizmetleri – Yazılım ve Veri Bilimi Ekibi", { size: 20 })], spacing: { after: 60 } }));
 ekle(new Paragraph({ children: [run("Yatırımcı ve iş ortağı sunumu için hazırlanmıştır", { size: 20 })], spacing: { after: 60 } }));
 ekle(new Paragraph({ children: [run("Gizlilik: Bu doküman EBM'nin ticari ve teknik bilgilerini içerir; yalnızca değerlendirme amacıyla paylaşılmıştır.", { size: 18, italics: true, color: GRI })], spacing: { after: 0 } }));
 
-// Belge kontrol
-ekle(new Paragraph({ children: [run("Belge kontrolü", { size: 24, bold: true, color: LACIVERT })], pageBreakBefore: true, spacing: { after: 160 } }));
-ekle(...tablo(["Sürüm", "Tarih", "Değişiklik", "Hazırlayan / Onaylayan"], [
-  ["0.9", "18.06.2026", "İlk taslak; modül tanımları ve mimari", "Yazılım Ekibi / Ürün Yöneticisi"],
-  ["1.0", "22.09.2026", "Sürüm 1.4 özellikleri, ekran görüntüleri, uyum bölümü", "Yazılım Ekibi / Kalite Güvence"],
-  ["1.1", "21.10.2026", "Ar-Ge göstergeleri, ticarileşme ve yol haritası bölümleri", "Yazılım ve Veri Bilimi Ekibi / Genel Müdür"],
-  ["2.1", "23.10.2026", "Uzman olmayanlar için giriş bölümü, bölüm başı sade özetler, sade sözlük; tek sayfalık tanıtım eklendi", "Yazılım ve Veri Bilimi Ekibi / Genel Müdür"],
-  ["2.0", "22.10.2026", "Sürüm 1.5: ulusal altyapı katmanı (TR-KlinikBench, federe güncelleme, model/veri kartları), sponsor portalı, merkez performans endeksi; konsorsiyum, pilot programı, birim ekonomisi ve etki modeli bölümleri", "Yazılım ve Veri Bilimi Ekibi / Genel Müdür"],
-], [1, 1.4, 4.2, 2.6]));
-ekle(P("Bu dokümandaki ekran görüntüleri sürüm 1.5.0'ın demo kurulumundan alınmıştır. Demo kurulumunda kullanılan tüm hasta kayıtları, çalışma ve merkez verileri sentetiktir; merkez adları kurgusaldır ve gerçek bir kurumu temsil etmez. Bölüm 9'daki ölçümler, aksi belirtilmedikçe, sistemin aynı demo verisi ve değerlendirme setleri üzerinde kendi hesapladığı değerlerdir. Bölüm 12 ve 13'teki fiyat, hacim ve etki rakamları varsayımlara dayalı planlama değerleridir, taahhüt değildir; her birinin varsayımı yanında belirtilmiştir."));
+// Okumadan once
+ekle(new Paragraph({ children: [run("Okumadan önce", { size: 24, bold: true, color: LACIVERT })], pageBreakBefore: true, spacing: { after: 160 } }));
+ekle(P("Bu dokümandaki ekran görüntüleri ürünün CRO kullanım modundaki demo kurulumundan alınmıştır. Demo kurulumunda kullanılan tüm hasta kayıtları, çalışma ve merkez verileri sentetiktir; merkez adları kurgusaldır ve gerçek bir kurumu temsil etmez. Bölüm 9'daki ölçümler, aksi belirtilmedikçe, ürünle gelen değerlendirme aracının (ml/degerlendirme) aynı demo verisi ve örnek değerlendirme setleri üzerindeki çıktısıdır. Bölüm 12 ve 13'teki fiyat, hacim ve etki rakamları varsayımlara dayalı planlama değerleridir, taahhüt değildir; her birinin varsayımı yanında belirtilmiştir."));
 ekle(P("Terimler: **BDM** büyük dil modeli; **HBYS** hastane bilgi yönetim sistemi; **eCRF** elektronik olgu rapor formu; **CRA** klinik araştırma uzmanı (monitör); **KRI/QTL** anahtar risk göstergesi / kalite tolerans limiti; **TMF** çalışma ana dosyası; **SDV** kaynak veri doğrulama; **RAG** erişim destekli üretim; **THS** teknoloji hazırlık seviyesi; **LoRA** düşük sıralı uyarlama (parametre verimli ince ayar)."));
 
 ekle(new Paragraph({ children: [run("İçindekiler", { size: 24, bold: true, color: LACIVERT })], pageBreakBefore: true, spacing: { after: 160 } }));
@@ -175,15 +176,15 @@ ekle(P("Karar vericiler için: Bölüm 1 (yönetici özeti), Bölüm 9 (bugünk�
 ekle(H1("1. Yönetici özeti"));
 ekle(kisaca("SmartClinical, klinik araştırmaları baştan sona yöneten ve Türkçe hasta raporlarını okuyabilen bir yapay zekâ ile uygun hastayı bulan, doğru hastaneyi seçen ve sorunları erken gösteren yerli bir yazılımdır. Temel kısmı geliştirilmiş ve test edilmiştir, yapay zekâ kısmı doğrulama aşamasındadır."));
 ekle(P("EBM SmartClinical, bir klinik araştırmanın tasarımından arşivine kadar bütün adımlarını tek bir platformda yönetir. Bunun üzerine, hastanenin kendi sunucusunda çalışan ve Türkçe hasta raporlarını anlayan bir yapay zekâ modeliyle üç karar desteği ekler: araştırmaya uygun hastaların otomatik ön taranması, hangi hastanenin ne kadar hasta kazandıracağının öngörülmesi ve yürütme sırasındaki risklerin erken tespiti."));
-ekle(P("Ürün, EBM'nin klinik araştırma yürütme ve hastane yönetimi hizmetlerinde yaşadığı gerçek ihtiyaçlardan doğmuştur. Araştırma yönetimi, hasta formları, yan etki bildirimi, belge arşivi, denetim izi ve elektronik imza gibi temel modüller geliştirilmiş, otomatik testlerle ve demo ortamında doğrulanmış olup pilot kullanıma hazırdır. Yapay zekâ katmanı (Türkçe klinik model, hasta eşleştirme, hastane seçimi ve risk izleme modelleri) sürüm 1.3–1.5 ile platforma eklenmiş ve laboratuvar ortamında yapay veriyle sınanmıştır. Gerçek hastane ortamında ileriye dönük doğrulama, yatırımın finanse edeceği 18 aylık Ar-Ge programında yapılacaktır."));
-ekle(P("Sürüm 1.5 ile ürün iki katmanlı bir yapıya kavuşmuştur. **Açık bileşen katmanı**, Türkçe klinik model geliştirme ve değerlendirmesi için herkese açık yapı taşlarını içerir: TR-KlinikBench değerlendirme seti, veri kurum dışına çıkmadan model iyileştirmeyi sağlayan federe LoRA güncelleme protokolü, model ve veri kartları, kimliksizleştirme aracı ve standart veri eşlemeleri. **Ticari ürün katmanı**, bu altyapıyı kullanan klinik araştırma platformudur. Bu ayrım, açık bileşenlerin hastaneler ve araştırmacılar tarafından benimsenerek ürünün etrafında bir ekosistem oluşturmasını, ticari ürünün ise bu bileşenlerin sürdürülmesini finanse etmesini sağlar (Bölüm 3)."));
+ekle(P("Ürün, EBM'nin klinik araştırma yürütme ve hastane yönetimi hizmetlerinde yaşadığı gerçek ihtiyaçlardan doğmuştur. Çalışma kurulumu ve tasarımı, kod yazmadan form hazırlama, hasta formları, randomizasyon, yan etki bildirimi, izlem ziyaretleri, belge arşivi, ön analiz, denetim izi ve elektronik imza gibi temel modüller geliştirilmiş, otomatik testlerle ve demo ortamında doğrulanmış olup pilot kullanıma hazırdır. Yapay zekâ katmanı (Türkçe klinik model, hasta eşleştirme, hastane seçimi ve risk izleme modelleri) platforma eklenmiş ve laboratuvar ortamında yapay veriyle sınanmıştır. Gerçek hastane ortamında ileriye dönük doğrulama, yatırımın finanse edeceği 18 aylık Ar-Ge programında yapılacaktır."));
+ekle(P("Ürün iki katmanlı bir yapıya sahiptir. **Açık bileşen katmanı**, Türkçe klinik model geliştirme ve değerlendirmesi için herkese açık yapı taşlarını içerir: TR-KlinikBench değerlendirme seti, veri kurum dışına çıkmadan model iyileştirmeyi sağlayan federe LoRA güncelleme protokolü, model ve veri kartları, kimliksizleştirme aracı ve standart veri eşlemeleri. **Ticari ürün katmanı**, bu altyapıyı kullanan klinik araştırma platformudur. Bu ayrım, açık bileşenlerin hastaneler ve araştırmacılar tarafından benimsenerek ürünün etrafında bir ekosistem oluşturmasını, ticari ürünün ise bu bileşenlerin sürdürülmesini finanse etmesini sağlar (Bölüm 3)."));
 ekle(P("Platformun ayırt edici özellikleri şunlardır:"));
-ekle(madde("**Uçtan uca kapsam.** İlaç, biyobenzer, tıbbi cihaz, in vitro tanı, gözlemsel, kayıt (gerçek yaşam verisi) ve araştırmacı başlatımlı çalışmalar aynı veri modeli ve aynı akışla yönetilir."));
+ekle(madde("**Uçtan uca kapsam.** İlaç, biyobenzer, tıbbi cihaz, in vitro tanı, gözlemsel, kayıt (gerçek yaşam verisi) ve araştırmacı başlatımlı çalışmalar aynı veri modeli ve aynı akışla yönetilir; CRO, üniversite ve tekil araştırmacı için ayrı kullanım modları vardır."));
 ekle(madde("**Türkçe klinik metni anlayan, hastane içinde çalışan yapay zekâ.** Epikriz, patoloji ve radyoloji raporları kimliksizleştirilir, protokol kriterleri hesaplanabilir sorguya dönüştürülür ve her öneri kaynak cümlesiyle sunulur. Hasta verisi kurum dışına çıkmaz."));
 ekle(madde("**İnsan kararı merkezde.** Hiçbir model çıktısı tek başına işlem yapmaz; her karar gerekçesiyle denetim izine yazılır."));
 ekle(madde("**Düzenleyici uyum tasarımın parçası.** ICH E6(R3), 21 CFR Part 11 / EU Annex 11, KVKK ve DIA TMF referans modeli ürünün içinde uygulanır; bilgisayarlı sistem validasyon dosyası ürünle birlikte teslim edilir."));
-ekle(madde("**Ölçülebilir Ar-Ge ve ağ etkisi.** Platform kendi model performansını sürekli ölçer; merkez performans endeksi her yeni çalışmayla kuvvetlenen, kurumlar arası anonim bir kıyaslama varlığı oluşturur."));
-ekle(P("Bu doküman ürünün mevcut durumunu, stratejik konumlandırmasını, teknik mimarisini, uyum yaklaşımını, Ar-Ge göstergelerini, iş birliği ve yönetişim yapısını, iş modelini ve etki projeksiyonunu yatırımcılara ve potansiyel iş ortaklarına sunmak amacıyla hazırlanmıştır."));
+ekle(madde("**Ölçülebilir Ar-Ge ve ağ etkisi.** Model performansı ürünle gelen değerlendirme aracı ve gölge mod raporuyla tekrarlanabilir biçimde ölçülür; merkez performans endeksi her yeni çalışmayla kuvvetlenen, kurumlar arası anonim bir kıyaslama varlığı oluşturur."));
+ekle(P("Bu doküman ürünün mevcut durumunu, stratejik konumlandırmasını, teknik mimarisini, uyum yaklaşımını, olgunluk durumunu ve ölçüm sonuçlarını, iş birliği ve yönetişim yapısını, iş modelini ve etki projeksiyonunu yatırımcılara ve potansiyel iş ortaklarına sunmak amacıyla hazırlanmıştır."));
 
 // 2 Problem ve firsat
 ekle(H1("2. Problem tanımı ve fırsat"));
@@ -196,7 +197,7 @@ ekle(H2("2.2 Mevcut çözümlerin sınırı"));
 ekle(P("Piyasadaki klinik araştırma yönetim ve hasta eşleştirme çözümleri büyük ölçüde yurt dışı kaynaklı, İngilizce odaklı ve bulut tabanlıdır. Türkçe klinik metni işleyemezler, hastane verisinin kurum dışına çıkmasını gerektirirler ve bu nedenle KVKK çerçevesinde Türkiye'deki hastanelerde uygulanamazlar. Lisans maliyetleri yurt içi akademik ve araştırmacı başlatımlı çalışmalar için erişilebilir değildir. Yerel araçlar ise çoğunlukla yalnızca veri toplama (EDC) ile sınırlıdır."));
 ekle(H2("2.3 Neden şimdi"));
 ekle(...tablo(["Etken", "Sonuç"], [
-  ["ICH E6(R3) (2025) risk temelli kalite yönetimini ve merkezi izlemi standart haline getirdi", "Sponsorlar ve CRO'lar KRI/QTL tabanlı izlem araçlarına geçmek zorunda; mevcut Türkçe çözüm yok"],
+  ["ICH E6(R3) risk temelli kalite yönetimini ve merkezi izlemi standart haline getirdi", "Sponsorlar ve CRO'lar KRI/QTL tabanlı izlem araçlarına geçmek zorunda; mevcut Türkçe çözüm yok"],
   ["Yerli ilaç, biyobenzer, tıbbi cihaz ve IVD ürün dalgası (kamu teşvikleri ve sanayi yatırımları)", "Klinik doğrulama kapasitesi ürünleşmenin darboğazı; hızlı ve ucuz çalışma yürütme talebi artıyor"],
   ["KVKK ve Kişisel Sağlık Verileri Yönetmeliği uygulaması sıkılaştı", "Bulut tabanlı yabancı çözümler hastane verisine erişemiyor; hastane içi çözüm zorunlu"],
   ["Açık kaynak 7–8B temel modeller Türkçe için yeterli olgunluğa ulaştı; nicemlenmiş modeller tek GPU'da çalışıyor", "Hastane içinde çalışan Türkçe klinik BDM teknik olarak uygulanabilir ve ekonomik hale geldi"],
@@ -213,7 +214,7 @@ ekle(...tablo(["Katman", "Bileşen", "Erişim", "Sürdürme"], [
   ["Açık bileşen", "Model ve veri kartları, etiketleme şeması, değerlendirme betikleri", "Açık", "Her model sürümüyle güncellenir"],
   ["Lisanslı bileşen", "Türkçe Klinik BDM ağırlıkları (ebm-klinik-tr)", "Hastane ve üniversitelere araştırma lisansı; ticari kullanım lisansla", "EBM; federe turlarla iyileştirme"],
   ["Lisanslı bileşen", "Kimliksizleştirme aracı, FHIR/OMOP eşlemeleri, klinik NLP servis API'si", "Bileşen lisansı; HBYS üreticilerine OEM", "EBM"],
-  ["Ticari ürün (kapalı)", "SmartClinical platformu (çalışma yönetimi, eCRF, RBM, merkez zekâsı, sponsor portalı, TMF)", "Lisans sınıfları (Bölüm 12)", "EBM ürün ekibi"],
+  ["Ticari ürün (kapalı)", "SmartClinical platformu (çalışma yönetimi ve tasarımı, eCRF, RBM, merkez zekâsı, sponsor görünümü, TMF, ön analiz)", "Lisans sınıfları (Bölüm 12)", "EBM ürün ekibi"],
 ], [1.7, 3.1, 1.8, 1.2]));
 ekle(P("Bu yapı üç soruya aynı anda cevap verir: hastaneler için \"verimi dışarı vermeden faydalanabilir miyim?\" (evet, federe protokol ve hastane içi kurulum); yatırımcı için \"savunulabilir bir konum var mı?\" (evet, açık bileşenler referans konumu ve veri varlığını büyütür, ticari çekirdek geliri üretir); EBM için \"bu altyapıyı kim sürdürecek?\" (ticari ürün gelirleri)."));
 
@@ -229,21 +230,21 @@ ekle(...tablo(["Çalışma türü", "Örnek", "Türe özgü davranış"], [
   ["In vitro tanı (IVD)", "HPV genotipleme performansı", "Örnek bazlı kayıt, referans yöntem karşılaştırması"],
   ["Gözlemsel / kayıt (RWE)", "KOAH gerçek yaşam kaydı", "Girişimsel olmayan başvuru yolu, azaltılmış eCRF, yüksek hacimli kayıt"],
   ["Araştırmacı başlatımlı", "Üniversite faz IV güvenlik", "Tek merkez akışı, sadeleştirilmiş TMF, akademik lisans sınıfı"],
-  ["İleri tedavi (ATMP)", "Hücre/gen tedavisi", "Uzun dönem takip vizit şablonu, ürün zinciri kayıtları (1.6)"],
+  ["İleri tedavi (ATMP)", "Hücre/gen tedavisi", "Uzun dönem takip vizit şablonu; ürün zinciri kayıtları yol haritasında"],
 ], [1.6, 1.8, 4.4]));
 ekle(H2("4.2 Kullanıcı rolleri"));
-ekle(P("Erişim on rol üzerinden ince taneli izinlerle yönetilir. Araştırmacı ve koordinatör yalnızca kendi merkezinin kayıtlarını görür; sponsor ve denetçi rolleri kimliksizleştirilmiş özet verilere salt okunur erişir; makine-makine entegrasyonlar API anahtarıyla, anahtar sahibinin rol izinleri dahilinde çalışır."));
+ekle(P("Erişim on rol üzerinden ince taneli izinlerle yönetilir. Araştırmacı ve koordinatör yalnızca kendi merkezinin kayıtlarını görür; proje ekibindeki roller yalnızca atandıkları çalışmaları görür (çalışma ekibi, Bölüm 6.7); sponsor ve denetçi rolleri kimliksizleştirilmiş özet verilere salt okunur erişir; makine-makine entegrasyonlar API anahtarıyla, anahtar sahibinin rol izinleri dahilinde çalışır. Hangi rolün çalışmayı kurduğu kullanım moduna göre değişir: tekil ve üniversite modunda araştırmacı, CRO modunda proje yöneticisi."));
 ekle(...tablo(["Rol", "Başlıca işlevler"], [
-  ["Araştırmacı", "Eşleştirme önerilerini inceleme ve onaylama, onam, randomizasyon, advers olay bildirimi, kriter onayı"],
+  ["Araştırmacı", "Eşleştirme önerilerini inceleme ve onaylama, onam, randomizasyon, advers olay bildirimi, kriter onayı, araştırmacı (PI) imzası; tekil ve üniversite modunda çalışma kurulumu"],
   ["Çalışma koordinatörü", "Gönüllü kaydı, vizit takvimi, eCRF veri girişi, sorgu cevaplama, CSV ile hasta havuzu yükleme"],
-  ["CRA (monitör)", "Risk bazlı izlem panosu, uyarı yönetimi, SDV, sorgu açma, ziyaret planlama ve raporu"],
-  ["Proje yöneticisi", "Çalışma kurulumu, merkez seçimi, başvuru takibi, aşama geçişleri, fizibilite raporu, sponsor portalı"],
-  ["Veri yöneticisi", "eCRF tasarımı, veri kilidi, CDISC ODM / CSV / OMOP dışa aktarım"],
+  ["CRA (monitör)", "Risk bazlı izlem panosu, uyarı yönetimi, SDV, sorgu açma, ziyaret planlama, ziyaret raporu ve bulgular"],
+  ["Proje yöneticisi", "Sihirbazla çalışma kurulumu, tasarım, çalışma ekibi, merkez seçimi, başvuru takibi, aşama geçişleri, ziyaret raporu onayı, fizibilite raporu"],
+  ["Veri yöneticisi", "eCRF tasarımı, toplu kilit ve gerekçeli kilit açma, randomizasyon listesi, CDISC ODM / CSV / OMOP dışa aktarım"],
   ["Farmakovijilans", "SAE/SUSAR değerlendirme, TİTCK ve etik kurul bildirim takibi"],
-  ["Biyoistatistikçi", "Kilitli veri setlerine erişim, dışa aktarım"],
-  ["Sponsor", "Sponsor portalı: kurumuna ait çalışmaların portföy görünümü, takvim riski, fizibilite raporları, anonim merkez endeksi"],
+  ["Biyoistatistikçi", "Ön analiz ve Tablo 1, kilitli veri setlerine erişim, analiz veri seti dışa aktarımı"],
+  ["Sponsor", "Genel Bakış'ta kendi kurumunun çalışmalarına ait salt okunur özet: ilerleme, takvim riski, uyarılar, fizibilite raporu; anonim merkez endeksi"],
   ["Denetçi / gözlemci", "Denetim izi, e-imza kayıtları, TMF (salt okunur)"],
-  ["Sistem yöneticisi", "Kullanıcı ve rol yönetimi, API anahtarları, sistem durumu, BDM yapılandırması, zincir doğrulama"],
+  ["Sistem yöneticisi", "İlk kurulum ve kullanım modu, kullanıcı ve rol yönetimi, API anahtarları, sistem durumu, BDM yapılandırması, zincir doğrulama"],
 ], [1.8, 6]));
 ekle(H2("4.3 Klinik araştırma yaşam döngüsü"));
 ekle(P("Her çalışma dokuz aşamalı bir yaşam döngüsü üzerinde ilerler. Aşama geçişleri proje yöneticisi tarafından gerekçeyle yapılır; her aşamanın kontrol listesi platform tarafından izlenir."));
@@ -256,10 +257,10 @@ ekle(H2("5.1 Katmanlı yapı"));
 ekle(P("SmartClinical, hastane bilgi işlem ekiplerinin işletebileceği sadelikte tasarlanmış modüler bir mimariye sahiptir. Uygulama tek bir sunucu süreci olarak çalışır; yalnızca GPU gerektiren bileşenler (BDM ve gömme sunucusu) ayrı servislerdir."));
 ekle(...sekil("sekil_01_mimari.png", "Platform mimarisi"));
 ekle(...tablo(["Katman", "Bileşenler", "Teknoloji"], [
-  ["Sunum", "Rol bazlı web panelleri, sponsor portalı, yazdırılabilir raporlar, REST API v1 (oturum veya API anahtarı), OpenAPI belgeleri", "Sunucu tarafı render (Jinja2), harici JavaScript kütüphanesi yok (kapalı ağ uyumu)"],
-  ["Uygulama", "Çalışma, merkez, başvuru, eşleştirme, eCRF, güvenlik, RBM, TMF, kıyaslama modülleri", "Python 3.11+, FastAPI, SQLAlchemy 2.0"],
+  ["Sunum", "Rol bazlı web panelleri, sponsor özet görünümü, yazdırılabilir raporlar, REST API v1 (oturum veya API anahtarı), OpenAPI belgeleri", "Sunucu tarafı render (Jinja2), harici JavaScript kütüphanesi yok (kapalı ağ uyumu)"],
+  ["Uygulama", "Çalışma, sihirbaz ve tasarım, merkez, başvuru, eşleştirme, eCRF, randomizasyon, güvenlik, RBM, izlem, TMF, analiz, kıyaslama modülleri", "Python 3.11+, FastAPI, SQLAlchemy 2.0"],
   ["Yapay zekâ", "Türkçe Klinik BDM istemcisi, kriter motoru, RAG, kalıp tabanlı metin değerlendirme, koruma katmanı, kimliksizleştirme, merkez zekâsı, KRI/anomali motoru", "NumPy/SciPy; BDM: vLLM / llama.cpp / Ollama; LoRA eğitim ve federe toplayıcı (ml/)"],
-  ["Çapraz kesen", "Hash zincirli denetim izi, e-imza, RBAC, API anahtarı, ortak veri modeli", "PBKDF2-SHA256 parola, SHA-256 zincir ve anahtar özeti, FHIR R4 / OMOP CDM v5.4"],
+  ["Çapraz kesen", "Zincirli denetim izi, e-imza, RBAC, API anahtarı, ortak veri modeli", "PBKDF2-SHA256 parola, SHA-256 zincir ve anahtar özeti, FHIR R4 / OMOP CDM v5.4"],
   ["Veri ve entegrasyon", "İşlem veritabanı, TMF dosya deposu, HBYS FHIR adaptörü, CSV hasta havuzu yükleme, dışa aktarım", "PostgreSQL 16 (geliştirmede SQLite), CDISC ODM 1.3.2, CSV, OMOP CSV"],
 ], [1.4, 3.6, 3]));
 ekle(H2("5.2 Hastane içi kurulum ve entegrasyon yolları"));
@@ -269,55 +270,84 @@ ekle(...sekil("sekil_05_kurulum.png", "Hastane içi kurulum topolojisi", 6.2));
 
 // 6 Moduller
 ekle(H1("6. Modüller"));
-ekle(kisaca("Bu bölüm her ekranın ne işe yaradığını anlatır: araştırmayı kurmak, hasta bulmak, hasta kaydetmek, yan etkileri bildirmek, hastaneleri karşılaştırmak, riskleri izlemek ve her şeyi kayıt altında tutmak."));
-ekle(P("Bu bölümde her modülün işlevi ve ekran görüntüleri verilmektedir. Ekranlar demo kurulumundan alınmıştır; veriler sentetiktir."));
-ekle(H2("6.1 Genel bakış ve çalışma yönetimi"));
+ekle(kisaca("Bu bölüm her ekranın ne işe yaradığını anlatır: kurulum ve çalışma tasarımı, hasta bulma, hasta kaydı ve formlar, yan etki bildirimi, hastane seçimi, risk izleme, ziyaretler, belge arşivi, ilk analizler ve her şeyin kayıt altında tutulması."));
+ekle(P("Bu bölümde her modülün işlevi ve ekran görüntüleri verilmektedir. Ekranlar CRO kullanım modundaki demo kurulumundan alınmıştır; veriler sentetiktir."));
+ekle(H2("6.1 Kullanım modları ve ilk kurulum"));
+ekle(P("Aynı yazılım üç farklı kurum tipine göre çalışır: **CRO / sponsor** (çok merkezli, sponsorlu çalışmalar; tam menü), **üniversite / hastane** (bölümler ve araştırmacılar tek kurum çatısı altında; kurum izni ve etik kurul takibi) ve **tekil araştırmacı** (tek merkezde kendi çalışmasını yürüten araştırmacı; en sade menü). Mod, ilk açılışta kurulum ekranında kurum adı ve yönetici hesabıyla birlikte seçilir ve sonradan Ayarlar sayfasından değiştirilebilir. Mod yalnızca menüyü, sihirbaz varsayılanlarını ve yeni kayıtları etkiler; yetkiler her modda rol bazlıdır."));
+ekle(...sekil("32_kurulum.png", "İlk kurulum: kullanım modu, kurum ve yönetici hesabı", 5.6));
+ekle(H2("6.2 Genel bakış ve çalışma yönetimi"));
 ekle(P("Genel bakış ekranı, kullanıcının rolüne göre düzenlenmiş bir iş listesi (yaklaşan vizitler, inceleme bekleyen aday hastalar, açık sorgular, bildirim bekleyen ciddi advers olaylar, planlı ziyaretler, açık risk uyarıları) ile portföydeki çalışmaların kayıt ilerlemesini bir arada gösterir."));
 ekle(...sekil("02_pano.png", "Genel bakış ekranı (sistem yöneticisi görünümü)"));
-ekle(P("Çalışma kaydı; protokol sürümleri ve değişiklik notları, randomizasyon kolları, aşama kontrol listesi, planlanan–gerçekleşen kayıt eğrisi ve çalışmaya ait denetim izini içerir."));
+ekle(P("Çalışma kaydı; protokol sürümleri ve değişiklik notları, aşama kontrol listesi, planlanan–gerçekleşen kayıt eğrisi ve çalışmaya ait denetim izini içerir. Sekmeler kurulum, yürütme, izlem ve kapanış başlıkları altında gruplanır."));
 ekle(...sekil("04_calisma_ozet.png", "Çalışma özeti: yaşam döngüsü, kayıt eğrisi ve aşama kontrol listesi"));
-ekle(H2("6.2 Protokol ve kriter yapılandırma"));
-ekle(P("Dahil etme ve hariç tutma kriterleri protokolden satır satır yapıştırılır. Her kriter, Türkçe Klinik BDM (ya da BDM sunucusu olmayan kurulumlarda kural tabanlı ayrıştırıcı) tarafından hesaplanabilir bir sorguya dönüştürülür: yaş, cinsiyet, tanı (ICD-10), laboratuvar (LOINC, birim normalizasyonu), ilaç (ATC), performans ölçeği (ECOG, Karnofsky, NYHA), gebelik, tedavi geçmişi, zaman penceresi ve bileşik koşullar desteklenir. Düşük güvenli dönüşümler araştırmacı onayı bekler."));
+ekle(H2("6.3 Dört adımlı çalışma sihirbazı"));
+ekle(P("Yeni bir çalışma dört adımda kurulur: temel bilgiler (protokol kodu önerisi, tür, faz, sponsor, hedef gönüllü sayısı), tasarım (kollar, vizit şablonu, dahil etme ve hariç tutma kriterleri), merkez ve ekip, eCRF formları ve başvurular. Yarım kalan kurulum taslak olarak saklanır ve kaldığı yerden sürdürülür; çalışmayı kuran kişi ekibe kendiliğinden eklenir. Protokol metni olan kullanıcı, çalışma oluşur oluşmaz protokolden taslak sayfasına yönlendirilir."));
+ekle(...sekil("33_sihirbaz_1.png", "Sihirbaz, 1. adım: temel bilgiler", 6.0));
+ekle(...sekil("34_sihirbaz_2.png", "Sihirbaz, 2. adım: kollar, vizit şablonu ve kriterler", 6.0));
+ekle(H2("6.4 Çalışma tasarımı ve kodsuz eCRF tasarımcısı"));
+ekle(P("Tasarım sayfası bir çalışmanın iskeletini tek yerde toplar: kollar ve randomizasyon oranları, gün ve pencere bilgisiyle vizit şeması, eCRF formları ve hangi formun hangi vizitte doldurulacağını gösteren vizit × form matrisi. Gönüllü randomize edildiğinde vizitleri bu şemadan üretilir."));
+ekle(...sekil("19_tasarim.png", "Çalışma tasarımı: kollar, vizit şeması ve eCRF formları"));
+ekle(P("eCRF tasarımcısı formların kod yazmadan hazırlanmasını sağlar: alan ekleme, tip ve birim seçimi, alt–üst sınırlar, zorunlu alan, koşullu alanlar, bölüm başlıkları, çoklu seçim ve tekrarlayan formlar. Sağdaki canlı önizleme veri giriş ekranının nasıl görüneceğini gösterir. Veri kaydı olan bir formda alan silinemez, tipi değiştirilemez; diğer değişiklikler form sürümünü artırır ve denetim izine yazılır. CDASH standart formları ve telifsiz ölçekler (PHQ-9, GAD-7, VAS) tek tıkla eklenebilir."));
+ekle(...sekil("35_ecrf_tasarimci.png", "Kodsuz eCRF tasarımcısı: alanlar, vizit seçimi ve canlı önizleme"));
+ekle(H2("6.5 Protokolden taslak"));
+ekle(P("Protokol metni yapıştırıldığında ya da PDF/DOCX olarak yüklendiğinde sistem dahil etme ve hariç tutma kriterlerini, çalışma kollarını, vizit takvimini ve gereken standart formları ayıklayıp öneri olarak listeler. Ayrıştırma kural tabanlıdır; Türkçe Klinik BDM bağlıysa öneriler onunla zenginleştirilir. Hiçbir öneri kendiliğinden uygulanmaz: kullanıcı işaretlediklerini onaylar, tanınamayan satırlar ayrıca gösterilir ve uygulanan her öğe denetim izine yazılır. Metinde kimlik verisi bulunursa metin modele gönderilmez."));
+ekle(...sekil("36_protokol_taslak.png", "Protokolden çıkarılan öneriler: kriterler, kollar, vizitler ve formlar"));
+ekle(H2("6.6 Protokol ve kriter yapılandırma"));
+ekle(P("Dahil etme ve hariç tutma kriterlerinin her biri, Türkçe Klinik BDM (ya da BDM sunucusu olmayan kurulumlarda kural tabanlı ayrıştırıcı) tarafından hesaplanabilir bir sorguya dönüştürülür: yaş, cinsiyet, tanı (ICD-10), laboratuvar (LOINC, birim normalizasyonu), ilaç (ATC), performans ölçeği (ECOG, Karnofsky, NYHA), gebelik, tedavi geçmişi, zaman penceresi ve bileşik koşullar desteklenir. Düşük güvenli dönüşümler araştırmacı onayı bekler."));
 ekle(...sekil("05_protokol_kriterler.png", "Kriterlerin hesaplanabilir sorguya dönüştürülmesi ve araştırmacı onayı"));
-ekle(H2("6.3 Merkez yönetimi, performans endeksi ve başvurular"));
+ekle(H2("6.7 Çalışma ekibi"));
+ekle(P("Her çalışmanın ekibi ayrı tanımlanır. Proje yöneticisi, CRA, veri yöneticisi, istatistikçi ve farmakovijilans kullanıcıları yalnızca atandıkları çalışmaları görür; araştırmacı ve koordinatörler merkezleri üzerinden erişir. Rol kişiye bir kez verilir, hangi çalışmada çalışacağı ekip sayfasından belirlenir; her ekleme ve çıkarma denetim izine yazılır."));
+ekle(...sekil("37_ekip.png", "Çalışma ekibi: atanan kullanıcılar ve merkez üzerinden erişenler"));
+ekle(H2("6.8 Merkez yönetimi, performans endeksi ve başvurular"));
 ekle(P("Merkez kayıt defteri; kurum türü, HBYS türü, FHIR uç noktası, terapötik alanlar, araştırmacı listesi (GCP eğitim yenileme uyarısıyla) ve geçmiş çalışmalardaki performansı tutar. **Merkez performans endeksi**, her merkezin aktivasyon süresi, kazanım hızı, tarama başarısızlığı ve veri kalitesi göstergelerini tüm havuza ve aynı kurum tipine göre yüzdelik dilimlerle kıyaslar. Sponsor görünümünde merkez adları gizlenir; merkezler kendi konumlarını görür. Kıyaslama havuzu platformdaki çalışma sayısıyla büyüdüğü için endeks, zamanla kuvvetlenen ve rakiplerce kolay kopyalanamayan bir veri varlığıdır."));
 ekle(...sekil("29_merkez_endeksi.png", "Merkez performans endeksi (EBM görünümü; sponsor görünümünde adlar gizlenir)"));
 ekle(P("Etik kurul, TİTCK, kurum izni ve KVKK başvuruları tip, referans numarası, gönderim ve karar tarihleriyle kaydedilir; karar süreleri merkez ve kurum bazında öğrenilir ve aktivasyon gecikme modelini besler."));
 ekle(...sekil("06_merkezler.png", "Çalışma merkezleri: durum, kilometre taşları, tahmin ve risk puanı"));
-ekle(H2("6.4 Protokol–hasta eşleştirme"));
+ekle(H2("6.9 Protokol–hasta eşleştirme"));
 ekle(P("Eşleştirme modülü, aktif merkezlerin kimliksizleştirilmiş hasta kayıtlarını protokol kriterleriyle karşılaştırır. Dahil etme kriterlerinde tanı kodu varsa havuz önce ICD-10 ön filtresiyle daraltılır; her hasta için her kriter önce yapısal veri üzerinde, yeterli kanıt yoksa serbest metin üzerinde değerlendirilir. Metin yolunda hasta metinleri cümle tabanlı parçalanır, hibrit aramayla ilgili parçalar bulunur ve BDM'den yalnızca kaynak metinde birebir geçen bir kanıt cümlesiyle karar vermesi istenir. BDM bulunmadığında kalıp tabanlı değerlendirme (laboratuvar değeri, ECOG/NYHA, TNM evre, reseptör durumu, zaman penceresi, tedavi geçmişi) devreye girer."));
 ekle(...sekil("sekil_03_eslestirme_akisi.png", "Protokol–hasta eşleştirme boru hattı"));
 ekle(P("Sonuçlar uygun, olası, belirsiz ve uygun değil sınıflarında özetlenir. Araştırmacı kriter bazında sonuç, kaynak cümle, güven ve yöntemi görür; kararını gerekçesiyle kaydeder. Onaylanan hasta gönüllü ön tarama listesine düşer. Gölge mod, model önerisi ile araştırmacı kararını karşılaştırarak duyarlılık, özgüllük ve öngörü değerlerini çalışma bazında raporlar."));
 ekle(...sekil("08_eslestirme.png", "Aday hasta listesi: model kararı ve araştırmacı kararı"));
 ekle(...sekil("09_eslestirme_detay.png", "Aday hasta detayı: kriter bazında kanıt cümleleri ve araştırmacı kararı"));
-ekle(H2("6.5 Gönüllü yönetimi ve eCRF"));
-ekle(P("Gönüllü kaydı; onam tarihi ve sürümü, tarama, randomizasyon (onam olmadan randomizasyon engellenir), kol ataması, vizit takvimi, erken ayrılma ve tarama başarısızlığı nedenlerini içerir. eCRF tanımları CDASH değişken adlarıyla eşlenir; sayısal aralık, zorunlu alan ve tarih kontrolleri otomatik sorgu açar. Tamamlanmış formdaki değişiklik için gerekçe zorunludur; CRA SDV işaretler, veri yöneticisi e-imza ile kilitler; açık sorgusu olan form kilitlenemez. Veri CDISC ODM 1.3.2 veya CSV paketi olarak dışa aktarılır."));
+ekle(H2("6.10 Gönüllü yönetimi, randomizasyon ve eCRF"));
+ekle(P("Gönüllü kaydı; onam tarihi ve sürümü, tarama, randomizasyon (onam olmadan randomizasyon engellenir), kol ataması, vizit takvimi, erken ayrılma ve tarama başarısızlığı nedenlerini içerir. Tamamlanmış formdaki değişiklik için gerekçe zorunludur; açık sorgusu olan form kilitlenemez."));
 ekle(...sekil("13_gonullu_detay.png", "Gönüllü kaydı: vizit × form matrisi, advers olaylar ve sorgular"));
+ekle(P("**Randomizasyon** platformun içinde yapılır: blok boyutu ve isteğe bağlı merkeze göre strata ile bir liste üretilir ve e-imza ile mühürlenir. Gönüllü çalışmaya alındığında kol sıradaki kayıttan otomatik atanır; kol dizilimi ve sıradaki tahsis hiçbir ekranda gösterilmez, yalnızca kullanılan ve kalan kayıt sayıları görünür. Tahsis yapılmış bir liste yeniden üretilemez."));
+ekle(...sekil("38_randomizasyon.png", "Randomizasyon listesi: merkeze göre strata, kullanılan ve kalan kayıtlar"));
+ekle(P("eCRF alanları CDASH değişken adlarıyla eşlenir; sayısal aralık, zorunlu alan ve tarih kontrolleri otomatik sorgu açar. CRA kaynak veri doğrulamasını (SDV) işaretler. Kapanış aşamasında **araştırmacı (PI) imzası** ve **toplu kilit** kullanılır: veri yöneticisi ön kontrol raporunu görür, seçilen formları tek e-imza ile kilitler; kilit açma gerekçe ister. Veri CDISC ODM 1.3.2 veya CSV paketi olarak dışa aktarılır."));
 ekle(...sekil("14_ecrf_form.png", "eCRF veri giriş formu (CDASH eşlemeli alanlar, otomatik edit-check)"));
-ekle(H2("6.6 Güvenlik raporlama"));
+ekle(H2("6.11 Güvenlik raporlama"));
 ekle(P("Advers olaylar MedDRA terimi, CTCAE derecesi, nedensellik, beklenirlik ve ciddiyet ölçütü ile kaydedilir. Ciddi olaylarda TİTCK bildirim süresi (7/15 gün) farkındalık tarihinden geri sayılır; beklenmeyen ve ilişkili ciddi olaylar SUSAR olarak işaretlenir."));
 ekle(...sekil("16_guvenlik.png", "Güvenlik modülü: AE listesi, SAE/SUSAR işaretleri ve bildirim takibi"));
-ekle(H2("6.7 Merkez zekâsı ve sponsor fizibilite raporu"));
+ekle(H2("6.12 Merkez zekâsı ve sponsor fizibilite raporu"));
 ekle(P("Kazanım tahmini, merkezin kendi geçmişi ile benzer terapötik alandaki merkez havuzunu birleştiren Gamma–Poisson hiyerarşik Bayes modelidir; az verili merkezlerde tahmin havuza doğru büzülür. Aktivasyon gecikme riski, seçimden aktivasyona geçen sürenin sansürlü Weibull hızlandırılmış başarısızlık zamanı modeliyle kestirilir. Monte Carlo simülasyonu ile hedefe ulaşma tarihi ve zamanında bitirme olasılığı hesaplanır; sıralama katmanı her merkez için Türkçe gerekçe üretir. Sponsor fizibilite raporu bu analizleri yazdırılabilir tek sayfada derler."));
 ekle(...sekil("10_merkez_zekasi.png", "Merkez zekâsı: tahminler, Monte Carlo projeksiyonu ve açıklanabilir sıralama"));
 ekle(...sekil("26_fizibilite_raporu.png", "Sponsor fizibilite ve kazanım raporu", 6.0));
-ekle(H2("6.8 Sponsor portalı"));
-ekle(P("Sponsor portalı, sponsor kurumun kendi çalışmalarını salt okunur bir portföy görünümünde sunar: randomizasyon ilerlemesi, mevcut hızla hedefe kalan süre ve plana göre takvim riski, açık ve aksiyon seviyesindeki uyarılar, SAE ve bildirim durumu, en riskli merkez ve fizibilite raporu bağlantısı. Portal hasta kimlik verisi içermez; eşleştirme çıktıları ve kaynak belgeler yalnızca araştırma merkezi tarafından görülebilir. Her görüntüleme denetim izine yazılır. Sponsorun ödediği değerin görünür olduğu yer burasıdır: takvim riski haftalar önce görünür, karar için rapor hazırdır."));
-ekle(...sekil("27_sponsor_portali.png", "Sponsor portalı (sponsor rolü görünümü)"));
-ekle(H2("6.9 Risk bazlı izlem"));
+ekle(H2("6.13 Sponsor görünümü"));
+ekle(P("Sponsor rolündeki kullanıcı, herkesin kullandığı Genel Bakış ekranına girer; bu ekran ona yalnızca kendi kurumunun çalışmalarını salt okunur bir özet olarak gösterir: aktif çalışma ve randomize gönüllü sayısı, mevcut hızla hedefe kalan süre ve plana göre takvim riski, açık ve aksiyon seviyesindeki uyarılar, SAE sayısı, en riskli merkez ve fizibilite raporu bağlantısı. Sponsor hiçbir kaydı değiştiremez; hasta kimlik verisi, eşleştirme çıktıları ve kaynak belgeler yalnızca araştırma merkezi tarafından görülür. Merkez performans endeksi sponsora anonim olarak açılır."));
+ekle(...sekil("27_sponsor_gorunumu.png", "Sponsor görünümü: Genel Bakış'ta kurumun salt okunur özeti"));
+ekle(H2("6.14 Risk bazlı izlem"));
 ekle(P("Modül ICH E6(R3) risk temelli kalite yönetimini uygular. On beş varsayılan anahtar risk göstergesi çalışma bazında eşiklerle özelleştirilir; uyarılar hem sabit eşiklerden hem de merkezler arası dayanıklı z-skoru ile anomali tespitinden üretilir ve her uyarının \"neden tetiklendi\" açıklaması vardır. Bileşik risk puanı izlem önerisini belirler; kalite tolerans limitleri çalışma düzeyinde izlenir."));
 ekle(...sekil("11_rbm.png", "Risk bazlı izlem: merkez × KRI ısı haritası ve uyarılar"));
-ekle(H2("6.10 İzlem ziyaretleri, sapmalar, TMF ve kalite"));
-ekle(P("Ziyaretler (SIV, IMV, COV, uzaktan, tetiklenmiş) ve protokol sapmaları kategori, önem, kök neden ve düzeltici faaliyetle izlenir. TMF modülü DIA referans modeli bölgelerine göre düzenlenmiştir; her belgenin SHA-256 özeti alınır, onay e-imza ile yapılır. Tüm işlemler hash zincirli denetim izine yazılır; e-imzada parola yeniden istenir; beş hatalı girişte hesap kilitlenir."));
+ekle(H2("6.15 İzlem ziyaretleri, ziyaret raporu ve sapma kapatma"));
+ekle(P("Ziyaretler (başlatma, ara izlem, kapanış, uzaktan ve tetiklenmiş) merkez bazında planlanır; aksiyon seviyesindeki bir risk uyarısından tek tıkla tetiklenmiş ziyaret açılabilir. **Ziyaret raporu** gerçekleşen tarihi, SDV oranını, kontrol listesini ve bulguları içerir; proje yöneticisi raporu e-imza ile onaylar, onaydan sonra rapor değiştirilemez. Kapanmamış bulgular sonraki ziyarete taşınır."));
+ekle(...sekil("39_ziyaret_raporu.png", "Ziyaret raporu: kayıt, kontrol listesi, bulgular ve e-imzalı onay"));
+ekle(P("Protokol sapmaları kategori ve önemle kaydedilir. **Sapma kapatma** için kök neden ve düzeltici-önleyici faaliyet girilir; majör sapmalarda etik kurul bildirim tarihi girilmeden sapma kapatılamaz. Tüm değişiklikler eski ve yeni değerleriyle denetim izine yazılır."));
+ekle(...sekil("40_sapma_kapatma.png", "Majör protokol sapması: kök neden, düzeltici faaliyet ve zorunlu etik bildirim tarihi"));
+ekle(H2("6.16 TMF, denetim izi ve elektronik imza"));
+ekle(P("TMF modülü DIA referans modeli bölgelerine göre düzenlenmiştir ve merkez dosyası (ISF) görünümü sunar. Her belgenin SHA-256 özeti alınır; belge sürümleri zincir halinde tutulur, onay e-imza ile yapılır. Belge indirilirken özet yeniden doğrulanır, böylece arşivdeki dosyanın değişmediği her indirmede kontrol edilmiş olur. Tüm işlemler zincirli denetim izine yazılır; e-imzada parola yeniden istenir; art arda hatalı girişte hesap süreli olarak kilitlenir."));
 ekle(...sekil("18_tmf.png", "TMF: DIA referans modeli bölgeleri, özet değerleri ve e-imza ile onay", 6.0));
-ekle(...sekil("21_denetim_izi.png", "Denetim izi: hash zincirli kayıtlar ve elektronik imzalar"));
-ekle(H2("6.11 Kimliksizleştirme ve hasta havuzu yükleme"));
+ekle(...sekil("21_denetim_izi.png", "Denetim izi: zincirli kayıtlar ve elektronik imzalar"));
+ekle(H2("6.17 Ön analiz ve Tablo 1"));
+ekle(P("Analiz sekmesi, veri girildikçe çalışmanın ilk sonuçlarını gösterir: kollara göre gönüllü akışı, değişken bazında betimleyici özet ve verinin dağılımına göre kural tabanlı test seçimi (Welch t, Mann-Whitney, ANOVA, Kruskal-Wallis, ki-kare, Fisher), vizitler arası değişim ve kol × sistem organ sınıfı advers olay özeti. **Tablo 1** (başlangıç özeti) seçilen vizitte tüm sayısal ve seçim alanlarını kol bazında tek tıkla hazırlar ve CSV olarak indirilir. Analiz veri seti de indirilebilir; her indirme denetim izine yazılır. Bu sayfa ön analiz içindir; nihai analiz istatistiksel analiz planına göre yapılır."));
+ekle(...sekil("25_analiz.png", "Ön analiz: kayıt özeti ve kollara göre gönüllü akışı"));
+ekle(...sekil("41_tablo1.png", "Başlangıç özeti (Tablo 1): kol bazında değişken özetleri"));
+ekle(H2("6.18 Kimliksizleştirme ve hasta havuzu yükleme"));
 ekle(P("HBYS'den gelen serbest metinler sisteme yazılmadan önce kimliksizleştirme modülünden geçer: TC kimlik numarası (algoritma doğrulamalı), telefon, e-posta, IBAN, plaka, tarihler, dosya ve protokol numaraları, kişi adları, kurum adları, il/ilçe ve adres ifadeleri, 89 yaş üstü. Klinik terimler beyaz liste ile korunur; maskeleme, tutarlı takma ad ve tarih kaydırma modları vardır. İkinci geçiş doğrulaması şüpheli kalıp kalan kayıtları reddeder. CSV yükleme sayfası aynı akışı HBYS dökümleri için uygular."));
 ekle(...sekil("20_kimliksizlestirme.png", "Kimliksizleştirme aracı: girdi, çıktı ve ikinci geçiş uyarıları"));
 ekle(...sekil("31_csv_yukleme.png", "CSV ile hasta havuzu yükleme (FHIR bağlantısı olmayan kurulumlar için)"));
-ekle(H2("6.12 Türkçe Klinik BDM konsolu, API ve Ar-Ge göstergeleri"));
-ekle(P("BDM konsolu dört görevi koruma katmanının kararlarıyla gösterir. REST API, platform işlevlerini ve genel amaçlı klinik NLP uçlarını (kimliksizleştirme, ICD-10 kodlama önerisi, özet, soru-cevap, kriter yapılandırma) oturum veya API anahtarıyla diğer kurumsal uygulamalara açar; HBYS entegrasyonu FHIR R4 Bundle alımı ve merkez bazlı senkronizasyon uçlarıyla yapılır. Ar-Ge göstergeleri sayfası model performansını proje hedefleriyle karşılaştırır (Bölüm 9)."));
-ekle(...sekil("19_bdm_konsol.png", "Türkçe Klinik BDM konsolu"));
+ekle(H2("6.19 REST API ve HBYS entegrasyonu"));
+ekle(P("REST API, platform işlevlerini (çalışma, kriter, eşleştirme, risk uyarıları) ve klinik metin uçlarını (kimliksizleştirme, kriter yapılandırma, ICD-10 kodlama önerisi, klinik özet) oturum veya API anahtarıyla diğer kurumsal uygulamalara açar. API anahtarları geçerlilik süreli ve iptal edilebilirdir; anahtar, sahibinin rol izinleri dahilinde çalışır. HBYS entegrasyonu FHIR R4 Bundle alımı, ResearchStudy / ResearchSubject kaynakları ve merkez bazlı senkronizasyon uçlarıyla yapılır. API belgeleri yalnızca oturum açmış kullanıcılara açılır."));
 ekle(...sekil("30_api_anahtarlari.png", "API anahtarı yönetimi (makine-makine entegrasyon)"));
 
 // 7 BDM altyapisi
@@ -327,7 +357,7 @@ ekle(H2("7.1 Model geliştirme hattı"));
 ekle(P("Model, açık kaynak 7–8 milyar parametreli bir temel modelin Türkçe tıbbi derlemle sürekli ön eğitimi ve klinik araştırma görevleri için talimat ince ayarı (LoRA/QLoRA) ile geliştirilmektedir. Derlem; kimliksizleştirilmiş epikriz, patoloji ve radyoloji raporları, klinik kılavuzlar, protokol metinleri ve klinisyen etiketli görev örneklerinden oluşur. Eğitim yapılandırmaları, veri hazırlama, değerlendirme ve nicemleme betikleri ürünün ml/ dizininde sürümlenir."));
 ekle(...sekil("sekil_04_bdm_gelistirme.png", "Türkçe Klinik BDM geliştirme ve dağıtım hattı"));
 ekle(H2("7.2 Görevler, istem tasarımı ve koruma katmanı"));
-ekle(P("Model dört göreve özelleştirilir: kriteri hesaplanabilir sorguya dönüştürme, kriter için hasta metninden kanıt çıkarma, çalışma odaklı klinik özet ve bağlam üzerinden soru-cevap. Koruma katmanı; kaynak metinde birebir bulunmayan kanıtı reddeder (halüsinasyon kontrolü), güven eşiğinin altındaki sonuçları araştırmacıya bırakır, JSON şema doğrulaması yapar, BDM erişilemezse kural tabanlı yola düşer ve istemde kimlik verisi kalıbı tespit ederse isteği engeller."));
+ekle(P("Model dört göreve özelleştirilir: kriteri hesaplanabilir sorguya dönüştürme, kriter için hasta metninden kanıt çıkarma, çalışma odaklı klinik özet ve ICD-10 kodlama önerisi. Protokolden taslak çıkarma da aynı yapılandırma yeteneğini kullanır. Koruma katmanı; kaynak metinde birebir bulunmayan kanıtı reddeder (halüsinasyon kontrolü), güven eşiğinin altındaki sonuçları araştırmacıya bırakır, JSON şema doğrulaması yapar, BDM erişilemezse kural tabanlı yola düşer ve istemde kimlik verisi kalıbı tespit ederse isteği engeller."));
 ekle(H2("7.3 TR-KlinikBench: açık değerlendirme seti"));
 ekle(P("Ar-Ge programı, Türkçe klinik araştırma NLP görevleri için bir açık değerlendirme seti tanımlar. Altı görev (kriter–hasta eşleştirme, kanıt çıkarma, kriter yapılandırma, kimliksizleştirme, ICD-10 kodlama, çalışma odaklı özet) için JSON şemaları, metrikler, iki etiketleyici + hakem kuralı ve skor tablosu politikası belirlenmiştir. Set yalnızca sentetik ve etik onaylı kimliksizleştirilmiş veri içerir; demo kurulumundaki örnekler sentetiktir. Hedef, pilot hastanelerde 2.000 etiketli çifte ulaşmak ve seti program sonunda yayımlamaktır. Kural tabanlı taban çizgisinin mevcut skorları Bölüm 9'da verilmiştir."));
 ekle(H2("7.4 Federe model güncelleme"));
@@ -351,25 +381,29 @@ ekle(...tablo(["Çerçeve", "Platformdaki karşılığı"], [
 ], [2.4, 5.4]));
 
 // 9 Olgunluk ve Ar-Ge
-ekle(H1("9. Olgunluk durumu ve Ar-Ge göstergeleri"));
-ekle(kisaca("Ürünün temel kısmı geliştirilmiş ve test edilmiş durumda; yapay zekâ kısmı ise doğrulama aşamasında. Sistem kendi başarısını sürekli ölçer ve hedeflerle karşılaştırır; sayılar bu bölümde olduğu gibi verilmiştir."));
+ekle(H1("9. Olgunluk durumu ve ölçüm sonuçları"));
+ekle(kisaca("Ürünün temel kısmı geliştirilmiş ve test edilmiş durumda; yapay zekâ kısmı ise doğrulama aşamasında. Yapay zekâ bileşenlerinin başarısı ürünle gelen değerlendirme aracıyla ölçülür ve hedeflerle karşılaştırılır; sayılar bu bölümde olduğu gibi verilmiştir."));
 ekle(H2("9.1 Modül olgunluk tablosu"));
 ekle(...tablo(["Modül", "Durum", "Açıklama"], [
-  ["Çalışma, merkez, başvuru yönetimi; sponsor portalı", "Hazır", "Otomatik testler ve demo ortamında doğrulandı; portal 1.5"],
-  ["Gönüllü, vizit, eCRF, sorgu, SDV, kilit, ODM dışa aktarım", "Hazır", "CDASH eşlemesi 1.1; ODM 1.5"],
-  ["Güvenlik raporlama (AE/SAE/SUSAR)", "Hazır", "MedDRA kodlama elle; otomatik kodlama önerisi 1.6"],
-  ["TMF, denetim izi, e-imza, RBAC, API anahtarı", "Hazır", "21 CFR 11 / Annex 11 uyum değerlendirmesi mevcut"],
-  ["Merkez performans endeksi", "Hazır", "Havuz büyüdükçe güvenilirliği artar; sponsor görünümü anonim"],
+  ["Çalışma, merkez, başvuru yönetimi; kullanım modları, sihirbaz, çalışma ekibi", "Hazır", "Otomatik testler ve demo ortamında doğrulandı"],
+  ["Çalışma tasarımı, kodsuz eCRF tasarımcısı, form sürümleme", "Hazır", "Kayıtlı formda alan silme ve tip değiştirme engelli; değişiklikler sürümlenir"],
+  ["Gönüllü, vizit, eCRF, sorgu, SDV, randomizasyon, PI imzası, toplu kilit, ODM dışa aktarım", "Hazır", "CDASH eşlemeli formlar; e-imzalı blok randomizasyon listesi"],
+  ["Güvenlik raporlama (AE/SAE/SUSAR)", "Hazır", "MedDRA kodlama elle; otomatik kodlama önerisi yol haritasında"],
+  ["İzlem ziyaretleri, ziyaret raporu, sapma kapatma", "Hazır", "E-imzalı rapor onayı; majör sapmada etik bildirim zorunlu"],
+  ["Ön analiz ve Tablo 1", "Hazır", "Ön analiz amaçlı; nihai analiz istatistiksel analiz planına göre yapılır"],
+  ["TMF (özet doğrulamalı indirme), denetim izi, e-imza, RBAC, API anahtarı", "Hazır", "21 CFR 11 / Annex 11 uyum değerlendirmesi mevcut"],
+  ["Merkez performans endeksi; sponsor görünümü", "Hazır", "Havuz büyüdükçe güvenilirliği artar; sponsora anonim ve salt okunur"],
+  ["Protokolden taslak", "Pilot", "Kural tabanlı ayrıştırma; BDM ile zenginleştirme laboratuvarda; öneriler insan onayıyla uygulanır"],
   ["Kimliksizleştirme", "Pilot", "Kural tabanlı; sentetik sette F1 0,95; gerçek rapor seti üzerinde değerlendirme Faz 1"],
   ["FHIR R4 HBYS adaptörü, CSV yükleme, OMOP", "Pilot", "Mock ve standart FHIR sunucusuyla test edildi; HBYS üreticileriyle saha testi Faz 4"],
   ["Risk bazlı izlem (KRI/QTL/anomali)", "Pilot", "Eşikler EBM geçmiş verisine göre; prospektif yanlış alarm oranı ölçülecek"],
-  ["Merkez zekâsı", "Pilot / Ar-Ge", "Örnek içi MAPE ve AUC hedefe yakın; çalışma türü kovaryatı 1.6"],
+  ["Merkez zekâsı", "Pilot / Ar-Ge", "Örnek içi MAPE ve AUC hedefe yakın; çalışma türü kovaryatı yol haritasında"],
   ["Kriter yapılandırma ve eşleştirme motoru", "Pilot / Ar-Ge", "Yapısal ve kalıp tabanlı yol üretimde; BDM yolu laboratuvarda"],
   ["Türkçe Klinik BDM, federe güncelleme", "Ar-Ge", "Kavram kanıtı ve iskelet; sürekli ön eğitim, ince ayar ve ilk federe tur Faz 2"],
   ["TR-KlinikBench", "Ar-Ge", "Şemalar, metrikler, sentetik örnek set ve çalıştırıcı hazır; klinisyen etiketli set Faz 1"],
 ], [2.8, 1.1, 3.9]));
 ekle(H2("9.2 Ar-Ge başarı ölçütleri ve mevcut ölçümler"));
-ekle(P("Aşağıdaki değerler, bu dokümanın hazırlandığı tarihte demo kurulumunda sistemin kendi hesapladığı değerlerdir. BDM sunucusu bağlı olmadığı için eşleştirme ölçümleri **kural tabanlı taban çizgisini** gösterir; Ar-Ge programında geliştirilecek Türkçe Klinik BDM'nin bu taban çizgisini aşması beklenir."));
+ekle(P("Eşleştirme, kanıt, kriter yapılandırma ve kimliksizleştirme değerleri, ürünle gelen değerlendirme aracının (ml/degerlendirme) demo kurulumunun örnek değerlendirme setleri üzerindeki komut satırı çıktısıdır; kazanım ve aktivasyon değerleri aynı demo verisi üzerinde merkez zekâsı modellerinin örnek içi hesaplamasıdır. BDM sunucusu bağlı olmadığı için eşleştirme ölçümleri **kural tabanlı taban çizgisini** gösterir; Ar-Ge programında geliştirilecek Türkçe Klinik BDM'nin bu taban çizgisini aşması beklenir."));
 ekle(...tablo(["Ölçüt", "Hedef (program)", "Mevcut", "Ölçüm kaynağı ve not"], [
   ["Hasta–kriter eşleştirmede duyarlılık", "≥ %90", "%76,9", "Altın standart set (28 sentetik örnek), kural tabanlı; özgüllük %93,3; belirsiz oranı %32"],
   ["Halüsinasyon oranı (kanıt kaynakta yok)", "≤ %2", "%0", "Koruma katmanı kaynakta bulunmayan kanıtı reddeder"],
@@ -384,7 +418,7 @@ if (BENCH && BENCH.satirlar && BENCH.satirlar.length) {
   ekle(P("Altı görevli değerlendirme setinin kural tabanlı sağlayıcıyla çalıştırılmasından elde edilen skorlar aşağıdadır. Set sentetik örneklerden oluşur; sayılar BDM'nin aşması gereken taban çizgisini belirler."));
   ekle(...tablo(["Görev", "Ana metrik", "Taban (kural)", "Hedef (BDM)"], BENCH.satirlar, [2.8, 2.2, 1.4, 1.4]));
 }
-ekle(...sekil("25_arge_gostergeleri.png", "Ar-Ge göstergeleri sayfası (demo kurulumu, kural tabanlı mod)"));
+ekle(not("Ölçümler aynı komutla yeniden üretilebilir: **python -m ml.degerlendirme.degerlendir --altin ml/degerlendirme/ornek_altin_standart.jsonl** (kural tabanlı sağlayıcı; BDM bağlıysa --saglayici ve --model ile). Sonuç ml/ciktilar altına JSON olarak yazılır."));
 ekle(P("Bu ölçümler ürünün mevcut durumuna ilişkin dürüst bir resim sunmayı amaçlar. Kural tabanlı yol halüsinasyon üretmez ancak serbest metin kriterlerinde sık \"belirsiz\" der; Ar-Ge programının kapatacağı boşluk budur."));
 ekle(H2("9.3 Teknoloji hazırlık seviyesi ve Ar-Ge programı fazları"));
 ekle(P("Platform çekirdeği ilgili ortamda doğrulanmış prototip düzeyindedir (THS 5–6: geliştirildi, otomatik testlerle ve demo ortamında sınandı, validasyon dosyası hazır), yapay zekâ katmanı laboratuvar ortamında doğrulanmıştır (THS 4). 18 aylık Ar-Ge programı, yapay zekâ katmanını gerçek klinik araştırma ortamında doğrulayarak bütünleşik ürünü THS 7'ye taşımayı hedefler. Program beş fazdan oluşur:"));
@@ -393,7 +427,7 @@ ekle(...tablo(["Faz", "Platformdaki mevcut temel", "Programla eklenecek"], [
   ["Faz 2 (ay 3–10) Türkçe Klinik BDM ve eşleştirme motoru", "Eşleştirme boru hattı, koruma katmanı, RAG, kalıp tabanlı değerlendirme, eğitim/değerlendirme betikleri, federe toplayıcı iskeleti", "Sürekli ön eğitim, talimat ince ayarı, nicemlenmiş hastane içi model, ilk federe tur, duyarlılık ≥ %90"],
   ["Faz 3 (ay 5–12) Merkez zekâsı ve RBM modelleri", "Gamma–Poisson, Weibull AFT, sıralama, performans endeksi, 15 KRI, anomali motoru", "Çalışma türü ve etik kurul süresi kovaryatları, transfer öğrenme, prospektif MAPE/AUC, yanlış alarm oranı"],
   ["Faz 4 (ay 9–15) Platform entegrasyonu, güvenlik, validasyon", "Sağlayıcı soyutlaması, FHIR adaptörü, API anahtarı, CSV dosyası, Part 11 uyumu", "HBYS üreticileriyle saha entegrasyonu, sızma testi, IEC 62304 / ISO 27001 uyum tamamlanması"],
-  ["Faz 5 (ay 13–18) Pilot doğrulama ve ürünleştirme", "Gölge mod, Ar-Ge göstergeleri, sponsor portalı, fizibilite raporu, kurulum paketi", "Üç hastanede prospektif gölge mod doğrulaması, kullanıcı kabul testleri, regülasyon sınıflandırması, ilk ticari kurulumlar, yazılım tescili ve patent başvurusu, TR-KlinikBench yayımı"],
+  ["Faz 5 (ay 13–18) Pilot doğrulama ve ürünleştirme", "Gölge mod, değerlendirme aracı, sponsor görünümü, fizibilite raporu, ön analiz, kurulum paketi", "Üç hastanede prospektif gölge mod doğrulaması, kullanıcı kabul testleri, regülasyon sınıflandırması, ilk ticari kurulumlar, yazılım tescili ve patent başvurusu, TR-KlinikBench yayımı"],
 ], [1.8, 3, 3]));
 
 // 10 Dogrulama
@@ -436,13 +470,13 @@ ekle(H1("12. İş modeli ve ticarileşme"));
 ekle(kisaca("Ürün hastanelere, ilaç ve cihaz firmalarına ve araştırma şirketlerine farklı paketlerle satılır; ilk adım pilot hastanelerde ölçülebilir doğrulama. Rakamlar planlama hedefidir, taahhüt değildir; varsayımları yanında yazılıdır."));
 ekle(H2("12.1 Hedef kullanıcılar ve değer önerisi"));
 ekle(...tablo(["Segment", "Temel sorun", "SmartClinical'ın değeri", "Ödeme gerekçesi"], [
-  ["Sponsorlar (yerli ilaç, biyobenzer, cihaz, IVD üreticileri)", "Kayıt gecikmesi, merkez seçim hatası, görünürlük eksikliği", "Hızlı kazanım, kanıta dayalı merkez seçimi, sponsor portalında gerçek zamanlı takvim ve risk görünümü, fizibilite raporu", "Çalışma süresindeki her ayın sabit maliyeti ve pazara giriş gecikmesi"],
+  ["Sponsorlar (yerli ilaç, biyobenzer, cihaz, IVD üreticileri)", "Kayıt gecikmesi, merkez seçim hatası, görünürlük eksikliği", "Hızlı kazanım, kanıta dayalı merkez seçimi, sponsor görünümünde güncel takvim ve risk özeti, fizibilite raporu", "Çalışma süresindeki her ayın sabit maliyeti ve pazara giriş gecikmesi"],
   ["CRO ve SMO'lar", "Manuel ön tarama ve izlem iş yükü, çok sistemli operasyon", "Tek platform, yapay zekâ destekli ön tarama, risk bazlı izlem ile ziyaret maliyeti düşüşü", "Personel verimliliği, proje başına marj"],
   ["Araştırma hastaneleri ve üniversiteler", "Uygun hastanın bulunamaması, KVKK nedeniyle dış sistem kullanılamaması, akademik çalışmalarda yazılım maliyeti", "Hastane içi Türkçe eşleştirme, performans endeksinde görünürlük, akademik lisans sınıfı", "Çalışma gelirleri, araştırma kapasitesi, akreditasyon"],
   ["HBYS üreticileri ve veri ambarı projeleri", "Araştırma amaçlı ikincil kullanım için kimliksizleştirme ve NLP eksikliği", "OEM kimliksizleştirme ve klinik NLP servis API'si", "Ürünlerine eklenecek araştırma modülü"],
 ], [1.9, 2, 2.4, 1.5]));
-ekle(H2("12.2 Pilot doğrulama ve referans müşteri yaklaşımı"));
-ekle(P("Pazara giriş, satış sürecinden önce kanıt üretme süreci olarak tasarlanmıştır. İlk kurulumlar, Ar-Ge programı kapsamında anlaşma yapılacak pilot hastanelerde ve EBM'nin yürüttüğü çalışmalarda yapılır; sistem mevcut iş akışının yanında gölge modda çalışır ve etkisi ölçülür. Pilotların ticari koşulları (kurulum, lisans, veri ve etiketleme katkısı, referans olma izni) her kurumla ayrı sözleşmede belirlenir; bu dokümanda bir fiyat veya ücretsizlik taahhüdü verilmemektedir."));
+ekle(H2("12.2 İlk kurulum ve doğrulama programı"));
+ekle(P("Pazara giriş, satış sürecinden önce kanıt üretme süreci olarak tasarlanmıştır. İlk kurulumlar, Ar-Ge programı kapsamında anlaşma yapılacak pilot hastanelerde ve EBM'nin yürüttüğü çalışmalarda yapılır; sistem mevcut iş akışının yanında gölge modda çalışır ve etkisi ölçülür. İlk kurulumların ticari koşulları (kurulum, lisans, veri ve etiketleme katkısı, referans olma izni) her kurumla ayrı sözleşmede belirlenir; bu doküman bir fiyat taahhüdü içermez."));
 ekle(...tablo(["Başlık", "Yaklaşım"], [
   ["Süre ve kapsam", "Hastane başına yaklaşık 6 ay; 1–2 aktif çalışma; FHIR veya CSV yoluyla hasta havuzu; gölge modda eşleştirme, risk izleme ve merkez zekâsı"],
   ["Hastaneden beklenen", "Etik kurul başvurusu, klinisyen etiketleme (iş akışı içinde), gölge mod karşılaştırması için manuel ön tarama kayıtları, pilot raporunun referans olarak kullanılmasına izin"],
@@ -453,7 +487,7 @@ ekle(H2("12.3 Gelir modeli ve indikatif fiyatlandırma"));
 ekle(P("Fiyatlar indikatif aralıklardır, taahhüt değildir; pilot sonrası fiyat duyarlılığı ölçümleriyle kesinleştirilecektir. Amaç, yurt dışı çözümlerin yıllık lisans düzeyinin belirgin altında kalırken akademik segmenti dışlamamaktır."));
 ekle(...tablo(["Lisans sınıfı", "Hedef", "Kapsam", "Model ve indikatif fiyat"], [
   ["Kurumsal (on-premise)", "Araştırma hastaneleri, üniversiteler", "Tüm modüller, BDM hastane GPU'sunda, sınırsız çalışma, HBYS entegrasyonu", "Yıllık lisans 1,5–4 milyon TL (yatak ve çalışma hacmine göre) + kurulum/entegrasyon + %18 bakım"],
-  ["Çalışma bazlı", "Sponsorlar, CRO'lar", "Belirli çalışma için merkez zekâsı, RBM, eCRF, TMF, sponsor portalı", "Çalışma başına 300 bin – 1,5 milyon TL (süre ve merkez sayısına göre)"],
+  ["Çalışma bazlı", "Sponsorlar, CRO'lar", "Belirli çalışma için merkez zekâsı, RBM, eCRF, TMF, sponsor görünümü", "Çalışma başına 300 bin – 1,5 milyon TL (süre ve merkez sayısına göre)"],
   ["SaaS (operasyon katmanı)", "Küçük CRO'lar, SMO'lar", "Hasta verisi içermeyen operasyon modülleri bulutta; eşleştirme hastane kurulumunda", "Kullanıcı başına aylık 2.500–4.000 TL"],
   ["Akademik", "Araştırmacı başlatımlı çalışmalar", "Tek merkez, temel modüller", "Yıllık 50–100 bin TL; eğitim ve destek dahil"],
   ["Bileşen / OEM", "HBYS üreticileri, veri ambarı projeleri", "Kimliksizleştirme aracı, klinik NLP servis API'si", "OEM lisansı veya API çağrısı başına; üretici başına yıllık asgari"],
@@ -469,7 +503,7 @@ ekle(...tablo(["Başlık", "Yıl 1 (pilot + ilk lisanslar)", "Yıl 2", "Yıl 3",
   ["Ar-Ge'ye ayrılan pay", "Yatırım bütçesi", "Gelirin %35'i", "Gelirin %30'u", "Model ve altyapı sürdürme maliyeti"],
 ], [2, 1.6, 1.1, 1.1, 2.6]));
 ekle(H2("12.5 Satış kanalları ve referans müşteri planı"));
-ekle(P("İlk kanal EBM'nin kendi operasyonudur: EBM'nin yürüteceği çalışmalarda sponsor portalı sponsora sunulur ve merkez kurulumları pilot sözleşmeleriyle yapılır; böylece ürün, dış satış görüşmelerinden önce gerçek çalışmalarda kanıt üretir. İkinci kanal pilot hastanelerin referansıyla diğer araştırma hastaneleri ve üniversitelerdir; yerli ürün geliştiricilerinin klinik doğrulamasında kullanım ayrıca referans oluşturur. Üçüncü kanal HBYS üreticileriyle OEM ortaklığıdır: üreticinin kurulu tabanı üzerinden araştırma modülü olarak sunum. Dördüncü aşamada Türkçe konuşan ülkeler ve MENA bölgesi için dil uyarlaması planlanır; mimari dil bağımlı bileşenleri değiştirilebilir tutar."));
+ekle(P("İlk kanal EBM'nin kendi operasyonudur: EBM'nin yürüteceği çalışmalarda sponsor görünümü sponsora açılır ve merkez kurulumları pilot sözleşmeleriyle yapılır; böylece ürün, dış satış görüşmelerinden önce gerçek çalışmalarda kanıt üretir. İkinci kanal pilot hastanelerin referansıyla diğer araştırma hastaneleri ve üniversitelerdir; yerli ürün geliştiricilerinin klinik doğrulamasında kullanım ayrıca referans oluşturur. Üçüncü kanal HBYS üreticileriyle OEM ortaklığıdır: üreticinin kurulu tabanı üzerinden araştırma modülü olarak sunum. Dördüncü aşamada Türkçe konuşan ülkeler ve MENA bölgesi için dil uyarlaması planlanır; mimari dil bağımlı bileşenleri değiştirilebilir tutar."));
 ekle(H2("12.6 Savunulabilirlik"));
 ekle(...tablo(["Savunulabilirlik kaynağı", "Açıklama"], [
   ["Türkçe klinik model ve değerlendirme seti", "Türkçe klinik metin için eğitilmiş model ve klinisyen etiketli set oluşturmak yıllar süren klinik erişim gerektirir; yurt dışı oyuncular için giriş engeli"],
@@ -485,7 +519,7 @@ ekle(...tablo(["Özellik", "Yurt dışı CTMS / eşleştirme çözümleri", "Yer
   ["Uçtan uca yaşam döngüsü", "Parçalı ürün ailesi", "Yalnızca veri toplama", "Tek platform"],
   ["Merkez zekâsı ve kıyaslama", "Üst segment ürünlerde, kapalı veri", "Yok", "Var, açıklanabilir, performans endeksi"],
   ["Risk bazlı izlem (ICH E6 R3)", "Var", "Yok", "Var, anomali tespitiyle"],
-  ["Sponsor portalı", "Var", "Kısmen", "Var"],
+  ["Sponsor için salt okunur özet", "Var", "Kısmen", "Var"],
   ["Part 11 / Annex 11 uyumu ve CSV dosyası", "Var", "Değişken", "Var, ürünle teslim"],
   ["Akademik çalışmalar için erişilebilir lisans", "Hayır", "Kısmen", "Evet"],
   ["Açık değerlendirme seti ve model kartı", "Hayır", "Hayır", "Evet (TR-KlinikBench)"],
@@ -512,14 +546,14 @@ ekle(P("Modelin en duyarlı olduğu parametre kazanım artışıdır; bu nedenle
 
 // 14 Yol haritasi ve riskler
 ekle(H1("14. Yol haritası ve riskler"));
-ekle(kisaca("Önümüzdeki iki yılda planlanan sürümler ve en önemli riskler (veri azlığı, hastanelerde donanım eksikliği, yanlış eşleştirme) ve her risk için alınan önlem."));
+ekle(kisaca("Ar-Ge programı boyunca planlanan geliştirmeler ve en önemli riskler (veri azlığı, hastanelerde donanım eksikliği, yanlış eşleştirme) ve her risk için alınan önlem."));
 ekle(H2("14.1 Yol haritası"));
-ekle(...tablo(["Sürüm", "Planlanan", "Başlıca içerik"], [
-  ["1.6", "2027 Ç1", "Çalışma bazlı kullanıcı atama; protokol bazlı vizit tasarımcısı; MedDRA ve ATC otomatik kodlama önerisi; merkez zekâsında çalışma türü ve etik kurul süresi kovaryatları; Alembic migrasyonları; LDAP/SSO"],
-  ["1.7", "2027 Ç2", "HBYS üreticileriyle sertifikalı FHIR entegrasyonu; çok merkezli kurulumlar için merkezi sponsor toplayıcı; SDTM dışa aktarım; e-onam entegrasyonu; ilk federe tur"],
-  ["2.0", "2027 Ç4 (program sonu)", "Nicemlenmiş Türkçe Klinik BDM'nin hastane içi dağıtımı; gölge mod pilotuyla doğrulanmış eşleştirme; TR-KlinikBench 1.0 yayımı; validasyon dosyasının tamamlanması; THS 7 ürün"],
-  ["2.x", "2028", "Çok dilli uyarlama (MENA); federe güncellemenin düzenli turları; gerçek yaşam verisi çalışmaları için OMOP tabanlı analiz katmanı"],
-], [0.9, 1.5, 5.6]));
+ekle(...tablo(["Aşama", "Zamanlama", "Başlıca içerik"], [
+  ["Kısa vade", "Programın ilk altı ayı", "MedDRA ve ATC otomatik kodlama önerisi; merkez zekâsında çalışma türü ve etik kurul süresi kovaryatları; veritabanı migrasyon altyapısı; LDAP/SSO"],
+  ["Orta vade", "Programın ikinci yarısı", "HBYS üreticileriyle sertifikalı FHIR entegrasyonu; çok merkezli kurulumlar için merkezi sponsor toplayıcı; SDTM dışa aktarım; e-onam entegrasyonu; ilk federe tur"],
+  ["Program sonu", "18. ay", "Nicemlenmiş Türkçe Klinik BDM'nin hastane içi dağıtımı; gölge mod pilotuyla doğrulanmış eşleştirme; TR-KlinikBench'in ilk yayımı; validasyon dosyasının tamamlanması; THS 7 ürün"],
+  ["Program sonrası", "Ticari yaygınlaşma", "Çok dilli uyarlama (MENA); federe güncellemenin düzenli turları; gerçek yaşam verisi çalışmaları için OMOP tabanlı analiz katmanı"],
+], [1.3, 1.7, 5]));
 ekle(H2("14.2 Riskler ve azaltım"));
 ekle(...tablo(["Risk", "Etki", "Azaltım"], [
   ["Türkçe tıbbi derlemin yeterli hacimde toplanamaması", "BDM performansı hedefin altında kalır", "Çok merkezli veri paylaşım protokolleri; federe eğitim (veri taşınmadan); sentetik örnek üretimi; kural tabanlı ve kalıp tabanlı yolun üründe kalması"],
@@ -527,7 +561,7 @@ ekle(...tablo(["Risk", "Etki", "Azaltım"], [
   ["HBYS entegrasyonunda üretici bağımlılığı", "Hasta havuzu alınamaz", "FHIR R4 standardı; CSV yükleme yolu; üreticilerle Faz 4 saha testi ve OEM ortaklığı"],
   ["Yanlış pozitif / negatif eşleştirme", "Uygun olmayan hasta aday listesine girer veya uygun hasta kaçar", "Araştırmacı onayı zorunlu; kaynak cümle gösterimi; gölge mod ile sürekli ölçüm; belirsizde güvenli taraf"],
   ["Regülasyon sınıflandırması (tıbbi yazılım)", "Pazara sunum gecikmesi", "Karar destek sınırlarının açık tanımı; Faz 5'te sınıflandırma analizi; IEC 62304 uyumlu yaşam döngüsü"],
-  ["Pilot dönüşümünün düşük kalması", "Gelir hedefleri sarkar", "Pilot tasarımı ödeme kararını verecek paydaşa (sponsor, hastane yönetimi) görünür değer üretir: sponsor portalı, performans endeksi, pilot raporu"],
+  ["Pilot dönüşümünün düşük kalması", "Gelir hedefleri sarkar", "Pilot tasarımı ödeme kararını verecek paydaşa (sponsor, hastane yönetimi) görünür değer üretir: sponsor görünümü, performans endeksi, pilot raporu"],
   ["Kullanıcı kabulü (araştırmacı iş yükü algısı)", "Düşük kullanım", "Rol bazlı sade arayüz; etiketlemenin iş akışına gömülmesi; pilotta SUS ölçümü"],
 ], [2.2, 1.8, 3.8]));
 
@@ -539,11 +573,11 @@ ekle(...tablo(["Başlık", "Özellik"], [
   ["Sunucu gereksinimi (BDM)", "Nicemlenmiş 7–8B model için 16 GB VRAM'li GPU önerilir; CPU modunda 32 GB bellek"],
   ["Veritabanı", "PostgreSQL 16; geliştirme ve küçük kurulumlarda SQLite"],
   ["İstemci", "Güncel tarayıcı; ek yazılım gerekmez; kapalı ağda çalışır"],
-  ["Kimlik doğrulama", "Yerel hesaplar, PBKDF2-SHA256, hesap kilitleme; API anahtarı (geçerlilik süreli, iptal edilebilir); LDAP/AD ve SSO 1.6"],
+  ["Kimlik doğrulama", "Yerel hesaplar, PBKDF2-SHA256, hesap kilitleme; API anahtarı (geçerlilik süreli, iptal edilebilir); LDAP/AD ve SSO yol haritasında"],
   ["Entegrasyon", "REST API v1 (OpenAPI), FHIR R4 (okuma ve ResearchStudy/ResearchSubject), CSV hasta havuzu yükleme, CDISC ODM 1.3.2, CSV, OMOP CDM v5.4, klinik NLP servis uçları"],
   ["Yedekleme", "Günlük veritabanı ve dosya yedeği; 7 günlük, 30 günlük ve uzun dönem saklama; SHA-256 bütünlük"],
   ["Loglama ve izleme", "Uygulama logları hasta verisi içermez; sağlık uç noktası; denetim izi zinciri doğrulama betiği"],
-  ["Test ve kalite", "146 otomatik test (servis, model, web, denetim, benchmark); statik analiz; değişiklik günlüğü; sürümleme"],
+  ["Test ve kalite", "390 otomatik test (servis, model, web, denetim, değerlendirme seti); statik analiz; değişiklik günlüğü"],
   ["Diller", "Arayüz Türkçe; kriter ayrıştırıcı Türkçe ve İngilizce protokol metinlerini destekler"],
 ], [2.2, 5.6]));
 
@@ -568,6 +602,9 @@ ekle(...tablo(["Terim", "Ne demek?"], [
   ["Gölge mod", "Yapay zekânın önerilerinin kullanıcılara gösterilmeden kaydedilip mevcut yöntemin sonuçlarıyla karşılaştırılması; sistemin gerçekten işe yarayıp yaramadığını ölçme yöntemi"],
   ["Duyarlılık", "Gerçekten uygun olan hastaların yüzde kaçını sistemin yakaladığı"],
   ["eCRF", "Elektronik hasta formu; araştırmada her hasta için toplanan verilerin girildiği dijital form"],
+  ["Randomizasyon", "Gönüllülerin tedavi kollarına kura ile, kimsenin önceden bilemeyeceği biçimde dağıtılması"],
+  ["Tablo 1", "Araştırma yayınlarındaki ilk tablo: gönüllülerin başlangıç özelliklerinin kollara göre özeti"],
+  ["Protokol sapması", "Araştırmanın kurallarından herhangi bir sapma; kök nedeni ve düzeltici adımıyla kapatılır"],
   ["Advers olay / SAE", "Araştırma sırasında hastada görülen istenmeyen etki; ciddi olanlar (hastaneye yatış gibi) belirli sürede bildirilmek zorundadır"],
   ["Risk bazlı izlem (KRI / QTL)", "Her hastaneyi aynı sıklıkla ziyaret etmek yerine ölçülen risk göstergelerine göre dikkatin sorunlu hastanelere yönlendirilmesi"],
   ["TMF", "Araştırmanın tüm resmi belgelerinin tutulduğu arşiv (çalışma ana dosyası)"],
@@ -580,13 +617,13 @@ ekle(...tablo(["Terim", "Ne demek?"], [
 ], [2.2, 5.6]));
 
 ekle(...bosluk(1));
-ekle(P("Bu doküman ürünün mevcut sürümünü tanımlar; işlevler ve ölçümler sürüm notlarıyla güncellenir. Teknik sorular için yazılım ekibi, ticari sorular için EBM iş geliştirme birimi ile iletişime geçilebilir.", { italics: true, color: GRI, size: 20 }));
+ekle(P("Bu doküman ürünün bugünkü durumunu tanımlar; işlevler ve ölçümler ürün geliştikçe güncellenir. Teknik sorular için yazılım ekibi, ticari sorular için EBM iş geliştirme birimi ile iletişime geçilebilir.", { italics: true, color: GRI, size: 20 }));
 
 // ---------------------------------------------------------------- belge
 const doc = new Document({
   creator: "EBM Klinik Araştırma Hizmetleri",
   title: "EBM SmartClinical – Ürün Tanıtım ve Teknik Özet Dokümanı",
-  description: "Sürüm 1.4.2",
+  description: "Ürün tanıtım, teknik özet ve yatırım dokümanı",
   styles: {
     default: { document: { run: { font: FONT, size: 22 } } },
     paragraphStyles: [
@@ -605,7 +642,7 @@ const doc = new Document({
   features: { updateFields: true },
   sections: [{
     properties: { page: { size: { width: SAYFA_GENISLIK, height: 16838 }, margin: { top: 1134, right: KENAR_BOSLUK, bottom: 1134, left: KENAR_BOSLUK } } },
-    headers: { default: new Header({ children: [new Paragraph({ children: [run("EBM SmartClinical · Ürün Tanıtım, Teknik Özet ve Yatırım Dokümanı · v2.1", { size: 16, color: GRI })], alignment: AlignmentType.RIGHT, border: { bottom: { style: BorderStyle.SINGLE, size: 4, color: KENAR, space: 4 } } })] }) },
+    headers: { default: new Header({ children: [new Paragraph({ children: [run("EBM SmartClinical · Ürün Tanıtım, Teknik Özet ve Yatırım Dokümanı", { size: 16, color: GRI })], alignment: AlignmentType.RIGHT, border: { bottom: { style: BorderStyle.SINGLE, size: 4, color: KENAR, space: 4 } } })] }) },
     footers: { default: new Footer({ children: [new Paragraph({ children: [run("Gizli – EBM Klinik Araştırma Hizmetleri   |   Sayfa ", { size: 16, color: GRI }), new TextRun({ children: [PageNumber.CURRENT], font: FONT, size: 16, color: GRI })], alignment: AlignmentType.CENTER })] }) },
     children: icerik,
   }],

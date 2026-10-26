@@ -1,5 +1,6 @@
 """SVG diyagramlari programatik olarak yazar (kutu/ok yardimcilari), sonra Chromium ile PNG'ye cevirir."""
 from pathlib import Path
+
 from playwright.sync_api import sync_playwright
 
 L, T, G, D, LT, LB, Y, R, W = "#16325c", "#0e8a8a", "#e6e8ec", "#3d4350", "#e3f3f3", "#e7eef9", "#fdf3e0", "#b23a3a", "#ffffff"
@@ -241,7 +242,7 @@ def sekil4():
     adim = [("Türkçe tıbbi derlem", ["kimliksizleştirilmiş epikriz,", "patoloji, radyoloji raporları;", "kılavuzlar, protokoller"], LB, L),
             ("Derlem temizleme", ["normalizasyon, hash ile", "tekilleştirme, şablon", "metinlerin ayıklanması"], W, L),
             ("Sürekli ön eğitim", ["açık kaynak 7–8B temel", "model; Türkçe tıbbi alan", "uyarlaması"], LT, T),
-            ("Talimat ince ayarı", ["LoRA / QLoRA (4-bit);", "kriter yapılandırma, kanıt", "çıkarma, özet, soru-cevap"], LT, T)]
+            ("Talimat ince ayarı", ["LoRA / QLoRA (4-bit);", "kriter yapılandırma, kanıt", "çıkarma, özet, ICD-10 önerisi"], LT, T)]
     adim2 = [("Değerlendirme", ["altın standart set;", "duyarlılık ≥ %90,", "halüsinasyon ≤ %2"], Y, "#b7791f"),
              ("Nicemleme", ["GGUF Q4_K_M / Q8_0;", "kalite kontrol eşiği", "(kayıp ≤ %1,5)"], W, L),
              ("Hastane içi sunum", ["vLLM / llama.cpp, tek GPU;", "kapalı ağ, dış erişim yok"], L, L)]
@@ -264,7 +265,7 @@ def sekil4():
     s.path(f"M 210 {y2 + 152} L 210 {y2 + 190} L {40 + 3 * 390 + 170} {y2 + 190} L {40 + 3 * 390 + 170} {y + 152 + 1}", R, 3, "okr", "8,6")
     s.text(760, y2 + 182, "hedef karşılanmazsa: veri artırımı ve yeniden ince ayar", 18, R)
     # sag alt: platform kullanimi
-    s.box(1210, y2, 350, 150, "SmartClinical platformu", ["kriter yapılandırma, hasta eşleştirme,", "BDM konsolu; tüm istekler", "denetim izinde"], LB, L, 22, 18)
+    s.box(1210, y2, 350, 150, "SmartClinical platformu", ["kriter yapılandırma, hasta eşleştirme,", "protokolden taslak; tüm istekler", "denetim izinde"], LB, L, 22, 18)
     s.arrow(40 + 2 * 390 + bw + 2, y2 + 75, 1208, y2 + 75)
     # klinisyen etiketleme dongusu
     s.rect(40, 620, 1520, 110, LT, T, 1.5, 10)
