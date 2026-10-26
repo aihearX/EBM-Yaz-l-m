@@ -153,8 +153,18 @@ _EPOSTA = re.compile(r"[\w.+-]+@[\w-]+\.[\w.]+")
 
 
 def phi_kontrol(istem: str) -> None:
-    """Istem icinde kimlik verisi varsa modele gonderilmez. Kimliksizlestirme atlandiysa burada yakalanir."""
+    """Istem icinde kimlik verisi varsa modele gonderilmez. Kimliksizlestirme atlandiysa burada yakalanir.
+
+    Kalip kontrolune ek olarak kimliksizlestirme sozlugundeki kisi adlari (harf durumundan bagimsiz) da aranir.
+    """
     for ad, kalip in (("TCKN", _TCKN), ("telefon", _TEL), ("e-posta", _EPOSTA)):
         if kalip.search(istem or ""):
             log.warning("BDM istemi engellendi: %s kalibi tespit edildi", ad)
             raise KorumaIhlali(f"İstem içinde {ad} kalıbı tespit edildi; metin kimliksizleştirilmeden modele gönderilemez.")
+    from ..kimliksizlestirme import sozluk_adlari  # dongusel ice aktarmayi onlemek icin burada
+
+    adlar = sozluk_adlari(istem or "")
+    if adlar:
+        log.warning("BDM istemi engellendi: sozlukte gecen %d kisi adi", len(adlar))
+        raise KorumaIhlali(f"İstem içinde kişi adı tespit edildi ({len(adlar)} ad); metin kimliksizleştirilmeden "
+                           f"modele gönderilemez.")

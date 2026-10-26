@@ -29,9 +29,16 @@ KURUM_KATSAYI = {
 DENEYIM_KATSAYI = {0: 0.75, 1: 0.90, 2: 1.00, 3: 1.10}  # alanda tamamlanan calisma sayisi (3+ ayni)
 REKABET_KATSAYI = {0: 1.00, 1: 0.90, 2: 0.80, 3: 0.70}  # ayni endikasyonda rekabet eden calisma (3+ ayni)
 
+KURUM_ETIKET = {"universite": "üniversite", "egitim_arastirma": "eğitim ve araştırma", "sehir": "şehir", "ozel": "özel"}
+
 # Havuz bos veya tek merkezse kullanilan oncul (hasta/ay)
 ONCUL_ALFA = 2.0
 ONCUL_BETA = 4.0  # ortalama 0.5 hasta/ay
+ARALIK_SIM = 4000  # merkez araligi icin Monte Carlo ornek sayisi
+
+
+def _v(x, basamak=2) -> str:
+    return f"{x:.{basamak}f}".replace(".", ",")
 
 
 @dataclass
@@ -117,21 +124,26 @@ def kovaryat_katsayisi(kovaryat):
     if kurum in KURUM_KATSAYI:
         k *= KURUM_KATSAYI[kurum]
         if KURUM_KATSAYI[kurum] != 1.0:
-            notlar.append(f"Kurum tipi ({kurum}) icin x{KURUM_KATSAYI[kurum]:.2f} duzeltme uygulandi.")
+            notlar.append(f"Kurum tipi ({KURUM_ETIKET.get(kurum, kurum)}) için ×{_v(KURUM_KATSAYI[kurum])} düzeltme uygulandı.")
     deneyim = kovaryat.get("alan_deneyimi")
     if deneyim is not None:
         d = DENEYIM_KATSAYI[min(int(deneyim), 3)]
         k *= d
-        notlar.append(f"Terapotik alanda {deneyim} calisma deneyimi: x{d:.2f}.")
+        notlar.append(f"Terapötik alanda {deneyim} çalışma deneyimi: ×{_v(d)}.")
     rekabet = kovaryat.get("rekabet")
     if rekabet:
         r = REKABET_KATSAYI[min(int(rekabet), 3)]
         k *= r
-        notlar.append(f"Ayni endikasyonda {rekabet} rekabet eden calisma: x{r:.2f}.")
+        notlar.append(f"Aynı endikasyonda {rekabet} rekabet eden çalışma: ×{_v(r)}.")
     return k, notlar
 
 
-def kazanim_tahmini(merkez_gecmis, havuz, ufuk_ay, kovaryat=None, guven=0.90, mle=True):
+def kazanim_tahmini(merkez_gecmis, havuz, ufuk_ay, kovaryat=None, guven=0.90, mle=True, seed=42):
+    """Merkez icin hasta/ay tahmini ve ufuk boyunca beklenen toplam.
+
+    Aralik, posterior orandan ve Poisson sayim gurultusunden birlikte Monte Carlo ile hesaplanir:
+    ufuk boyunca gozlenecek hizin yuzdelikleri. Yalnizca posterior ppf'i (0,87-0,90 gibi) yapay dar aralik verirdi.
+    """
     havuz = [h for h in (havuz or []) if h.get("ay", 0) > 0]
     alfa0, beta0 = _moment_kestirim(havuz)
     if mle and havuz:
@@ -150,33 +162,37 @@ def kazanim_tahmini(merkez_gecmis, havuz, ufuk_ay, kovaryat=None, guven=0.90, ml
     post = stats.gamma(a=alfa_p, scale=1.0 / beta_p)
     ort = post.mean() * katsayi
     q = (1 - guven) / 2
-    alt = post.ppf(q) * katsayi
-    ust = post.ppf(1 - q) * katsayi
+    T = max(1.0, float(ufuk_ay))
 
-    # Toplam: negatif binom (Gamma-Poisson marjinali) - ufuk boyunca
-    # NB parametreleri: n=alfa_p, p=beta_p/(beta_p + T*katsayi)
-    T = float(ufuk_ay)
-    p = beta_p / (beta_p + T * katsayi)
-    nb = stats.nbinom(alfa_p, p)
+    # Monte Carlo: oran posterior Gamma'dan, ufuk boyunca sayim Poisson'dan; gozlenen hiz = sayim / ufuk
+    rng = np.random.default_rng(seed)
+    oranlar = rng.gamma(alfa_p, 1.0 / beta_p, size=ARALIK_SIM) * katsayi
+    sayimlar = rng.poisson(oranlar * T)
+    hizlar = sayimlar / T
+    alt = float(np.percentile(hizlar, 100 * q))
+    ust = float(np.percentile(hizlar, 100 * (1 - q)))
+    if ust <= alt:  # cok kucuk ufuklarda ayni yuzdelik: posterior genisligine dus
+        alt, ust = post.ppf(q) * katsayi, post.ppf(1 - q) * katsayi
     beklenen = ort * T
-    toplam_alt = float(nb.ppf(q))
-    toplam_ust = float(nb.ppf(1 - q))
+    toplam_alt = float(np.percentile(sayimlar, 100 * q))
+    toplam_ust = float(np.percentile(sayimlar, 100 * (1 - q)))
 
     egri = [(ay, float(ort) * ay) for ay in range(1, int(ufuk_ay) + 1)]
 
     aciklama = []
     if havuz:
-        aciklama.append(f"Havuzdaki {len(havuz)} benzer merkezin ortalamasi {alfa0 / beta0:.2f} hasta/ay.")
+        aciklama.append(f"Havuzdaki {len(havuz)} benzer merkezin ortalaması {_v(alfa0 / beta0)} hasta/ay.")
     else:
-        aciklama.append("Benzer calisma havuzu bulunamadi; genel oncul (0.5 hasta/ay) kullanildi.")
+        aciklama.append("Benzer çalışma havuzu bulunamadı; genel öncül (0,5 hasta/ay) kullanıldı.")
     if t > 0:
-        aciklama.append(f"Merkezin kendi gecmisi: {t:.0f} ayda {n} hasta ({n / t:.2f} hasta/ay).")
+        aciklama.append(f"Merkezin kendi geçmişi: {t:.0f} ayda {n} hasta ({_v(n / t)} hasta/ay).")
     else:
-        aciklama.append("Merkezin bu alanda kayitli gecmisi yok; tahmin tamamen havuza dayaniyor.")
-    aciklama.append(f"Tahminin %{shrinkage * 100:.0f}'i havuz bilgisinden geliyor (buzulme)." if shrinkage > 0.5
-                    else f"Tahmin agirlikli olarak merkezin kendi verisine dayaniyor (havuz payi %{shrinkage * 100:.0f}).")
+        aciklama.append("Merkezin bu alanda kayıtlı geçmişi yok; tahmin tamamen havuza dayanıyor.")
+    aciklama.append(f"Tahminin %{shrinkage * 100:.0f}'i havuz bilgisinden geliyor (büzülme)." if shrinkage > 0.5
+                    else f"Tahmin ağırlıklı olarak merkezin kendi verisine dayanıyor (havuz payı %{shrinkage * 100:.0f}).")
     aciklama.extend(kov_notlar)
-    aciklama.append(f"{ufuk_ay} ayda beklenen {beklenen:.1f} hasta (%{guven * 100:.0f} aralik {toplam_alt:.0f}-{toplam_ust:.0f}).")
+    aciklama.append(f"{ufuk_ay} ayda beklenen {_v(beklenen, 1)} hasta (%{guven * 100:.0f} aralık {toplam_alt:.0f}–{toplam_ust:.0f}); "
+                    f"aralık Monte Carlo yüzdelikleriyle hesaplandı.")
 
     return KazanimTahmini(
         hasta_ay_ort=float(ort), hasta_ay_alt=float(alt), hasta_ay_ust=float(ust),

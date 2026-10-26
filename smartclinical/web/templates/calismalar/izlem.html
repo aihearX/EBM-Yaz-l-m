@@ -3,6 +3,13 @@
 {% block yol %}<a href="/calismalar">Çalışmalar</a> › <a href="/calismalar/{{ c.id }}">{{ c.kod }}</a> › Ziyaret ve Sapmalar{% endblock %}
 {% block icerik %}
 {% include "calismalar/_baslik.html" %}
+{# entegrasyon oncesi eski rota bu baglami vermez; sayfa yine acilsin #}
+{% set uyarilar = uyarilar if uyarilar is defined else [] %}
+{% set tetiklenen = tetiklenen if tetiklenen is defined else [] %}
+{% set secili_merkez = secili_merkez if secili_merkez is defined else none %}
+{% set bugun = bugun() if bugun is callable else bugun %}
+{% set ZIYARET_TIP_ETIKET = ZIYARET_TIP_ETIKET if ZIYARET_TIP_ETIKET is defined else {'SIV': 'SIV', 'IMV': 'IMV', 'COV': 'COV', 'uzaktan': 'Uzaktan', 'tetiklenmis': 'Tetiklenmiş'} %}
+{% set SAPMA_ONEM_ETIKET = SAPMA_ONEM_ETIKET if SAPMA_ONEM_ETIKET is defined else {'minor': 'Minör', 'major': 'Majör'} %}
 {% set yonetir = izinli(kullanici, 'rbm.yonet') %}
 {% if uyarilar %}
 <div class="kart" style="margin-bottom:16px">

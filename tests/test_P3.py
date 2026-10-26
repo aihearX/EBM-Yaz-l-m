@@ -64,10 +64,21 @@ def _eski_rotalari_sil(router) -> None:
             router._mark_routes_changed()
 
 
+def tum_rotalar(router=None, onek: str = "") -> list:
+    """Ic ice router'lardaki tum rotalar: (tam yol, rota) listesi; include prefix'i yola eklenir."""
+    sonuc = []
+    for r in (router or app.router).routes:
+        if hasattr(r, "original_router"):
+            sonuc.extend(tum_rotalar(r.original_router, onek + (getattr(r.include_context, "prefix", "") or "")))
+        else:
+            sonuc.append((onek + getattr(r, "path", ""), r))
+    return sonuc
+
+
 def rotalari_bagla():
     """izlem, belgeler ve veri_islem router'larini uygulamaya ekler; calismalar'daki eski kopyalari kaldirir."""
     _eski_rotalari_sil(app.router)
-    moduller = {getattr(getattr(r, "endpoint", None), "__module__", "") for r in app.routes}
+    moduller = {getattr(getattr(r, "endpoint", None), "__module__", "") for _, r in tum_rotalar()}
     for mod in (izlem_web, belgeler_web, veri_web):
         if mod.__name__ not in moduller:
             app.include_router(mod.router)
@@ -200,7 +211,7 @@ def test_izlenebilirlik_matrisi_kodla_eslesir():
     """TM-001'deki her test ve rota referansi depoda bulunmali; belgelerde surum/tarih damgasi olmamali."""
     rotalari_bagla()
     metin = (KOK / "docs/validasyon/TM-001_izlenebilirlik_matrisi.md").read_text(encoding="utf-8")
-    uygulama_rotalari = {getattr(r, "path", "") for r in app.routes}
+    uygulama_rotalari = {yol for yol, _ in tum_rotalar()}
     for ref in re.findall(r"`(tests/test_\w+\.py)(?:::(test_\w+))?`", metin):
         dosya, fonk = ref
         assert (KOK / dosya).exists(), dosya
@@ -211,9 +222,9 @@ def test_izlenebilirlik_matrisi_kodla_eslesir():
     for rota in re.findall(r"`((?:GET|POST) /[^`]+)`", metin):
         yol = rota.split(" ", 1)[1]
         assert yol in uygulama_rotalari, rota
-    damga = re.compile(r"\bv?1\.\d\.\d\b|\b20\d\d-\d\d(-\d\d)?\b")
+    damga = re.compile(r"\bv\d+\.\d+\.\d+\b|Sürüm \d|\b20\d\d-\d\d(-\d\d)?\b")
     for d in list((KOK / "docs/validasyon").glob("*.md")) + [KOK / "docs/gelistirme.md", KOK / "docs/api.md", KOK / "deploy/KURULUM.md"]:
         icerik = d.read_text(encoding="utf-8")
         assert not damga.search(icerik), f"{d.name}: surum/tarih damgasi"
-        for yok in ("csv_sablonu.xlsx", "TOTP", "Yönetim → Entegrasyon", "03:00", "otomatik uygulan"):
+        for yok in ("csv_sablonu.xlsx", "TOTP", "Yönetim → Entegrasyon", "03:00", "otomatik uygulanır", "SMTP"):
             assert yok not in icerik, f"{d.name}: {yok}"

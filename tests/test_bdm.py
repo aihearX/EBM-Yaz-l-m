@@ -1,3 +1,8 @@
+import os
+from types import SimpleNamespace
+
+os.environ["SC_DB_URL"] = "sqlite:///:memory:"
+
 import pytest
 
 from smartclinical.services.bdm import BDMErisimHatasi, BDMIstemci, korumalar, saglayici_olustur
@@ -166,3 +171,72 @@ def test_json_sema_ic_ice():
     assert not korumalar.json_sema({"vizitler": [{"ad": "V1"}], "formlar": ["VS"], "guven": 0.8}, sema)
     assert not korumalar.json_sema({"vizitler": [], "formlar": [1], "guven": 0.8}, sema)
     assert not korumalar.json_sema(None, sema)
+
+
+# -- P4: dis URL'de kural moduna dusme, istem ozeti, sozluk adi korumasi ------------------
+
+def _ayar(**ek):
+    v = {"bdm_saglayici": "vllm", "bdm_url": "http://bdm.example.com", "bdm_model": "m", "bdm_zaman_asimi_sn": 1}
+    v.update(ek)
+    return SimpleNamespace(**v)
+
+
+def _denetim(islem):
+    from sqlalchemy import select
+
+    from smartclinical.db import oturum_fabrikasi
+    from smartclinical.models import DenetimKaydi
+
+    db = oturum_fabrikasi()()
+    try:
+        return db.execute(select(DenetimKaydi).where(DenetimKaydi.islem == islem).order_by(DenetimKaydi.id.desc())).scalars().all()
+    finally:
+        db.close()
+
+
+def test_dis_url_kural_moduna_duser_ve_denetime_yazar(monkeypatch):
+    from smartclinical.db import sifirla
+
+    sifirla()
+    monkeypatch.delenv("SC_BDM_DIS_IZIN", raising=False)
+    c = BDMIstemci.olustur(_ayar())
+    assert c.kural_modu and "özel ağ dışında" in (c.dusme_nedeni or "") and c.durum()["not"]
+    kayitlar = _denetim("bdm_engel")
+    assert kayitlar and kayitlar[0].yeni["url"] == "http://bdm.example.com" and kayitlar[0].yeni["neden"] == "ozel_ag_disi"
+    monkeypatch.setenv("SC_BDM_DIS_IZIN", "1")
+    assert not BDMIstemci.olustur(_ayar()).kural_modu
+    assert not BDMIstemci.olustur(_ayar(bdm_url="http://10.0.0.5:8000")).kural_modu
+    assert BDMIstemci.olustur(_ayar(bdm_saglayici="kural")).kural_modu and BDMIstemci.olustur(_ayar(bdm_saglayici="kural")).dusme_nedeni is None
+
+
+class _SahteSaglayici(VLLMSaglayici):
+    ad = "sahte"
+
+    def hazir(self):
+        return True
+
+    def uret(self, istem, sistem=None, json_cikti=False, sicaklik=0.0, maks_token=512):
+        from smartclinical.services.bdm.saglayicilar import Uretim
+        return Uretim('{"kategori": "lab", "sorgu": {"alan": "lab", "ad": "hemoglobin", "op": ">=", "deger": 9}, "guven": 0.9}', 12, 5, "m")
+
+
+def test_istem_ozeti_denetime_yazilir_metin_yazilmaz():
+    from smartclinical.db import sifirla
+
+    sifirla()
+    c = BDMIstemci(_SahteSaglayici("http://10.0.0.5", "m"))
+    y = c.kriter_yapilandir("Hemoglobin ≥ 9 g/dL")
+    assert y.yontem == "bdm"
+    kayitlar = _denetim("bdm_istem")
+    assert kayitlar and kayitlar[0].yeni["gorev"] == "kriter_yapilandir" and kayitlar[0].yeni["sonuc"] == "ok"
+    assert len(kayitlar[0].yeni["hash"]) == 64 and "Hemoglobin" not in str(kayitlar[0].yeni)
+    # istemde sozluk adi varsa phi_kontrol engeller ve kayit 'phi_engel' olur
+    with pytest.raises(korumalar.KorumaIhlali):
+        c._uret_json("Hasta ayşe yılmaz 54 yaşında", {"a": str}, gorev="deneme")
+    assert _denetim("bdm_istem")[0].yeni["sonuc"] == "phi_engel"
+
+
+def test_phi_kontrol_sozluk_adi():
+    with pytest.raises(korumalar.KorumaIhlali):
+        korumalar.phi_kontrol("Dr. Mehmet Kaya tarafından değerlendirildi")
+    korumalar.phi_kontrol("18 yaş ve üzeri kadın hastalar; ECOG 0-1")

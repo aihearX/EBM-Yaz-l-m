@@ -6,14 +6,41 @@ vllm      : OpenAI uyumlu /v1/chat/completions
 llamacpp  : llama.cpp sunucusu /completion
 """
 
+import ipaddress
 import json
 import logging
 import time
 from dataclasses import dataclass
+from urllib.parse import urlparse
 
 import httpx
 
 log = logging.getLogger(__name__)
+
+_YEREL_SONEKLER = (".local", ".lan", ".internal", ".intra", ".localdomain")
+
+
+def url_guvenli(url: str) -> bool:
+    """BDM adresi hastane ici mi? localhost, ozel IP araliklari, tek etiketli ya da yerel sonekli adlar kabul.
+
+    Hasta metni kurum disina cikmasin diye genel internet adresleri varsayilan olarak reddedilir
+    (SC_BDM_DIS_IZIN=1 ile acilir).
+    """
+    if not url:
+        return True
+    try:
+        ana = urlparse(url if "://" in url else "http://" + url).hostname or ""
+    except ValueError:
+        return False
+    ana = ana.strip("[]").lower()
+    if not ana or ana == "localhost" or ana.endswith(_YEREL_SONEKLER):
+        return True
+    try:
+        ip = ipaddress.ip_address(ana)
+        return ip.is_private or ip.is_loopback or ip.is_link_local
+    except ValueError:
+        pass
+    return "." not in ana  # tek etiketli ag adi (bdm-sunucu): yerel DNS
 
 
 class BDMErisimHatasi(Exception):

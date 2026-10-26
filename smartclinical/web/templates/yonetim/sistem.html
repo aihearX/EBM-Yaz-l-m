@@ -30,12 +30,18 @@
     </table>
     <div class="ayrac"></div>
     <h2>Türkçe Klinik BDM</h2>
-    <table class="sikisik">{% for k, v in bdm_durum.items() %}<tr><th>{{ k }}</th><td>{{ v }}</td></tr>{% endfor %}</table>
-    <div class="not" style="margin-top:8px">Model hastane içindeki GPU sunucusunda (vLLM/llama.cpp) çalışır. Sunucuya erişilemediğinde sistem otomatik olarak kural tabanlı ayrıştırıcıya düşer ve bunu denetim izine yazar.</div>
+    {% set kural = bdm_durum.get('saglayici') == 'kural' %}
+    <table class="sikisik">
+      <tr><th>Sağlayıcı</th><td>{% if kural %}Kural tabanlı{% else %}{{ bdm_durum.get('saglayici') }}{% if bdm_durum.get('url') %} <small>({{ bdm_durum.get('url') }})</small>{% endif %}{% endif %}</td></tr>
+      <tr><th>Model</th><td>{{ bdm_durum.get('model') }}</td></tr>
+      <tr><th>Durum</th><td>{% if kural %}<span class="rozet kontur">Kural tabanlı mod: sunucu tanımlı değil</span>{% elif bdm_durum.get('hazir') %}<span class="rozet yesil">Bağlı</span>{% else %}<span class="rozet sari">Erişilemiyor; kural tabanlı moda düşüldü</span>{% endif %}{% if bdm_durum.get('not') %}<br><small>{{ bdm_durum.get('not') }}</small>{% endif %}</td></tr>
+    </table>
+    <div class="not" style="margin-top:8px">Model hastane içindeki GPU sunucusunda (vLLM/llama.cpp) çalışır. Sunucuya erişilemediğinde sistem otomatik olarak kural tabanlı ayrıştırıcıya düşer ve bunu denetim izine yazar. Özel ağ dışındaki bir adres yalnızca SC_BDM_DIS_IZIN=1 ile kullanılabilir.</div>
+    <details style="margin-top:10px"><summary>Teknik bilgi</summary>
+      <table class="sikisik" style="margin-top:6px"><tr><th>İstemci sürümü</th><td>{{ bdm_durum.get('surum') }}</td></tr><tr><th>Güven eşiği</th><td>{{ bdm_durum.get('guven_esigi') }}</td></tr></table>
+      <h3 style="margin:10px 0 4px">Tablo kayıt sayıları</h3>
+      <div style="columns:3;font-size:12.5px">{% for t, n in sayilar.items() %}<div>{{ t }}: <b>{{ n }}</b></div>{% endfor %}</div>
+    </details>
   </div>
-</div>
-<div class="kart">
-  <h2>Tablo kayıt sayıları</h2>
-  <div style="columns:4;font-size:12.5px">{% for t, n in sayilar.items() %}<div>{{ t }}: <b>{{ n }}</b></div>{% endfor %}</div>
 </div>
 {% endblock %}

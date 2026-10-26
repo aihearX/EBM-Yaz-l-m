@@ -59,8 +59,8 @@ def anomali_tespit(degerler, yon="yuksek", z_esik=Z_ESIK):
         if not np.isfinite(z_yon):
             # diger merkezlerin tamami ayni degerde: z-skor tanimsiz, sapma yonu yine de soylenir
             if aykiri:
-                acik = (f"Merkez değeri {_s(v)}; bu düzey diğer merkezlerde gözlenmedi (hepsi {_s(med)}). "
-                        f"{n} merkez arasında {siralar[k]}. sırada.")
+                acik = (f"Merkez değeri {_s(v)}; bu düzey diğer merkezlerde gözlenmedi (medyan {_s(med)}, "
+                        f"z-skoru tanımsız). {n} merkez arasında {siralar[k]}. sırada.")
             else:
                 acik = f"Merkez değeri {_s(v)}, diğer merkezlerin tamamı {_s(med)}; kötü yönde sapma yok."
         elif aykiri:

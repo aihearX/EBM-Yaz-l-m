@@ -3,6 +3,11 @@
 {% block yol %}<a href="/calismalar">Çalışmalar</a> › <a href="/calismalar/{{ c.id }}">{{ c.kod }}</a> › TMF{% endblock %}
 {% block icerik %}
 {% include "calismalar/_baslik.html" %}
+{# entegrasyon oncesi eski rota bu baglami vermez; sayfa yine acilsin #}
+{% set eskimis = eskimis if eskimis is defined else {} %}
+{% set tamlik_yuzde = tamlik_yuzde if tamlik_yuzde is defined else (100 * (tamlik.values()|select|list|length) // (TMF_BOLGELER|length)) %}
+{% set secili_merkez = secili_merkez if secili_merkez is defined else none %}
+{% set merkez_secilebilir = merkez_secilebilir if merkez_secilebilir is defined else true %}
 {% macro belge_tablo(liste) %}
 <table class="sikisik"><tr><th>Belge</th><th>Merkez</th><th>Sürüm</th><th>Durum</th><th>Yükleyen</th><th>Tarih</th><th>SHA-256</th><th></th></tr>
   {% for b in liste %}<tr><td>{{ b.ad }}{% if b.dosya_adi %}<br><small>{{ b.dosya_adi }}</small>{% endif %}{% if b.onceki_id %}<br><small>önceki sürüm: #{{ b.onceki_id }}</small>{% endif %}</td><td>{{ b.merkez.sehir if b.merkez else 'Merkezi' }}</td><td>{{ b.versiyon }}</td>

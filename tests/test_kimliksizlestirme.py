@@ -1,3 +1,5 @@
+import pytest
+
 from smartclinical.services.kimliksizlestirme import (
     Sonuc,
     kimliksizlestir,
@@ -93,7 +95,6 @@ def test_bos_metin():
 
 
 def test_gecersiz_mod():
-    import pytest
     with pytest.raises(ValueError):
         kimliksizlestir("x", mod="yok")
 
@@ -112,3 +113,29 @@ def test_ozet_rapor():
     r = ozet_rapor(s)
     assert r.startswith("Toplam") and "AD" in r
     assert ozet_rapor(kimliksizlestir("Hemoglobin 11.2 g/dL.")) == "Kimlik verisi tespit edilmedi."
+
+
+# -- P4: harf durumundan bagimsiz sozluk eslesmesi ------------------------------------
+
+
+@pytest.mark.parametrize("metin", [
+    "hasta ayşe yılmaz bugün başvurdu.",
+    "HASTA AYŞE YILMAZ BUGÜN BAŞVURDU. HEMOGLOBİN 11,2 G/DL.",
+    "Hasta Ayşe Yılmaz bugün başvurdu.",
+    "refakatçi mehmet kaya'nın bilgileri",
+])
+def test_kucuk_ve_buyuk_harfli_adlar_maskelenir(metin):
+    s = kimliksizlestir(metin)
+    assert s.istatistik.get("AD") == 1, s.metin
+    for parca in ("ayşe", "yılmaz", "mehmet", "kaya"):
+        assert parca not in s.metin.lower(), s.metin
+    uyarilar = metni_dogrula(metin)
+    assert any("kişi adı" in u for u in uyarilar)
+    assert metni_dogrula(s.metin) == []
+
+
+def test_buyuk_harfli_metinde_klinik_terimler_korunur():
+    m = "SOL MEME CA TANISI. METASTAZ SAPTANMADI. HEMOGLOBİN 11,2 G/DL. METFORMİN KULLANIYOR."
+    s = kimliksizlestir(m)
+    assert s.metin == m and s.toplam == 0
+    assert metni_dogrula("hemoglobin 11,2 g/dl, metformin 2x1000 mg, kontrol planlandı") == []

@@ -10,6 +10,8 @@ from .sablon import goster
 
 router = APIRouter(prefix="/araclar")
 
+# Arac sayfasi yonetim menusunde; ornek metin sentetiktir, gercek hasta verisi burada islenmez.
+
 ORNEK_METIN = """HASTA: Ayşe Yılmaz  TC: 10000000146  Doğum: 14.03.1962  Protokol No: 2024/88213
 Tel: 0532 417 22 85   Adres: Çankaya / Ankara
 
@@ -21,13 +23,13 @@ Dr. Mehmet Kaya tarafından neoadjuvan kemoterapi planlandı. Kontrol: 16.05.202
 
 
 @router.get("/kimliksizlestirme")
-def kimliksizlestirme_sayfa(request: Request, k: Kullanici = Depends(gerekli("hasta.goruntule"))):
+def kimliksizlestirme_sayfa(request: Request, k: Kullanici = Depends(gerekli("kullanici.yonet"))):
     request.state.kullanici = k
     return goster(request, "araclar/kimliksizlestirme.html", metin=ORNEK_METIN, sonuc=None, mod="maske")
 
 
 @router.post("/kimliksizlestirme")
-def kimliksizlestirme_calistir(request: Request, k: Kullanici = Depends(gerekli("hasta.goruntule")),
+def kimliksizlestirme_calistir(request: Request, k: Kullanici = Depends(gerekli("kullanici.yonet")),
                                db: Session = Depends(get_db), metin: str = Form(...), mod: str = Form("maske")):
     request.state.kullanici = k
     from ..services.kimliksizlestirme import kimliksizlestir, metni_dogrula

@@ -328,3 +328,106 @@ def test_protokol_taslak_onaysiz_yazmaz_ve_uygulanir(istemci):
     c = db.get(Calisma, cid)
     assert len(c.kriterler) == 3 and len(c.formlar) == 2 and len(c.vizit_tanimlari) == 3
     db.close()
+
+
+# -- P4: yardim metnindeki kaliplar, standart formlar, toplam puan -----------------
+
+YARDIM_PARCASI = """Dahil Etme Kriterleri
+1. 18 yaş ve üzeri
+Hariç Tutma Kriterleri
+a) Gebe veya emziren kadınlar
+Çalışma Kolları
+Kol A: Araştırma ürünü 200 mg günde iki kez
+Kol B: Plasebo
+Vizit Takvimi
+Tarama (-14 gün ± 7)
+Vizit 1 (Gün 0)
+Vizit 2 (Gün 28 ± 3)
+Hafta 12
+"""
+
+
+def test_yardim_metnindeki_kaliplar_isaretli_ve_isaretsiz():
+    for metin in (YARDIM_PARCASI, YARDIM_PARCASI.replace("\nKol ", "\n- Kol ").replace("\nVizit ", "\n- Vizit ")
+                  .replace("\nTarama", "\n- Tarama").replace("\nHafta", "\n- Hafta")):
+        t = protokol.taslak_cikar(metin)
+        assert t.kollar == ["Kol A: Araştırma ürünü 200 mg günde iki kez", "Kol B: Plasebo"]
+        assert t.vizitler == [("Tarama", -14, 7), ("Vizit 1", 0, 0), ("Vizit 2", 28, 3), ("Hafta 12", 84, 3)]
+        assert t.dahil == ["18 yaş ve üzeri"] and t.haric == ["Gebe veya emziren kadınlar"]
+        assert "EX" in t.formlar  # "200 mg günde" doz kalibi
+        assert t.taninmayan == []
+
+
+def test_ayni_satirda_noktali_virgulle_kollar_ve_ay_gun_kaliplari():
+    t = protokol.taslak_cikar("Çalışma kolları\nKol A: Plasebo; Kol B: Aktif ilaç 5 mg infüzyon\nVizit takvimi\nAy 6\nGün 56 (± 5)")
+    assert t.kollar == ["Kol A: Plasebo", "Kol B: Aktif ilaç 5 mg infüzyon"]
+    assert ("Ay 6", 180, 3) in t.vizitler and any(gun == 56 and p == 5 for _, gun, p in t.vizitler)
+    assert "EX" in t.formlar
+
+
+def test_taninmayan_satirlar_listelenir():
+    t = protokol.taslak_cikar("Dahil Etme Kriterleri\n1. 18 yaş\nBu satır bir kriter değil ama uzun bir açıklama cümlesi.\n"
+                              "Vizit Takvimi\n- Haftalık telefon görüşmesi yapılır\n- Vizit 3 (Gün 56)")
+    assert t.dahil == ["18 yaş"] and t.vizitler == [("Vizit 3", 56, 3)]
+    assert t.taninmayan == ["Bu satır bir kriter değil ama uzun bir açıklama cümlesi.", "Haftalık telefon görüşmesi yapılır"]
+    assert any("2 satır ayrıştırılamadı" in n for n in t.notlar)
+    assert protokol.kriter_anahtar("18 Yaş ve üzeri.") == protokol.kriter_anahtar("18 yaş  ve üzeri")
+
+
+def test_standart_form_paketi_anket_taslak_cm_tekrarlayan_toplam_puan():
+    assert ecrf.STANDART_FORMLAR["ANKET"]["durum"] == "taslak"
+    assert ecrf.STANDART_FORMLAR["CM"]["tekrarlayan"] is True and ecrf.STANDART_FORMLAR["MH"]["tekrarlayan"] is True
+    assert {"PHQ9", "GAD7", "VAS"} <= set(ecrf.STANDART_FORMLAR)
+    phq = ecrf.STANDART_FORMLAR["PHQ9"]
+    toplam = next(a for a in phq["alanlar"] if a.get("toplam"))
+    assert toplam["kod"] == "PHQ9TOT" and len(toplam["toplam"]) == 9
+    assert ecrf.form_dogrula([ecrf.alan_normalize(a) for a in phq["alanlar"]]) == []
+    # alan_normalize min/max anahtarlarini her zaman uretir
+    n = ecrf.alan_normalize({"kod": "x", "etiket": "X", "tip": "metin"})
+    assert n["min"] is None and n["max"] is None and n["kod"] == "X"
+    # veri_oku toplami hesaplar
+    f = CRF(kod="PHQ9", ad="PHQ-9", alanlar=[ecrf.alan_normalize(a) for a in phq["alanlar"]])
+    gelen = {f"PHQ{i}": "2 - Günlerin yarısından fazlası" if i % 2 else "1 - Birkaç gün" for i in range(1, 10)}
+    v = ecrf.veri_oku(f, gelen)
+    assert v["PHQ9TOT"] == "14"
+    assert ecrf.edit_check(f, v) == []
+    eksik = ecrf.veri_oku(f, {**gelen, "PHQ5": ""})
+    assert eksik["PHQ9TOT"] == "" and [k for k, _ in ecrf.edit_check(f, eksik)] == ["PHQ5"]
+    # edit-check mesajinda alan etiketi, kod ve form adi
+    mesaj = ecrf.edit_check(f, eksik)[0][1]
+    assert "PHQ-9 formunda" in mesaj and "(PHQ5)" in mesaj
+
+
+def test_standart_formlar_calismaya_eklenince_durum_ve_tekrar(istemci):
+    _giris(istemci)
+    cid = _calisma("ECRF-002")
+    b = f"/calismalar/{cid}/tasarim"
+    assert istemci.post(f"{b}/form/standart", data={"kodlar": ["ANKET", "CM", "PHQ9"]}, follow_redirects=False).status_code == 303
+    db = oturum_fabrikasi()()
+    formlar = {f.kod: f for f in db.get(Calisma, cid).formlar}
+    assert formlar["ANKET"].durum == "taslak" and formlar["CM"].tekrarlayan is True and formlar["PHQ9"].durum == "yayinda"
+    assert formlar["PHQ9"].alanlar[-1]["toplam"] == [f"PHQ{i}" for i in range(1, 10)]
+    db.close()
+    # gonullu sayfasinda taslak ANKET gorunmez, PHQ9 gorunur
+    db = oturum_fabrikasi()()
+    g = db.get(Calisma, cid).gonulluler[0]
+    gid, anket_id, phq_id = g.id, formlar["ANKET"].id, formlar["PHQ9"].id
+    db.close()
+    r = istemci.get(f"/gonulluler/{gid}")
+    assert r.status_code == 200 and f"/form/{anket_id}" not in r.text and "form taslak durumunda" in r.text
+    r = istemci.get(f"/gonulluler/{gid}/form/{phq_id}")
+    assert r.status_code == 200 and "PHQ-9 toplam puan" in r.text
+    # tasarimci tekrarlayan isaretini yazar; sayfa basligi ve temel sutunlar
+    r = istemci.get(f"{b}/form/yeni")
+    assert r.status_code == 200 and "Yeni eCRF formu" in r.text and 'name="tekrarlayan"' in r.text
+    assert 'class="tip"' in r.text and "Canlı önizleme" in r.text and 'data-hizli="evet_hayir"' in r.text
+    r = istemci.post(f"{b}/form/yeni", data={"kod": "AE2", "ad": "Olay listesi", "durum": "yayinda", "tekrarlayan": "1",
+                                            "alanlar_json": json.dumps([{"kod": "TERIM", "etiket": "Terim", "tip": "metin"}])},
+                     follow_redirects=False)
+    assert r.status_code == 303
+    db = oturum_fabrikasi()()
+    f = next(x for x in db.get(Calisma, cid).formlar if x.kod == "AE2")
+    assert f.tekrarlayan is True
+    db.close()
+    r = istemci.get(b)
+    assert r.status_code == 200 and "Vizit × form matrisi" in r.text

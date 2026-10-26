@@ -43,7 +43,7 @@ def test_kazanim_havuz_yok_oncul():
     kt = kazanim_tahmini([], [], ufuk_ay=6)
     assert kt.hasta_ay_ort == pytest.approx(0.5, abs=0.05)
     assert kt.shrinkage == 1.0
-    assert any("oncul" in a for a in kt.aciklama)
+    assert any("öncül" in a for a in kt.aciklama)
 
 
 def test_kazanim_buzulme_az_veride_daha_fazla():
@@ -140,8 +140,8 @@ def test_gecikme_modeli_oncul():
     r = m.tahmin({"kurum_tipi": "universite"}, 120)
     assert 0 < r.olasilik_gecikme < 1
     assert r.p25 < r.medyan_gun < r.p75
-    assert any("oncul" in a for a in r.aciklama)
-    assert "Universite hastanesi" in r.katkilar
+    assert any("öncül" in a for a in r.aciklama)
+    assert "Üniversite hastanesi" in r.katkilar
 
 
 def test_gecikme_kovaryat_yonu():
@@ -227,3 +227,25 @@ def test_calisma_tahmin_guncelle_bos_db():
         assert len(sonuc) == 1
         assert sonuc[0].tahmini_kazanim is not None and sonuc[0].tahmini_kazanim > 0
         assert 0 <= sonuc[0].gecikme_riski <= 1
+
+
+# -- P4: Turkce aciklamalar ve Monte Carlo araligi ---------------------------------
+
+def test_aciklamalar_turkce_ve_aralik_monte_carlo():
+    rng = np.random.default_rng(5)
+    _, havuz = _sentetik_havuz(rng)
+    kt = kazanim_tahmini([{"hasta": 30, "ay": 36}], havuz, 12, {"kurum_tipi": "ozel", "rekabet": 1})
+    metin = " ".join(kt.aciklama)
+    for yasak in ("oncul", "buzulme", "calisma", "gecmis", "duzeltme", "aralik"):
+        assert yasak not in metin.lower(), yasak
+    assert "Monte Carlo" in metin and "hasta/ay" in metin
+    # yalnizca posterior ppf'ten gelen yapay dar aralik degil: sayim gurultusu dahil
+    from scipy import stats
+    post = stats.gamma(a=kt.alfa_post, scale=1.0 / kt.beta_post)
+    assert (kt.hasta_ay_ust - kt.hasta_ay_alt) > (post.ppf(0.95) - post.ppf(0.05)) * 0.8 * 1.0
+    assert kt.hasta_ay_alt < kt.hasta_ay_ort < kt.hasta_ay_ust
+    r = GecikmeModeli().tahmin({"kurum_tipi": "universite", "sozlesme_sablonu_var": True}, 120)
+    assert all(("ü" in a or "ı" in a or "ş" in a or "ç" in a or "ö" in a) for a in r.aciklama)
+    assert "Hazır sözleşme şablonu" in r.katkilar
+    s = merkez_sirala([{"ad": "A", "tahmini_kazanim": 1.5, "gecikme_riski": 0.2}, {"ad": "B", "tahmini_kazanim": 0.4, "gecikme_riski": 0.7}])
+    assert "En güçlü yönleri" in s[0]["gerekce"] and "kazanım" in s[0]["gerekce"]

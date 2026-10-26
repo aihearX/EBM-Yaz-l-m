@@ -202,7 +202,7 @@ def test_erken_uyari_uretimi(veri):
     assert sae.seviye == "uyari" and sae.esik == 1
     major = next(u for u in sorunlu if u.kri_kod == "MAJOR_SAPMA")
     assert major.seviye == "aksiyon"
-    assert "esik" in major.aciklama.lower() and "medyan" in major.aciklama
+    assert "eşik" in major.aciklama.lower() and "medyan" in major.aciklama
     assert "Hastane 4 (05)" in major.mesaj
     assert cmler[4].risk_puani > 50
     assert cmler[0].risk_puani is not None and cmler[0].risk_puani < 15
@@ -285,7 +285,7 @@ def test_bilesik_puan_ve_oneri():
     cm = CM()
     assert "yeterli veri" in izlem_onerisi(cm)
     cm.risk_puani = 70
-    assert "tetiklenmis" in izlem_onerisi(cm)
+    assert "tetiklenmiş" in izlem_onerisi(cm)
     cm.risk_puani = 5
     assert "uzaktan" in izlem_onerisi(cm).lower()
 
@@ -309,7 +309,7 @@ def test_anomali_dusuk_yon():
 
 def test_anomali_az_merkez_ve_none():
     s = anomali_tespit({1: 5.0, 2: 1.0, 3: None}, "yuksek")
-    assert not s[1].aykiri and "karsilastirma yapilamadi" in s[1].aciklama
+    assert not s[1].aykiri and "karşılaştırma yapılamadı" in s[1].aciklama
     assert s[3].z is None and s[3].aciklama == "Veri yok"
     assert anomali_tespit({}, "yuksek") == {}
 
@@ -326,3 +326,58 @@ def test_cusum():
     assert len(S) == 45
     assert alarm and alarm[0] >= 30
     assert not cusum([0.0] * 20, 0.5, 4.0)[1]
+
+
+# -- P4: Turkce metinler, kacirilan vizit (durum), kapali sapmalar ---------------------
+
+_ASCII_TUZAK = ("esik", "ustunde", "altinda", "gonullu", "yuksek", "dusuk", "gun ", "sure", "karsilastirma", "dagilim",
+                "siklik", "sapmasi", "agirlik", "medyani", "degeri", "calisma", "oncul", "gecmis")
+
+
+def _turkce_mi(metin: str) -> bool:
+    k = metin.lower()
+    return not any(f" {t}" in f" {k}" or k.startswith(t) for t in _ASCII_TUZAK)
+
+
+def test_kri_ve_uyari_metinleri_turkce(veri):
+    db, c, cmler = veri
+    for k in rbm.VARSAYILAN_KRILER:
+        assert _turkce_mi(k["ad"]) and _turkce_mi(k["aciklama"]), k["kod"]
+        assert k["birim"] in ("%", "gün", "adet", "sorgu/form", "sapma/gönüllü", "AE/gönüllü")
+    for q in rbm.VARSAYILAN_QTLLER:
+        assert _turkce_mi(q["parametre"]) and _turkce_mi(q["gerekce"])
+    uyarilar = rbm.erken_uyari_calistir(db, c)
+    db.commit()
+    assert uyarilar
+    for u in uyarilar:
+        assert _turkce_mi(u.mesaj) and _turkce_mi(u.aciklama), (u.mesaj, u.aciklama)
+    major = next(u for u in uyarilar if u.kri_kod == "MAJOR_SAPMA")
+    assert "Major sapma sayısı 3 adet" in major.mesaj and "eşiğinin üstünde" in major.aciklama
+
+    class CM:
+        risk_puani = 70
+    assert _turkce_mi(izlem_onerisi(CM()))
+    from smartclinical.services.rbm.gostergeler import deger_metni
+    assert deger_metni(38, "%") == "%38" and deger_metni(12.5, "gün") == "12,5 gün"
+
+
+def test_anomali_sonsuz_z_metni():
+    s = anomali_tespit({1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0, 5: 3.0}, "yuksek")
+    assert s[5].aykiri and s[5].z is None and "diğer merkezlerde gözlenmedi" in s[5].aciklama
+    assert not s[1].aykiri and s[1].z == 0.0
+
+
+def test_kacirilan_vizit_durum_ve_kapali_sapma(veri):
+    db, c, cmler = veri
+    g = cmler[0].gonulluler[0]
+    # gelecekte planli ama 'kacirildi' isaretlenmis vizit de sayilir (P2 durum alani)
+    db.add(Vizit(gonullu_id=g.id, ad="V2", sira=2, planlanan=BUGUN + timedelta(days=10), durum="kacirildi"))
+    db.flush()
+    assert rbm.HESAPLAYICILAR["kacirilan_vizit"](db, cmler[0]) == pytest.approx(14.3, abs=0.1)
+    # kapatilan sapmalar acik sapma oranina girmez; major sayisi degismez
+    once = rbm.HESAPLAYICILAR["sapma_orani"](db, cmler[4])
+    for s in db.query(ProtokolSapmasi).filter_by(calisma_merkez_id=cmler[4].id).all()[:3]:
+        s.kapanis_tarihi = BUGUN
+    db.flush()
+    assert rbm.HESAPLAYICILAR["sapma_orani"](db, cmler[4]) < once
+    assert rbm.HESAPLAYICILAR["major_sapma"](db, cmler[4]) == 3

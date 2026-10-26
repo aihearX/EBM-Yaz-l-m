@@ -36,6 +36,8 @@ def tr_kucuk(s: str) -> str:
 
 _ADLAR_K = {tr_kucuk(a) for a in ADLAR}
 _SOYADLAR_K = {tr_kucuk(a) for a in SOYADLAR}
+# harf durumundan bagimsiz kelime (kesme isaretli ek dahil): "ayşe", "AYŞE", "Ayşe'nin"
+_HER_KELIME_RE = re.compile(r"[A-Za-zÇĞİÖŞÜçğıöşü]{2,}(?:['’][a-zçğıöşü]+)?")
 
 
 @dataclass
@@ -101,6 +103,17 @@ def _adlari_bul(metin: str) -> list[tuple[int, int, str]]:
     for m in ETIKET_AD_RE.finditer(metin):
         bulunan.append((m.start(1), m.end(1), "AD"))
 
+    # harf durumundan bagimsiz ad + soyad ciftleri (kucuk harfle ya da tamamen buyuk harfle yazilmis adlar)
+    bulunan.extend(_ad_soyad_ciftleri(metin))
+    if _buyuk_harf_metin(metin):
+        # tamamen buyuk harfli metinde her kelime "buyuk harfli"dir; grup heuristigi tum cumleyi maskelerdi.
+        # Unvan, etiket ve ad+soyad cifti kurallari yeterli; tek kelimelik adlar yalnizca sozlukte ad ise.
+        for m in KELIME_RE.finditer(metin):
+            k = m.group()
+            if tr_kucuk(_kok(k)) in _ADLAR_K and not _beyaz_mi(k) and _cumle_basi_degil(metin, m.start()):
+                bulunan.append((m.start(), m.end(), "AD"))
+        return bulunan
+
     # Sozluk + buyuk harf heuristigi: ardisik buyuk harfli kelimeler, en az biri sozlukte
     kelimeler = list(KELIME_RE.finditer(metin))
     i = 0
@@ -132,6 +145,55 @@ def _adlari_bul(metin: str) -> list[tuple[int, int, str]]:
 def _cumle_basi_degil(metin: str, poz: int) -> bool:
     onceki = metin[:poz].rstrip()
     return bool(onceki) and onceki[-1] not in ".!?\n:"
+
+
+def _buyuk_harf_metin(metin: str) -> bool:
+    """Tamami buyuk harfle yazilmis metin (HBYS ciktilarinda sik): buyuk harf heuristigi anlamsizlasir."""
+    harfler = [c for c in metin if c.isalpha()]
+    return bool(harfler) and not any(c.islower() for c in harfler)
+
+
+def _ad_soyad_ciftleri(metin: str) -> list[tuple[int, int, str]]:
+    """Sozluk ad + soyad ciftleri, harf durumundan bagimsiz: 'ayşe yılmaz', 'AYŞE YILMAZ', 'Ayşe Nur Yılmaz'."""
+    bulunan: list[tuple[int, int, str]] = []
+    kelimeler = list(_HER_KELIME_RE.finditer(metin))
+
+    def ad_mi(idx):
+        return idx < len(kelimeler) and tr_kucuk(_kok(kelimeler[idx].group())) in _ADLAR_K and not _beyaz_mi(kelimeler[idx].group())
+
+    def soyad_mi(idx):
+        return idx < len(kelimeler) and tr_kucuk(_kok(kelimeler[idx].group())) in _SOYADLAR_K and not _beyaz_mi(kelimeler[idx].group())
+
+    def bitisik(idx):
+        return idx < len(kelimeler) and metin[kelimeler[idx - 1].end():kelimeler[idx].start()] == " "
+
+    i = 0
+    while i < len(kelimeler):
+        if ad_mi(i):
+            # "ad soyad" once denenir; bazi sozcukler (Yılmaz) hem ad hem soyad oldugundan sonra "ad ad soyad"
+            if bitisik(i + 1) and soyad_mi(i + 1):
+                bulunan.append((kelimeler[i].start(), kelimeler[i + 1].end(), "AD"))
+                i += 2
+                continue
+            if bitisik(i + 1) and ad_mi(i + 1) and bitisik(i + 2) and soyad_mi(i + 2):
+                bulunan.append((kelimeler[i].start(), kelimeler[i + 2].end(), "AD"))
+                i += 3
+                continue
+        i += 1
+    return bulunan
+
+
+def sozluk_adlari(metin: str) -> list[str]:
+    """Metinde gecen sozluk tabanli kisi adlari (harf durumundan bagimsiz); metni_dogrula ve BDM phi_kontrol kullanir."""
+    adlar: list[str] = []
+    for bas, bit, _ in _ad_soyad_ciftleri(metin or ""):
+        adlar.append(metin[bas:bit])
+    for m in KELIME_RE.finditer(metin or ""):
+        k = m.group()
+        if _isim_mi(k) and tr_kucuk(_kok(k)) in _ADLAR_K and _cumle_basi_degil(metin, m.start()) \
+                and not any(bas <= m.start() < bit for bas, bit, _ in _ad_soyad_ciftleri(metin)):
+            adlar.append(k)
+    return adlar
 
 
 def _kaliplari_bul(metin: str) -> list[tuple[int, int, str]]:
@@ -302,10 +364,8 @@ def metni_dogrula(metin: str) -> list[str]:
     for aciklama, kalip in _SUPHELI:
         for m in kalip.finditer(metin):
             uyarilar.append(f"{aciklama}: '{m.group()}' (konum {m.start()})")
-    for m in KELIME_RE.finditer(metin):
-        k = m.group()
-        if _isim_mi(k) and tr_kucuk(_kok(k)) in _ADLAR_K and _cumle_basi_degil(metin, m.start()):
-            uyarilar.append(f"sözlükte geçen kişi adı: '{k}' (konum {m.start()})")
+    for ad in sozluk_adlari(metin):
+        uyarilar.append(f"sözlükte geçen kişi adı: '{ad}' (konum {metin.find(ad)})")
     return uyarilar
 
 
@@ -318,4 +378,4 @@ def ozet_rapor(sonuc: Sonuc) -> str:
     return "\n".join(satirlar)
 
 
-__all__ = ["kimliksizlestir", "metni_dogrula", "ozet_rapor", "tckn_gecerli", "Sonuc", "Bulgu", "ETIKETLER"]
+__all__ = ["kimliksizlestir", "metni_dogrula", "sozluk_adlari", "ozet_rapor", "tckn_gecerli", "Sonuc", "Bulgu", "ETIKETLER"]

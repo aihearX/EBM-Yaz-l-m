@@ -250,3 +250,78 @@ def test_sponsor_ve_cra_403(istemci):
             assert istemci.get(f"/calismalar/{cid}/analiz{yol}").status_code == 403, (kadi, yol)
     _giris(istemci, "admin")
     assert istemci.get(f"/calismalar/{cid}/analiz").status_code == 200
+
+
+# -- P4: vizitler arasi degisim, Tablo 1, merkez siniri -----------------------------
+
+def test_vizitler_arasi_degisim_eslestirilmis_test(istemci):
+    db, c = _calisma()
+    d = analiz.vizit_degisimi(c, "VS.SYSBP", "V1", "V2")
+    assert d["gorunum"] == "degisim" and d["test"]["test"] in ("Eşleştirilmiş t testi", "Wilcoxon işaretli sıra testi")
+    assert d["test"]["n_cift"] == 7  # kol B'de bir V2 taslak
+    assert sum(k["n"] for k in d["kollar"]) == 7 and d["toplam"]["n"] == 7
+    assert analiz.vizit_degisimi(c, "VS.ATES", "V1", "V2")["test"]["test"] is None
+    kucuk = analiz.eslestirilmis_karsilastir([1.0, 2.0])
+    assert kucuk["test"] is None and "en az 3" in kucuk["gerekce"]
+    db.close()
+
+
+def test_tablo1_sutunlari_ve_csv(istemci):
+    db, c = _calisma()
+    t = analiz.tablo1(c, "V1")
+    assert t["kollar"] == ["Kol A", "Kol B"] and t["gonullu"] == 8
+    etiketler = [s["etiket"] for s in t["satirlar"]]
+    assert any(e.startswith("Sistolik kan basıncı (mmHg), ") for e in etiketler)
+    assert "Ateş var mı?, n (%)" in etiketler and "Evet" in etiketler
+    satir = next(s for s in t["satirlar"] if s["etiket"].startswith("Sistolik"))
+    assert set(satir["hucreler"]) == {"Kol A", "Kol B"} and "(n=4)" in satir["hucreler"]["Kol A"]
+    csv_satirlar = analiz.tablo1_csv_satirlari(t)
+    assert csv_satirlar[0] == ["Değişken", "Kol A", "Kol B", "Toplam"]
+    cid = c.id
+    db.close()
+    _giris(istemci, "istat")
+    r = istemci.get(f"/calismalar/{cid}/analiz/tablo1")
+    assert r.status_code == 200 and "Başlangıç özeti (Tablo 1)" in r.text and "Sistolik kan basıncı" in r.text
+    r = istemci.get(f"/calismalar/{cid}/analiz/tablo1.csv?vizit=V1")
+    assert r.status_code == 200 and r.text.startswith("﻿Değişken;Kol A;Kol B;Toplam")
+    db = oturum_fabrikasi()()
+    kayit = db.execute(select(DenetimKaydi).where(DenetimKaydi.islem == "disa_aktar").order_by(DenetimKaydi.id.desc())).scalars().first()
+    assert kayit.yeni["bicim"] == "tablo1_csv" and kayit.yeni["vizit"] == "V1"
+    db.close()
+    # sema olmadiginda varsayilan vizit yok, tum vizitler gorunumu; mod secimi calisir
+    r = istemci.get(f"/calismalar/{cid}/analiz?degisken=VS.SYSBP&mod=degisim&vizit1=V1&vizit2=V2")
+    assert r.status_code == 200 and "Vizitler arası değişim" in r.text and "eşleştirilmiş gönüllü" in r.text
+    r = istemci.get(f"/calismalar/{cid}/analiz?degisken=VS.SYSBP&mod=vizit")
+    assert r.status_code == 200 and 'value="V1" selected' in r.text  # sema yok: gozlenen ilk vizit varsayilan
+    r = istemci.get(f"/calismalar/{cid}/analiz?degisken=VS.SYSBP&mod=vizit&vizit=tum")
+    assert r.status_code == 200 and "kol testi yapılmaz" in r.text
+
+
+def test_arastirmaci_yalnizca_kendi_merkezini_gorur(istemci):
+    db, c = _calisma()
+    cid = c.id
+    m2 = Merkez(kod="T-02", ad="İkinci Hastane", sehir="İzmir", kurum_tipi="sehir")
+    db.add(m2)
+    db.flush()
+    cm2 = CalismaMerkez(calisma_id=cid, merkez_id=m2.id, merkez_no="02", hedef_hasta=5, durum="aktif")
+    db.add(cm2)
+    db.flush()
+    form = next(f for f in c.formlar if f.kod == "VS")
+    g = Gonullu(calisma_id=cid, calisma_merkez_id=cm2.id, gonullu_no="02-001", durum=GonulluDurumu.TEDAVIDE, kol_id=c.kollar[0].id)
+    db.add(g)
+    db.flush()
+    v = Vizit(gonullu_id=g.id, ad="V1", sira=0, planlanan=date(2024, 1, 1), gerceklesen=date(2024, 1, 1), durum="yapildi")
+    db.add(v)
+    db.flush()
+    db.add(FormKaydi(gonullu_id=g.id, form_id=form.id, vizit_id=v.id, veriler={"SYSBP": "150", "ATES": "Evet"}, durum="tamamlandi"))
+    db.add(Kullanici(kullanici_adi="ar2", ad_soyad="Araştırmacı", eposta="ar2@t.local", parola_hash=yetki.parola_hashle(PAROLA),
+                     rol=Rol.ARASTIRMACI, merkez_id=m2.id))
+    db.commit()
+    assert analiz.veri_seti(c, m2.id)[1][0]["gonullu_no"] == "02-001" and len(analiz.veri_seti(c, m2.id)[1]) == 1
+    assert analiz.gonullu_akisi(c, m2.id)["toplam_gonullu"] == 1
+    db.close()
+    _giris(istemci, "ar2")
+    r = istemci.get(f"/calismalar/{cid}/analiz")
+    assert r.status_code == 200 and "Yalnızca merkezinizin gönüllüleri" in r.text
+    r = istemci.get(f"/calismalar/{cid}/analiz/veri-seti.csv")
+    assert r.status_code == 200 and len(r.text.splitlines()) == 2 and "01-001" not in r.text

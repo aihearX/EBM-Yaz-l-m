@@ -5,7 +5,9 @@ dener; model yoksa / hata verirse / ciktisi dogrulanamazsa kural tabanli yola du
 platform modelsiz de calisir, model sadece kapsama ve dogrulugu artirir.
 """
 
+import hashlib
 import logging
+import os
 import re
 from dataclasses import dataclass, field
 
@@ -15,9 +17,25 @@ from ..kriter import sozluk as S
 from ..kriter import yapilandir as _kural_yapilandir
 from . import istemler, korumalar, metin_kurallari
 from .rag import HibritArama, cumlelere_bol
-from .saglayicilar import BDMErisimHatasi, KuralTabanliSaglayici, Saglayici, saglayici_olustur
+from .saglayicilar import BDMErisimHatasi, KuralTabanliSaglayici, Saglayici, saglayici_olustur, url_guvenli
 
 log = logging.getLogger(__name__)
+
+
+def _denetime_yaz(islem: str, veri: dict) -> None:
+    """Istek baglami olmadan denetim izine yazar (kendi oturumu); hicbir hata BDM akisini durdurmaz."""
+    try:
+        from ...db import oturum_fabrikasi
+        from .. import denetim
+
+        db = oturum_fabrikasi()()
+        try:
+            denetim.kaydet(db, None, islem, "bdm", None, yeni=veri)
+            db.commit()
+        finally:
+            db.close()
+    except Exception as e:  # pragma: no cover - tablo yoksa (ilk kurulum) sessizce gecilir
+        log.debug("BDM denetim kaydi yazilamadi: %s", e)
 
 SURUM = "ebm-klinik-tr/istemci-1.3"
 
@@ -128,12 +146,22 @@ class BDMIstemci:
         self.oy_sayisi = max(1, oy_sayisi)
         self.gomme = gomme
         self._hazir: bool | None = None
+        self.dusme_nedeni: str | None = None  # kural moduna dusulduyse kullaniciya gosterilen neden
 
     @classmethod
     def olustur(cls, ayarlar=None) -> "BDMIstemci":
+        """Ayarlardan istemci. BDM adresi ozel ag disindaysa ve SC_BDM_DIS_IZIN=1 yoksa kural moduna duser."""
         a = ayarlar or _ayarlar()
         s = saglayici_olustur(a.bdm_saglayici, a.bdm_url, a.bdm_model, a.bdm_zaman_asimi_sn)
-        return cls(s)
+        nesne = cls(s)
+        if not nesne.kural_modu and not url_guvenli(a.bdm_url) and os.environ.get("SC_BDM_DIS_IZIN") != "1":
+            log.warning("BDM adresi ozel ag disinda (%s); SC_BDM_DIS_IZIN=1 olmadan kural moduna dusuluyor", a.bdm_url)
+            _denetime_yaz("bdm_engel", {"saglayici": a.bdm_saglayici, "url": a.bdm_url, "model": a.bdm_model,
+                                        "neden": "ozel_ag_disi"})
+            nesne = cls(KuralTabanliSaglayici())
+            nesne.dusme_nedeni = (f"BDM adresi ({a.bdm_url}) özel ağ dışında; hasta metni kurum dışına çıkmasın diye "
+                                  f"kural tabanlı moda düşüldü. Dış sunucu kullanmak için SC_BDM_DIS_IZIN=1 tanımlayın.")
+        return nesne
 
     # -- durum -------------------------------------------------------------
 
@@ -152,25 +180,37 @@ class BDMIstemci:
 
     def durum(self) -> dict:
         return {"saglayici": self.saglayici.ad, "model": self.model_adi, "url": self.saglayici.url,
-                "hazir": self.hazir(), "surum": SURUM, "guven_esigi": self.guven_esigi}
+                "hazir": self.hazir(), "surum": SURUM, "guven_esigi": self.guven_esigi, "not": self.dusme_nedeni}
 
     # -- dusuk seviye ------------------------------------------------------
 
-    def _uret_json(self, istem: str, sema: dict, maks_token: int = 512, sicaklik: float = 0.0) -> dict | None:
+    def _uret_json(self, istem: str, sema: dict, maks_token: int = 512, sicaklik: float = 0.0,
+                   gorev: str = "", varlik: str | None = None) -> dict | None:
+        """Modelden JSON ister. Her istemin ozeti (hash, gorev, varlik, sonuc) denetim izine 'bdm_istem' olarak
+        yazilir; istem metni hicbir yere yazilmaz."""
         if self.kural_modu:
             return None
-        korumalar.phi_kontrol(istem)
+        ozet = {"hash": hashlib.sha256(istem.encode("utf-8")).hexdigest(), "gorev": gorev, "varlik": varlik,
+                "model": self.model_adi, "saglayici": self.saglayici.ad, "karakter": len(istem)}
+        try:
+            korumalar.phi_kontrol(istem)
+        except korumalar.KorumaIhlali:
+            _denetime_yaz("bdm_istem", {**ozet, "sonuc": "phi_engel"})
+            raise
         try:
             u = self.saglayici.uret(istem, sistem=istemler.SISTEM, json_cikti=True,
                                     sicaklik=sicaklik, maks_token=maks_token)
         except BDMErisimHatasi as e:
             log.warning("BDM erisim hatasi, kural tabanliya dusuluyor: %s", e)
             self._hazir = False
+            _denetime_yaz("bdm_istem", {**ozet, "sonuc": "erisim_hatasi"})
             return None
         v = korumalar.json_ayikla(u.metin)
         if not korumalar.sema_dogrula(v, sema):
             log.info("BDM ciktisi semaya uymadi: %.200s", u.metin)
+            _denetime_yaz("bdm_istem", {**ozet, "sonuc": "sema_disi", "token": u.token_sayisi, "sure_ms": u.sure_ms})
             return None
+        _denetime_yaz("bdm_istem", {**ozet, "sonuc": "ok", "token": u.token_sayisi, "sure_ms": u.sure_ms})
         return v
 
     # -- gorevler ----------------------------------------------------------
@@ -180,7 +220,8 @@ class BDMIstemci:
         if self.kural_modu:
             return kural
         v = self._uret_json(istemler.KRITER_YAPILANDIR.format(tip=tip, metin=metin.strip()),
-                            {"kategori": str, "sorgu": dict, "guven": (int, float)})
+                            {"kategori": str, "sorgu": dict, "guven": (int, float)}, gorev="kriter_yapilandir",
+                            varlik=f"kriter:{tip}")
         if not v or v["kategori"] not in __import__("smartclinical.services.kriter", fromlist=["KATEGORILER"]).KATEGORILER:
             return kural
         # Model ciktisini kural ayristirici ile capraz kontrol: kategori uyusmuyorsa ve kural guveni yuksekse kural kazanir
@@ -205,7 +246,8 @@ class BDMIstemci:
         oylar: list[tuple[str, float]] = []
         kanit, indeks = None, None
         for i in range(self.oy_sayisi):
-            v = self._uret_json(istem, sema, maks_token=256, sicaklik=0.0 if self.oy_sayisi == 1 else 0.4)
+            v = self._uret_json(istem, sema, maks_token=256, sicaklik=0.0 if self.oy_sayisi == 1 else 0.4,
+                                gorev="kanit_cikar", varlik=f"hasta_metni:{len(parcalar)} parça")
             if v is None:
                 if i == 0:
                     return self._kural_kanit(kriter_metni, parcalar, notlar=["BDM yanit vermedi"], sorgu=sorgu)
@@ -229,7 +271,8 @@ class BDMIstemci:
 
     def klinik_ozet(self, metin: str) -> list[str]:
         if not self.kural_modu:
-            v = self._uret_json(istemler.KLINIK_OZET.format(metin=metin[:6000]), {"maddeler": list}, maks_token=400)
+            v = self._uret_json(istemler.KLINIK_OZET.format(metin=metin[:6000]), {"maddeler": list}, maks_token=400,
+                                gorev="klinik_ozet", varlik="hasta_metni")
             if v:
                 return [str(m) for m in v["maddeler"]][:6]
         return self._kural_ozet(metin)
@@ -246,7 +289,7 @@ class BDMIstemci:
             metin = _baslik_cevresi(metin, PROTOKOL_BASLIKLARI)
         v = self._uret_json(istemler.PROTOKOL_TASLAK.format(metin=metin[:PROTOKOL_METIN_SINIRI]),
                             {"dahil": list, "haric": list, "kollar": list, "vizitler": list, "formlar": list,
-                             "guven": (int, float)}, maks_token=1500)
+                             "guven": (int, float)}, maks_token=1500, gorev="protokol_taslagi", varlik="protokol")
         if not v or not korumalar.json_sema(v, {"dahil": [str], "haric": [str], "kollar": [str],
                                                 "vizitler": [{"ad": str, "gun": (int, float)}], "formlar": [str]}):
             return None
@@ -258,7 +301,8 @@ class BDMIstemci:
     def soru_cevap(self, soru: str, baglam: str) -> dict:
         if not self.kural_modu:
             v = self._uret_json(istemler.SORU_CEVAP.format(soru=soru, baglam=baglam[:6000]),
-                                {"cevap": str, "guven": (int, float)}, maks_token=300)
+                                {"cevap": str, "guven": (int, float)}, maks_token=300, gorev="soru_cevap",
+                                varlik="hasta_metni")
             if v:
                 dayanak = v.get("dayanak") or ""
                 if dayanak and not korumalar.kanit_dogrula(dayanak, [baglam])[0]:

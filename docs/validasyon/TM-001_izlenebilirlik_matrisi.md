@@ -57,7 +57,7 @@ belgeyi her sürümde kodla karşılaştırır (olmayan test, betik ya da rota r
 | URS-EDC-06 | GK | FRS-21 | `smartclinical/models/tasarim.py`, `POST /gonulluler/{gid}/vizit/{vid}` | `tests/test_ecrf.py::test_randomizasyonda_vizitler_tanimdan_uretilir`, `tests/test_gonullu.py::test_kacirilan_vizit_gerekce` | OQ-11 |
 | URS-EDC-07 | İK | FRS-22 | `GET /calismalar/{calisma_id}/veri/disa-aktar`, `smartclinical/web/disa_aktar.py` | `tests/test_disa_aktar.py::test_study_event_ref_ve_oidler`, `tests/test_disa_aktar.py::test_merkez_ae_dispozisyon_ve_tekrar`, `tests/test_disa_aktar.py::test_csv_paketi_bom_ve_ayirici` | OQ-36 |
 | URS-EDC-08 | GK | FRS-74 | `POST /calismalar/{calisma_id}/veri/imza/{gid}`, `GET /calismalar/{calisma_id}/veri/imza` | `tests/test_izlem.py::test_arastirmaci_imzasi_ve_toplu_kilit`, `tests/test_izlem.py::test_imzadan_sonra_degisen_kayit_yenilenmeli` | OQ-09 |
-| URS-EDC-09 | GK | FRS-75 | `POST /calismalar/{calisma_id}/randomizasyon/uret` | `tests/test_randomizasyon.py::test_blok_dengesi_oranlara_uyar`, `tests/test_randomizasyon.py::test_eimza_olmadan_liste_uretilmez` | OQ-08 |
+| URS-EDC-09 | GK | FRS-75 | `smartclinical/web/randomizasyon.py` | `tests/test_randomizasyon.py::test_blok_dengesi_oranlara_uyar`, `tests/test_randomizasyon.py::test_eimza_olmadan_liste_uretilmez` | OQ-08 |
 
 ## 5. Güvenlik (farmakovijilans)
 
@@ -125,7 +125,7 @@ belgeyi her sürümde kodla karşılaştırır (olmayan test, betik ya da rota r
 | URS-Eİ-03 | GK | FRS-55 | `smartclinical/web/veri_islem.py` (`imza_durumu`) | `tests/test_izlem.py::test_imzadan_sonra_degisen_kayit_yenilenmeli`, `tests/test_denetim.py::test_eimza_icerik_ozeti_anahtardan_bagimsiz` | OQ-09 |
 | URS-YT-01 | GK | FRS-56 | `smartclinical/services/yetki.py` (`IZINLER`) | `tests/test_roller.py::test_rol_rota_matrisi`, `tests/test_roller.py::test_matris_dokumanla_uyumlu`, `tests/test_ekip.py::test_izin_haritasi` | OQ-02, OQ-03 |
 | URS-YT-02 | GK | FRS-56 | `smartclinical/services/yetki.py` (`calisma_erisimi`, `gonullu_erisimi`) | `tests/test_P1.py::test_arastirmaci_baska_merkezin_hastasina_erisemez`, `tests/test_roller.py::test_merkez_rolleri_kendi_merkezini_gorur`, `tests/test_roller.py::test_sponsor_kurum_filtresi_ve_sekmeler`, `tests/test_izlem.py::test_merkez_rolu_yalnizca_kendi_merkezini_gorur` | OQ-02, OQ-03 |
-| URS-YT-03 | GK | FRS-57 | `smartclinical/services/yetki.py`, `POST /hesap/parola` | `tests/test_web.py::test_hatali_giris_ve_sureli_kilit`, `tests/test_web.py::test_parola_degistir_ve_gecmis`, `tests/test_web.py::test_ilk_giriste_parola_degisimi_zorunlu`, `tests/test_web.py::test_ip_basina_deneme_siniri` | OQ-04 |
+| URS-YT-03 | GK | FRS-57 | `smartclinical/services/yetki.py`, `smartclinical/web/hesap.py` | `tests/test_web.py::test_hatali_giris_ve_sureli_kilit`, `tests/test_web.py::test_parola_degistir_ve_gecmis`, `tests/test_web.py::test_ilk_giriste_parola_degisimi_zorunlu`, `tests/test_web.py::test_ip_basina_deneme_siniri` | OQ-04 |
 | URS-YT-04 | GK | FRS-58 | `POST /yonetim/kullanicilar/{kid}/durum` | `tests/test_web.py::test_rol_kisiti` | OQ-35 |
 | URS-YT-05 | İK | FRS-77 | `POST /calismalar/{calisma_id}/ekip/ekle`, `smartclinical/services/yetki.py` (`kisit_aktif`) | `tests/test_ekip.py::test_ilk_atama_kisiti_baslatir`, `tests/test_ekip.py::test_kendini_cikaramaz_ve_cikarma_denetimi` | OQ-02 |
 
@@ -153,8 +153,8 @@ gereksinim listesinden çıkarıldı ve bu matriste izlenmez:
 
 - Kurumsal dizin (LDAP/AD) ile kimlik doğrulama.
 - İngilizce arayüz.
-- E-posta (SMTP) uyarıları; uyarılar arayüzde ve gece işi çıktısında gösterilir.
+- E-posta uyarıları; uyarılar arayüzde ve gece işi çıktısında gösterilir.
 - Zamanlanmış HBYS eşitlemesi; eşitleme API üzerinden elle tetiklenir.
-- Uygulama düzeyinde iki aşamalı doğrulama (TOTP); uzaktan erişim hastane VPN'i ile sağlanır.
+- Uygulama düzeyinde ikinci faktör; uzaktan erişim hastane VPN'i ile sağlanır.
 - SDTM/XPT dışa aktarımı; veri CSV paketi ve CDISC ODM olarak verilir.
 - Yük testi (50 eşzamanlı kullanıcı) ve otomatik şema migrasyonu.

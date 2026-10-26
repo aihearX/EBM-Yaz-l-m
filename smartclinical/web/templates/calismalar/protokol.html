@@ -3,22 +3,32 @@
 {% block yol %}<a href="/calismalar">Çalışmalar</a> › <a href="/calismalar/{{ c.id }}">{{ c.kod }}</a> › Protokol{% endblock %}
 {% block icerik %}
 {% include "calismalar/_baslik.html" %}
+{% set GUVEN_ESIGI = 0.8 %}
+{% set toplu_aday = c.kriterler|rejectattr('onaylandi')|selectattr('guven')|selectattr('guven', 'ge', GUVEN_ESIGI)|list %}
 <div class="izgara k21">
   <div>
     <div class="kart">
-      <h2>Dahil etme / hariç tutma kriterleri</h2>
-      <p class="kucuk">Her kriter, Türkçe Klinik BDM ({{ bdm_model }}{% if bdm == 'kural' %}, kural tabanlı mod{% endif %}) tarafından hesaplanabilir sorguya dönüştürülür. Araştırmacı onayı olmadan eşleştirme sonuçları "ön tarama" niteliğindedir.</p>
+      <div class="baslik-satiri" style="margin-bottom:4px">
+        <h2 style="margin:0">Dahil etme / hariç tutma kriterleri</h2>
+        {% if toplu_aday and izinli(kullanici, 'kriter.onayla') %}
+        <form method="post" action="/calismalar/{{ c.id }}/protokol/kriter/toplu-onay" class="inline" data-onay="Güven değeri %{{ (GUVEN_ESIGI*100)|int }} ve üzeri olan {{ toplu_aday|length }} kriter onaylanacak. Devam edilsin mi?"><button class="btn">Güven eşiği üstündekileri toplu onayla ({{ toplu_aday|length }})</button></form>
+        {% endif %}
+      </div>
+      <p class="kucuk">Her kriter, Türkçe Klinik BDM ({{ bdm_model }}{% if bdm == 'kural' %}, kural tabanlı mod{% endif %}) tarafından hesaplanabilir sorguya dönüştürülür ve okunur cümle olarak gösterilir. Araştırmacı onayı olmadan eşleştirme sonuçları "ön tarama" niteliğindedir.</p>
       {% for tip, baslik in [('dahil', 'Dahil etme kriterleri'), ('haric', 'Hariç tutma kriterleri')] %}
       <h3 style="margin-top:12px">{{ baslik }}</h3>
       <table class="sikisik">
-        <tr><th style="width:30px">#</th><th>Kriter</th><th style="width:120px">Kategori</th><th style="width:70px">Güven</th><th style="width:90px">Durum</th><th style="width:150px"></th></tr>
+        <tr><th style="width:30px">#</th><th>Kriter ve hesaplanabilir karşılığı</th><th style="width:110px">Kategori</th><th style="width:70px">Güven</th><th style="width:90px">Durum</th><th style="width:150px"></th></tr>
         {% for kr in c.kriterler if kr.tip == tip %}
+        {% set dusuk = kr.guven is not none and kr.guven < GUVEN_ESIGI %}
         <tr>
           <td>{{ kr.sira }}</td>
           <td>{{ kr.metin }}
-            <details><summary class="kucuk">yapısal sorgu</summary><pre style="margin:4px 0">{{ kr.yapisal|tojson(indent=1) }}</pre></details></td>
+            <div style="margin-top:3px"><span class="rozet {{ 'mavi' if kr.yapisal and kr.yapisal.sorgu else 'kontur' }}" style="white-space:normal">{{ kriter_cumlesi(kr.yapisal) }}</span></div>
+            {% if dusuk %}<div class="kucuk" style="color:var(--sari);margin-top:3px">Düşük güven: {% if kr.yapisal and kr.yapisal.notlar %}{{ kr.yapisal.notlar|join('; ') }}{% else %}kalıp kısmen tanındı; cümleyi kontrol edip onaylayın{% endif %}.</div>{% endif %}
+            <details><summary class="kucuk">teknik ayrıntı (JSON)</summary><pre style="margin:4px 0;white-space:pre-wrap">{{ kr.yapisal|json_tr }}</pre></details></td>
           <td><span class="rozet kontur">{{ kr.yapisal.kategori if kr.yapisal else '—' }}</span></td>
-          <td class="sayi">{% if kr.guven is not none %}<span class="rozet {{ 'yesil' if kr.guven >= 0.8 else ('sari' if kr.guven >= 0.5 else 'kirmizi') }}">{{ (kr.guven*100)|round|int }}%</span>{% endif %}</td>
+          <td class="sayi">{% if kr.guven is not none %}<span class="rozet {{ 'yesil' if kr.guven >= GUVEN_ESIGI else ('sari' if kr.guven >= 0.5 else 'kirmizi') }}">%{{ (kr.guven*100)|round|int }}</span>{% endif %}</td>
           <td>{% if kr.onaylandi %}<span class="rozet yesil">Onaylı</span>{% else %}<span class="rozet sari">Onay bekliyor</span>{% endif %}</td>
           <td>
             {% if not kr.onaylandi and izinli(kullanici, 'kriter.onayla') %}
@@ -67,7 +77,7 @@
       <h2>Çalışma kolları</h2>
       <ul class="liste-sade">{% for k in c.kollar %}<li><b>{{ k.ad }}</b> ({{ k.oran }}){% if k.aciklama %}<br><small>{{ k.aciklama }}</small>{% endif %}</li>{% else %}<li class="kucuk">Tanımlı kol yok.</li>{% endfor %}</ul>
     </div>
-    <div class="not">Yapısal sorgular yalnızca ön tarama amaçlıdır. Nihai uygunluk kararı her zaman araştırmacıya aittir; sistem tüm önerileri kaynak cümlesiyle birlikte sunar ve kararı denetim izine yazar.</div>
+    <div class="not">Yapısal sorgular yalnızca ön tarama amaçlıdır. Nihai uygunluk kararı her zaman araştırmacıya aittir; sistem tüm önerileri kaynak cümlesiyle birlikte sunar ve kararı denetim izine yazar. Toplu onay yalnızca güven değeri %{{ (GUVEN_ESIGI*100)|int }} ve üzeri kriterleri kapsar; düşük güvenli kriterler tek tek incelenir.</div>
   </div>
 </div>
 {% endblock %}
