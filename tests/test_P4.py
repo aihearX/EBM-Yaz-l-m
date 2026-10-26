@@ -333,3 +333,12 @@ def test_merkez_zekasi_ve_rbm_sayfalari_metinler(istemci):
     r = istemci.get(f"/calismalar/{cid}/eslestirme")
     assert r.status_code == 200 and "Listeyi filtrele" in r.text and "Taramayı çalıştır" in r.text
     assert "Uygun değil" in r.text and ">uygun_degil<" not in r.text
+
+
+def test_bitirme_olasiligi_yuz_yerine_99_ustu():
+    # sayfa: olasilik 0.995 ve ustunde '>%99' ve varsayim notu; '%100' hic gosterilmez
+    from smartclinical.web.sablon import sablonlar
+
+    kaynak, _, _ = sablonlar.env.loader.get_source(sablonlar.env, "eslestirme/merkez_zekasi.html")
+    assert "&gt;%99" in kaynak and "olasilik >= 0.995" in kaynak and "%100" not in kaynak
+    assert "varsayımına dayanır" in kaynak and "henüz hesaplanmadı" in kaynak

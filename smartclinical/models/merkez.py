@@ -84,7 +84,3 @@ class CalismaMerkez(Taban, ZamanDamgasi):
     def durum_etiket(self) -> str:
         return CM_DURUM_ETIKET.get(self.durum, self.durum)
 
-
-# TODO(entegrasyon): models/__init__.py ve scripts/demo_veri.py KilometreTasi'ni ice almayi birakinca bu satir silinecek.
-# Kilometre tasi tablosu kaldirildi; SIV ve aktivasyon bilgisi IzlemZiyareti ve CalismaMerkez tarihlerinden okunur.
-KilometreTasi = None

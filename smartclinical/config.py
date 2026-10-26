@@ -30,6 +30,10 @@ class Ayarlar(BaseModel):
     fhir_sunucu_url: str = ""
     fhir_token: str = ""
 
+    parola_min: int = 12
+    parola_gun: int = 90
+    takma_ad_anahtari: str = ""
+
     @property
     def uretim(self) -> bool:
         return self.ortam == "uretim"
@@ -62,7 +66,12 @@ def ayarlar() -> Ayarlar:
         dosya_dizini=Path(_env("SC_DOSYA_DIZINI", str(KOK_DIZIN / "yuklemeler"))),
         fhir_sunucu_url=_env("SC_FHIR_SUNUCU_URL", ""),
         fhir_token=_env("SC_FHIR_TOKEN", ""),
+        parola_min=int(_env("SC_PAROLA_MIN", "12")),
+        parola_gun=int(_env("SC_PAROLA_GUN", "90")),
+        takma_ad_anahtari=_env("SC_TAKMA_AD_ANAHTARI", ""),
     )
     if a.uretim and a.secret_key.startswith("gelistirme-"):
         raise RuntimeError("Uretim ortaminda SC_SECRET_KEY tanimlanmali")
+    if a.uretim and not a.takma_ad_anahtari:
+        raise RuntimeError("Uretim ortaminda SC_TAKMA_AD_ANAHTARI tanimlanmali")
     return a
