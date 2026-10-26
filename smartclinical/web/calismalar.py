@@ -34,7 +34,14 @@ from ..models.ekip import CalismaUyesi
 from ..models.izlem import SAPMA_KATEGORI
 from ..models.merkez import CM_DURUMLAR
 from ..services import denetim
-from ..services.yetki import MERKEZ_ROLLERI, calisma_duzenleyebilir, calisma_filtresi, gerekli, izinli, kisit_aktif
+from ..services.yetki import (
+    MERKEZ_ROLLERI,
+    calisma_duzenleyebilir,
+    calisma_filtresi,
+    gerekli,
+    izinli,
+    kisit_aktif,
+)
 from ._ortak import bilgi, calisma_duzenleyen, calisma_getir, ip, oturumlu, sayfala
 from .sablon import goster, sablonlar
 
@@ -335,11 +342,7 @@ def detay(request: Request, c: Calisma = Depends(calisma_getir), k: Kullanici = 
     # sponsor salt okunur ozet gorur; islem gecmisi gosterilmez
     son_denetim = []
     if k.rol != Rol.SPONSOR:
-        cm_ids = [m.id for m in c.merkezler] or [0]
-        son_denetim = db.execute(select(DenetimKaydi).where(
-            ((DenetimKaydi.varlik.in_(["calisma", "eslestirme"])) & (DenetimKaydi.varlik_id == c.id)) |
-            ((DenetimKaydi.varlik == "calisma_merkez") & (DenetimKaydi.varlik_id.in_(cm_ids)))
-        ).order_by(DenetimKaydi.id.desc()).limit(6)).scalars().all()
+        son_denetim = db.execute(_calisma_denetim_sorgusu(c).limit(6)).scalars().all()
     return goster(request, "calismalar/detay.html", c=c, o=o, egri=egri, kontrol=kontrol, son_denetim=son_denetim,
                   sekme="ozet", duzenleyebilir=calisma_duzenleyebilir(db, k, c))
 
@@ -690,18 +693,24 @@ def belge_onayla(request: Request, belge_id: int, c: Calisma = Depends(calisma_g
 
 # --- Denetim izi (calisma) --------------------------------------------------
 
+def _calisma_denetim_sorgusu(c: Calisma):
+    """Calismaya ait denetim kayitlari: calisma, merkezleri, gonulluleri, kriterleri, protokol surumleri, basvurulari."""
+    def _ids(liste):
+        return [x.id for x in liste] or [0]
+
+    return select(DenetimKaydi).where(
+        ((DenetimKaydi.varlik.in_(["calisma", "eslestirme"])) & (DenetimKaydi.varlik_id == c.id)) |
+        ((DenetimKaydi.varlik == "gonullu") & (DenetimKaydi.varlik_id.in_(_ids(c.gonulluler)))) |
+        ((DenetimKaydi.varlik == "calisma_merkez") & (DenetimKaydi.varlik_id.in_(_ids(c.merkezler)))) |
+        ((DenetimKaydi.varlik == "kriter") & (DenetimKaydi.varlik_id.in_(_ids(c.kriterler)))) |
+        ((DenetimKaydi.varlik == "protokol_versiyon") & (DenetimKaydi.varlik_id.in_(_ids(c.versiyonlar)))) |
+        ((DenetimKaydi.varlik == "basvuru") & (DenetimKaydi.varlik_id.in_(_ids(c.basvurular))))
+    ).order_by(DenetimKaydi.id.desc())
+
+
 @router.get("/{calisma_id}/denetim")
 def calisma_denetim(request: Request, c: Calisma = Depends(calisma_getir), k: Kullanici = Depends(gerekli("denetim.goruntule")),
                     db: Session = Depends(get_db)):
     request.state.kullanici = k
-    gid = [g.id for g in c.gonulluler]
-    cmid = [m.id for m in c.merkezler]
-    krid = [x.id for x in c.kriterler]
-    kayitlar = db.execute(select(DenetimKaydi).where(
-        ((DenetimKaydi.varlik == "calisma") & (DenetimKaydi.varlik_id == c.id)) |
-        ((DenetimKaydi.varlik == "gonullu") & (DenetimKaydi.varlik_id.in_(gid))) |
-        ((DenetimKaydi.varlik == "calisma_merkez") & (DenetimKaydi.varlik_id.in_(cmid))) |
-        ((DenetimKaydi.varlik == "kriter") & (DenetimKaydi.varlik_id.in_(krid))) |
-        ((DenetimKaydi.varlik == "eslestirme") & (DenetimKaydi.varlik_id == c.id))
-    ).order_by(DenetimKaydi.id.desc()).limit(200)).scalars().all()
+    kayitlar = db.execute(_calisma_denetim_sorgusu(c).limit(200)).scalars().all()
     return goster(request, "calismalar/denetim.html", c=c, o=_ozet(db, c), sekme="denetim", kayitlar=kayitlar)

@@ -14,9 +14,8 @@ from smartclinical.models import Arastirmaci, Basvuru, Calisma, CalismaMerkez, K
 from smartclinical.models import Form as CRF
 from smartclinical.models.ekip import CalismaUyesi
 from smartclinical.models.kurulum import CalismaTaslagi, KurulumAyari
-from smartclinical.services import yetki
 from smartclinical.models.tasarim import VizitTanimi
-from smartclinical.services import denetim, kurulum
+from smartclinical.services import denetim, kurulum, yetki
 from smartclinical.web import sihirbaz as sihirbaz_web
 
 PAROLA = "Test1234!xyz"

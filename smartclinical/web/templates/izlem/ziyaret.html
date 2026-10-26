@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block baslik %}{{ c.kod }} · Ziyaret raporu{% endblock %}
+{% block yol %}<a href="/calismalar">Çalışmalar</a> › <a href="/calismalar/{{ c.id }}">{{ c.kod }}</a> › <a href="/calismalar/{{ c.id }}/izlem">Ziyaret ve Sapmalar</a> › {{ z.tip_etiket }}{% endblock %}
+{% block icerik %}
+{% include "calismalar/_baslik.html" %}
+{% set yonetir = izinli(kullanici, 'rbm.yonet') and not z.rapor_onay %}
+{% set cm = z.calisma_merkez %}
+<div class="baslik-satiri">
+  <div><h1 style="font-size:18px">{{ z.tip_etiket }} · {{ cm.merkez_no }} {{ cm.merkez.ad }}</h1>
+    <small>{{ cm.merkez.sehir }} · Baş araştırmacı: {{ cm.bas_arastirmaci.ad_soyad if cm.bas_arastirmaci else '—' }} · CRA: {{ z.cra.ad_soyad if z.cra else '—' }}{% if z.tetikleyen_uyari %} · Tetikleyen uyarı: {{ z.tetikleyen_uyari.kri_kod }} ({{ z.tetikleyen_uyari.mesaj }}){% endif %}</small></div>
+  <div class="sag"><span class="rozet {{ 'yesil' if z.durum == 'onaylandi' else ('mavi' if z.durum == 'raporlandi' else '') }}">{{ z.durum_etiket }}</span>
+    <button class="btn kucuk" onclick="window.print()">Yazdır</button></div>
+</div>
+<div class="izgara k21">
+  <div>
+    <div class="kart">
+      <h2>Ziyaret kaydı</h2>
+      {% if yonetir %}
+      <form method="post" action="/calismalar/{{ c.id }}/izlem/ziyaret/{{ z.id }}">
+        <div class="ikili">
+          <div class="alan"><label>Planlanan</label><input type="text" value="{{ z.planlanan|tarih }}" disabled></div>
+          <div class="alan"><label>Gerçekleşen tarih</label><input type="date" name="gerceklesen" value="{{ z.gerceklesen or '' }}"></div>
+          <div class="alan"><label>SDV oranı (%)</label><input type="number" name="sdv_orani" min="0" max="100" step="1" value="{{ z.sdv_orani if z.sdv_orani is not none else '' }}"></div>
+        </div>
+        <div class="alan"><label>Katılımcılar</label><input type="text" name="katilimcilar" value="{{ z.katilimcilar or '' }}" placeholder="Baş araştırmacı, koordinatör, eczacı"></div>
+        <div class="alan"><label>Kontrol listesi</label>
+          {% for anahtar, etiket in ZIYARET_KONTROL.items() %}<label style="display:block;font-weight:400"><input type="checkbox" name="kontrol" value="{{ anahtar }}" {{ 'checked' if z.kontrol_listesi and z.kontrol_listesi.get(anahtar) }}> {{ etiket }}</label>{% endfor %}</div>
+        <div class="alan"><label>Rapor</label><textarea name="rapor" rows="8" placeholder="Ziyaret kapsamı, incelenen gönüllüler, kaynak belge karşılaştırması, sonuç">{{ z.rapor or '' }}</textarea></div>
+        <button class="btn birincil">Kaydet</button>
+      </form>
+      {% else %}
+      <table class="sikisik">
+        <tr><th>Planlanan</th><td>{{ z.planlanan|tarih }}</td><th>Gerçekleşen</th><td>{{ z.gerceklesen|tarih }}</td></tr>
+        <tr><th>SDV oranı</th><td>{{ z.sdv_orani|yuzde if z.sdv_orani is not none else '—' }}</td><th>Katılımcılar</th><td>{{ z.katilimcilar or '—' }}</td></tr>
+      </table>
+      <h3 style="margin-top:10px">Kontrol listesi</h3>
+      <ul>{% for anahtar, etiket in ZIYARET_KONTROL.items() %}<li>{{ etiket }}: <span class="rozet {{ 'yesil' if z.kontrol_listesi and z.kontrol_listesi.get(anahtar) else 'sari' }}">{{ 'tamam' if z.kontrol_listesi and z.kontrol_listesi.get(anahtar) else 'eksik' }}</span></li>{% endfor %}</ul>
+      <h3 style="margin-top:10px">Rapor</h3>
+      <p style="white-space:pre-wrap">{{ z.rapor or 'Rapor yazılmadı.' }}</p>
+      {% endif %}
+    </div>
+    <div class="kart">
+      <h2>Bulgular</h2>
+      <table class="sikisik"><tr><th>#</th><th>Konu</th><th>Önem</th><th>Aksiyon</th><th>Sorumlu</th><th>Hedef</th><th>Durum</th>{% if yonetir %}<th></th>{% endif %}</tr>
+        {% for b in z.bulgular or [] %}<tr><td>{{ loop.index }}</td><td>{{ b.konu }}{% if b.tasindi_ziyaret_id %} <span class="rozet kontur">önceki ziyaretten</span>{% endif %}</td><td><span class="rozet {{ 'kirmizi' if b.onem in ('major', 'kritik') else 'sari' }}">{{ BULGU_ONEM_ETIKET.get(b.onem, b.onem) }}</span></td><td>{{ b.aksiyon or '—' }}</td><td>{{ b.sorumlu or '—' }}</td><td>{{ b.hedef_tarih|tarih if b.hedef_tarih else '—' }}</td>
+          <td>{% if b.kapali %}<span class="rozet yesil">kapalı{% if b.kapanis %} · {{ b.kapanis|tarih }}{% endif %}</span>{% else %}<span class="rozet sari">açık</span>{% endif %}</td>
+          {% if yonetir %}<td>{% if not b.kapali %}<form method="post" action="/calismalar/{{ c.id }}/izlem/ziyaret/{{ z.id }}/bulgu/{{ loop.index0 }}/kapat" class="satir"><input type="text" name="not" placeholder="kapanış notu" style="width:140px"><button class="btn kucuk">Kapat</button></form>{% endif %}</td>{% endif %}</tr>
+        {% else %}<tr><td colspan="8" class="kucuk">Bulgu kaydedilmedi.</td></tr>{% endfor %}
+      </table>
+      {% if yonetir %}
+      <details style="margin-top:10px"><summary>Bulgu ekle</summary>
+      <form method="post" action="/calismalar/{{ c.id }}/izlem/ziyaret/{{ z.id }}/bulgu" style="margin-top:8px">
+        <div class="alan"><label>Konu</label><input type="text" name="konu" required></div>
+        <div class="ikili">
+          <div class="alan"><label>Önem</label><select name="onem">{% for kod, ad in BULGU_ONEM_ETIKET.items() %}<option value="{{ kod }}">{{ ad }}</option>{% endfor %}</select></div>
+          <div class="alan"><label>Sorumlu</label><input type="text" name="sorumlu" placeholder="Koordinatör"></div>
+          <div class="alan"><label>Hedef tarih</label><input type="date" name="hedef_tarih"></div>
+        </div>
+        <div class="alan"><label>Beklenen aksiyon</label><input type="text" name="aksiyon"></div>
+        <button class="btn">Ekle</button>
+      </form></details>
+      {% endif %}
+    </div>
+  </div>
+  <div>
+    <div class="kart">
+      <h2>Rapor onayı</h2>
+      {% if z.rapor_onay %}
+      <p><span class="rozet yesil">Onaylı</span> {{ z.onaylayan.ad_soyad if z.onaylayan else '—' }} · {{ z.rapor_onay|tarih }}</p>
+      <small>Onay sonrası rapor değiştirilemez; imza kaydı kullanıcı, zaman ve içerik özeti ile denetim izindedir.</small>
+      {% elif onaylayabilir %}
+      <form method="post" action="/calismalar/{{ c.id }}/izlem/ziyaret/{{ z.id }}/onay">
+        <div class="alan"><label>Parolanız (e-imza)</label><input type="password" name="parola" required></div>
+        <button class="btn birincil">Raporu onayla</button>
+      </form>
+      <small>Onay için gerçekleşen tarih ve rapor metni girilmiş olmalı.</small>
+      {% else %}<p class="kucuk">Raporu proje yöneticisi elektronik imza ile onaylar.</p>{% endif %}
+    </div>
+    {% if izinli(kullanici, 'rbm.yonet') %}
+    <div class="kart">
+      <h2>Bağlantılar</h2>
+      <p><a class="btn kucuk" href="/calismalar/{{ c.id }}/izlem?merkez_id={{ cm.id }}#sapma-kaydet">Sapma kaydet (bu merkez)</a></p>
+      <p><a class="btn kucuk" href="/calismalar/{{ c.id }}/rbm">Risk göstergeleri</a> <a class="btn kucuk" href="/calismalar/{{ c.id }}/belgeler?merkez_id={{ cm.merkez_id }}">Merkez dosyası (ISF)</a></p>
+    </div>
+    {% endif %}
+    <div class="not">Başlatma ziyaretinde gerçekleşen tarihin girilmesi, aktivasyon aşaması kontrol listesindeki "Başlatma ziyareti (SIV) yapıldı" maddesini tamamlar.</div>
+  </div>
+</div>
+{% endblock %}

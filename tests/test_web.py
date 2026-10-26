@@ -11,7 +11,17 @@ from sqlalchemy import select
 
 from smartclinical.db import oturum_fabrikasi, sifirla
 from smartclinical.main import app
-from smartclinical.models import Calisma, CalismaMerkez, DenetimKaydi, Gonullu, GonulluDurumu, Hasta, Kullanici, Merkez, Rol
+from smartclinical.models import (
+    Calisma,
+    CalismaMerkez,
+    DenetimKaydi,
+    Gonullu,
+    GonulluDurumu,
+    Hasta,
+    Kullanici,
+    Merkez,
+    Rol,
+)
 from smartclinical.models._ortak import simdi
 from smartclinical.scripts.yeniden_anahtarla import eslem_hesapla, yeniden_anahtarla
 from smartclinical.services import denetim, yetki

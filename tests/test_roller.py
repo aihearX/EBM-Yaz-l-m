@@ -225,7 +225,7 @@ def test_bos_calisma_bos_durumlari(istemci):
     r = istemci.get(f"/calismalar/{c.id}/veri")
     assert r.status_code == 200 and f"/calismalar/{c.id}/tasarim" in r.text and "eCRF formu tanımlı değil" in r.text
     r = istemci.get(f"/calismalar/{c.id}/gonulluler")
-    assert "Henüz gönüllü yok" in r.text and "Önce merkez ekleyin" in r.text
+    assert "Henüz gönüllü yok" in r.text and f"/calismalar/{c.id}/merkezler" in r.text
     r = istemci.get(f"/calismalar/{c.id}/merkezler")
     assert "henüz merkez eklenmedi" in r.text and 'href="#merkez-ekle"' in r.text
     r = istemci.get(f"/calismalar/{c.id}/eslestirme")

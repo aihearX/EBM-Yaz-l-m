@@ -3,44 +3,59 @@
 {% block yol %}<a href="/calismalar">Çalışmalar</a> › <a href="/calismalar/{{ c.id }}">{{ c.kod }}</a> › Ziyaret ve Sapmalar{% endblock %}
 {% block icerik %}
 {% include "calismalar/_baslik.html" %}
+{% set yonetir = izinli(kullanici, 'rbm.yonet') %}
+{% if uyarilar %}
+<div class="kart" style="margin-bottom:16px">
+  <h2>Aksiyon gerektiren uyarılar <span class="rozet kirmizi">{{ uyarilar|length }}</span></h2>
+  <table class="sikisik"><tr><th>Merkez</th><th>Gösterge</th><th>Uyarı</th><th>Durum</th><th></th></tr>
+    {% for u in uyarilar %}<tr><td>{{ u.calisma_merkez.merkez_no if u.calisma_merkez else '—' }}</td><td>{{ u.kri_kod }}</td><td>{{ u.mesaj }}</td><td><span class="rozet {{ 'sari' if u.durum == 'inceleniyor' else 'kirmizi' }}">{{ u.durum }}</span></td>
+      <td>{% if u.id in tetiklenen %}<span class="rozet turkuaz">ziyaret planlandı</span>{% elif yonetir and u.calisma_merkez_id %}<form method="post" action="/calismalar/{{ c.id }}/izlem/tetikle/{{ u.id }}"><button class="btn kucuk">Tetiklenmiş ziyaret oluştur</button></form>{% endif %}</td></tr>{% endfor %}
+  </table>
+  <small>Tetiklenmiş ziyaret uyarıya bağlanır (tetikleyen uyarı) ve uyarı inceleme durumuna alınır. <a href="/calismalar/{{ c.id }}/rbm">Risk bazlı izlem</a></small>
+</div>
+{% endif %}
 <div class="izgara k2">
   <div class="kart">
-    <h2>İzlem ziyaretleri</h2>
-    <table class="sikisik"><tr><th>Merkez</th><th>Tip</th><th>Planlanan</th><th>Gerçekleşen</th><th>CRA</th><th class="sag">SDV</th><th class="sag">Bulgu</th></tr>
-      {% for z in ziyaretler %}<tr><td>{{ z.calisma_merkez.merkez_no }} – {{ z.calisma_merkez.merkez.sehir }}</td><td><span class="rozet {{ 'turkuaz' if z.tip == 'tetiklenmis' else '' }}">{{ z.tip }}</span></td><td>{{ z.planlanan|tarih }}</td><td>{{ z.gerceklesen|tarih }}</td><td>{{ z.cra.ad_soyad if z.cra else '—' }}</td><td class="sayi">{{ z.sdv_orani|yuzde if z.sdv_orani is not none else '—' }}</td><td class="sayi">{{ z.bulgular|length if z.bulgular else 0 }}</td></tr>
-      {% else %}<tr><td colspan="7" class="kucuk">Henüz izlem ziyareti planlanmadı.
-        {% if izinli(kullanici, 'rbm.yonet') %}{% if c.merkezler %}Aşağıdan ilk ziyareti planlayın.{% else %}<a href="/calismalar/{{ c.id }}/merkezler">Önce merkez ekleyin</a>{% endif %}{% endif %}</td></tr>{% endfor %}
+    <h2>İzlem ziyaretleri {% if ziyaretler %}<a class="btn kucuk" href="/calismalar/{{ c.id }}/izlem/ziyaretler.csv" style="float:right">CSV</a>{% endif %}</h2>
+    <table class="sikisik"><tr><th>Merkez</th><th>Tip</th><th>Planlanan</th><th>Gerçekleşen</th><th>CRA</th><th class="sag">SDV</th><th class="sag">Açık bulgu</th><th>Durum</th></tr>
+      {% for z in ziyaretler %}<tr><td>{{ z.calisma_merkez.merkez_no }} – {{ z.calisma_merkez.merkez.sehir }}</td><td><a href="/calismalar/{{ c.id }}/izlem/ziyaret/{{ z.id }}"><span class="rozet {{ 'turkuaz' if z.tip == 'tetiklenmis' else '' }}">{{ z.tip_etiket }}</span></a></td><td>{{ z.planlanan|tarih }}</td><td>{{ z.gerceklesen|tarih }}</td><td>{{ z.cra.ad_soyad if z.cra else '—' }}</td><td class="sayi">{{ z.sdv_orani|yuzde if z.sdv_orani is not none else '—' }}</td><td class="sayi">{{ z.acik_bulgular|length }}</td>
+        <td><span class="rozet {{ 'yesil' if z.durum == 'onaylandi' else ('mavi' if z.durum == 'raporlandi' else '') }}">{{ z.durum_etiket }}</span></td></tr>
+      {% else %}<tr><td colspan="8" class="kucuk">Henüz izlem ziyareti planlanmadı.
+        {% if yonetir %}{% if c.merkezler %}Aşağıdan ilk ziyareti planlayın.{% else %}<a href="/calismalar/{{ c.id }}/merkezler">Önce merkez ekleyin</a>{% endif %}{% endif %}</td></tr>{% endfor %}
     </table>
-    {% if izinli(kullanici, 'rbm.yonet') %}
+    {% if yonetir and c.merkezler %}
     <details style="margin-top:10px"><summary>Ziyaret planla</summary>
     <form method="post" action="/calismalar/{{ c.id }}/izlem/ziyaret" class="satir" style="margin-top:8px">
-      <div class="alan"><label>Merkez</label><select name="calisma_merkez_id">{% for cm in c.merkezler %}<option value="{{ cm.id }}">{{ cm.merkez_no }} – {{ cm.merkez.ad }}</option>{% endfor %}</select></div>
-      <div class="alan"><label>Tip</label><select name="tip"><option>SIV</option><option>IMV</option><option>COV</option><option value="uzaktan">Uzaktan</option><option value="tetiklenmis">Tetiklenmiş</option></select></div>
-      <div class="alan"><label>Tarih</label><input type="date" name="planlanan" required></div>
+      <div class="alan"><label>Merkez</label><select name="calisma_merkez_id">{% for cm in merkezler %}<option value="{{ cm.id }}" {{ 'selected' if cm.id == secili_merkez }}>{{ cm.merkez_no }} – {{ cm.merkez.ad }}</option>{% endfor %}</select></div>
+      <div class="alan"><label>Tip</label><select name="tip">{% for kod, ad in ZIYARET_TIP_ETIKET.items() %}<option value="{{ kod }}">{{ ad }}</option>{% endfor %}</select></div>
+      <div class="alan"><label>Tarih</label><input type="date" name="planlanan" value="{{ bugun }}" required></div>
       <button class="btn">Planla</button>
-    </form></details>{% endif %}
+    </form>
+    <small>Aynı merkezin önceki ziyaretinde açık kalan bulgular yeni ziyarete otomatik taşınır.</small></details>{% endif %}
   </div>
-  <div class="kart">
-    <h2>Protokol sapmaları</h2>
-    <table class="sikisik"><tr><th>Tarih</th><th>Merkez</th><th>Gönüllü</th><th>Kategori</th><th>Önem</th><th>Açıklama</th><th>Durum</th></tr>
-      {% for s in sapmalar %}<tr><td>{{ s.tarih|tarih }}</td><td>{{ s.calisma_merkez.merkez_no }}</td><td>{{ s.gonullu.gonullu_no if s.gonullu else '—' }}</td><td>{{ s.kategori_etiket }}</td><td><span class="rozet {{ 'kirmizi' if s.onem == 'major' else 'sari' }}">{{ s.onem }}</span></td><td>{{ s.aciklama }}</td><td>{{ 'Kapalı' if s.kapali else 'Açık' }}</td></tr>
-      {% else %}<tr><td colspan="7" class="kucuk">Protokol sapması kaydedilmedi.{% if izinli(kullanici, 'rbm.yonet') and c.merkezler %} Sapma tespit edilirse aşağıdan kaydedin.{% endif %}</td></tr>{% endfor %}
+  <div class="kart" id="sapma-kaydet">
+    <h2>Protokol sapmaları {% if sapmalar %}<a class="btn kucuk" href="/calismalar/{{ c.id }}/izlem/sapmalar.csv" style="float:right">CSV</a>{% endif %}</h2>
+    <table class="sikisik"><tr><th>Tarih</th><th>Merkez</th><th>Gönüllü</th><th>Kategori</th><th>Önem</th><th>Açıklama</th><th>Hedef</th><th>Durum</th></tr>
+      {% for s in sapmalar %}<tr><td><a href="/calismalar/{{ c.id }}/izlem/sapma/{{ s.id }}">{{ s.tarih|tarih }}</a></td><td>{{ s.calisma_merkez.merkez_no }}</td><td>{{ s.gonullu.gonullu_no if s.gonullu else '—' }}</td><td>{{ s.kategori_etiket }}</td><td><span class="rozet {{ 'kirmizi' if s.onem == 'major' else 'sari' }}">{{ s.onem_etiket }}</span></td><td>{{ s.aciklama }}</td><td>{{ s.hedef_tarih|tarih if s.hedef_tarih else '—' }}</td>
+        <td><span class="rozet {{ 'yesil' if s.kapali else ('kirmizi' if s.onem == 'major' else 'sari') }}">{{ s.durum_etiket }}</span></td></tr>
+      {% else %}<tr><td colspan="8" class="kucuk">Protokol sapması kaydedilmedi.{% if yonetir and c.merkezler %} Sapma tespit edilirse aşağıdan kaydedin.{% endif %}</td></tr>{% endfor %}
     </table>
-    {% if izinli(kullanici, 'rbm.yonet') %}
-    <details style="margin-top:10px"><summary>Sapma kaydet</summary>
+    {% if yonetir and c.merkezler %}
+    <details style="margin-top:10px" {{ 'open' if secili_merkez }}><summary>Sapma kaydet</summary>
     <form method="post" action="/calismalar/{{ c.id }}/izlem/sapma" style="margin-top:8px">
       <div class="ikili">
-        <div class="alan"><label>Merkez</label><select name="calisma_merkez_id">{% for cm in c.merkezler %}<option value="{{ cm.id }}">{{ cm.merkez_no }} – {{ cm.merkez.sehir }}</option>{% endfor %}</select></div>
+        <div class="alan"><label>Merkez</label><select name="calisma_merkez_id">{% for cm in merkezler %}<option value="{{ cm.id }}" {{ 'selected' if cm.id == secili_merkez }}>{{ cm.merkez_no }} – {{ cm.merkez.sehir }}</option>{% endfor %}</select></div>
         <div class="alan"><label>Gönüllü</label><select name="gonullu_id"><option value="">—</option>{% for g in c.gonulluler|sort(attribute='gonullu_no') %}<option value="{{ g.id }}">{{ g.gonullu_no }}</option>{% endfor %}</select></div>
-        <div class="alan"><label>Tarih</label><input type="date" name="tarih" required></div>
+        <div class="alan"><label>Tarih</label><input type="date" name="tarih" value="{{ bugun }}" required></div>
       </div>
       <div class="ikili">
         <div class="alan"><label>Kategori</label><select name="kategori">{% for k, v in kategoriler.items() %}<option value="{{ k }}">{{ v }}</option>{% endfor %}</select></div>
-        <div class="alan"><label>Önem</label><select name="onem"><option value="minor">Minör</option><option value="major">Majör</option></select></div>
+        <div class="alan"><label>Önem</label><select name="onem">{% for kod, ad in SAPMA_ONEM_ETIKET.items() %}<option value="{{ kod }}">{{ ad }}</option>{% endfor %}</select></div>
       </div>
       <div class="alan"><label>Açıklama</label><input type="text" name="aciklama" required></div>
       <button class="btn">Kaydet</button>
     </form></details>{% endif %}
+    <div class="not" style="margin-top:10px">Majör sapmalar etik kurul bildirim tarihi girilmeden kapatılamaz. Kök neden, düzeltici faaliyet, sorumlu ve hedef tarih sapma sayfasında işlenir.</div>
   </div>
 </div>
 {% endblock %}

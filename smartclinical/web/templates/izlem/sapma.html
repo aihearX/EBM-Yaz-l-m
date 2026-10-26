@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block baslik %}{{ c.kod }} · Sapma{% endblock %}
+{% block yol %}<a href="/calismalar">Çalışmalar</a> › <a href="/calismalar/{{ c.id }}">{{ c.kod }}</a> › <a href="/calismalar/{{ c.id }}/izlem">Ziyaret ve Sapmalar</a> › Sapma{% endblock %}
+{% block icerik %}
+{% include "calismalar/_baslik.html" %}
+{% set yonetir = izinli(kullanici, 'rbm.yonet') and not s.kapali %}
+<div class="izgara k21">
+  <div class="kart">
+    <h2>Protokol sapması <span class="rozet {{ 'kirmizi' if s.onem == 'major' else 'sari' }}">{{ s.onem_etiket }}</span> <span class="rozet {{ 'yesil' if s.kapali else 'sari' }}">{{ s.durum_etiket }}</span></h2>
+    <table class="sikisik">
+      <tr><th>Tarih</th><td>{{ s.tarih|tarih }}</td><th>Merkez</th><td>{{ s.calisma_merkez.merkez_no }} – {{ s.calisma_merkez.merkez.ad }}</td></tr>
+      <tr><th>Gönüllü</th><td>{{ s.gonullu.gonullu_no if s.gonullu else '—' }}</td><th>Kategori</th><td>{{ s.kategori_etiket }}</td></tr>
+      <tr><th>Açıklama</th><td colspan="3">{{ s.aciklama }}</td></tr>
+      {% if s.kapali %}<tr><th>Kapanış</th><td>{{ s.kapanis_tarihi|tarih }}</td><th>Etik bildirim</th><td>{{ s.etik_bildirim|tarih }}</td></tr>{% endif %}
+    </table>
+    {% if yonetir %}
+    <form method="post" action="/calismalar/{{ c.id }}/izlem/sapma/{{ s.id }}" style="margin-top:12px">
+      <div class="alan"><label>Kök neden</label><textarea name="kok_neden" rows="3">{{ s.kok_neden or '' }}</textarea></div>
+      <div class="alan"><label>Düzeltici ve önleyici faaliyet</label><textarea name="duzeltici_faaliyet" rows="3">{{ s.duzeltici_faaliyet or '' }}</textarea></div>
+      <div class="ikili">
+        <div class="alan"><label>Sorumlu</label><select name="sorumlu_id"><option value="">—</option>{% for u in kullanicilar %}<option value="{{ u.id }}" {{ 'selected' if u.id == s.sorumlu_id }}>{{ u.ad_soyad }} ({{ u.rol_etiket }})</option>{% endfor %}</select></div>
+        <div class="alan"><label>Hedef tarih</label><input type="date" name="hedef_tarih" value="{{ s.hedef_tarih or '' }}"></div>
+        <div class="alan"><label>Etik kurul bildirim tarihi{% if s.etik_bildirim_gerekli %} (zorunlu){% endif %}</label><input type="date" name="etik_bildirim" value="{{ s.etik_bildirim or '' }}"></div>
+      </div>
+      <label style="display:block;font-weight:400;margin-bottom:8px"><input type="checkbox" name="kapat" value="1"> Sapmayı kapat</label>
+      <button class="btn birincil">Kaydet</button>
+    </form>
+    {% else %}
+    <table class="sikisik" style="margin-top:12px">
+      <tr><th>Kök neden</th><td>{{ s.kok_neden or '—' }}</td></tr>
+      <tr><th>Düzeltici faaliyet</th><td>{{ s.duzeltici_faaliyet or '—' }}</td></tr>
+      <tr><th>Sorumlu</th><td>{{ s.sorumlu.ad_soyad if s.sorumlu else '—' }}</td></tr>
+      <tr><th>Hedef tarih</th><td>{{ s.hedef_tarih|tarih }}</td></tr>
+      <tr><th>Etik bildirim</th><td>{{ s.etik_bildirim|tarih }}</td></tr>
+    </table>
+    {% endif %}
+  </div>
+  <div>
+    <div class="not">Kapatma için kök neden ve düzeltici faaliyet girilir. Majör sapmalarda etik kurul bildirim tarihi olmadan kapatma yapılamaz. Tüm değişiklikler eski/yeni değerle denetim izine yazılır.</div>
+    {% if s.gonullu %}<p style="margin-top:10px"><a class="btn kucuk" href="/gonulluler/{{ s.gonullu_id }}">Gönüllü sayfası</a></p>{% endif %}
+  </div>
+</div>
+{% endblock %}
