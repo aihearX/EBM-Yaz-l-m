@@ -268,7 +268,12 @@ def calisma_filtresi(db: Session, k: Kullanici, sorgu):
     if k.rol == Rol.SPONSOR:
         if not _kurum(k):
             return sorgu.where(false())
-        return sorgu.where(func.lower(func.trim(Calisma.sponsor)) == _kurum(k))
+        # SQLite lower() Turkce buyuk harfleri kucultmez; eslestirme Python tarafinda casefold ile yapilir
+        adaylar = db.scalars(select(Calisma.sponsor).distinct()).all()
+        eslesenler = [s for s in adaylar if (s or "").casefold().strip() == _kurum(k)]
+        if not eslesenler:
+            return sorgu.where(false())
+        return sorgu.where(Calisma.sponsor.in_(eslesenler))
     if k.rol in MERKEZ_ROLLERI:
         if not k.merkez_id:
             return sorgu

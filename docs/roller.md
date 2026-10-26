@@ -6,7 +6,7 @@ Rol globaldir; çalışma bazlı görünürlük ayrıca uygulanır (`services/ye
 - Sponsor yalnızca kurum adı (`Kullanici.kurum`) çalışmanın sponsor alanıyla eşleşen çalışmaları görür
   (büyük/küçük harf ve boşluk farkı gözetilmez) ve her yerde salt okunurdur.
 - Araştırmacı ve koordinatör yalnızca kendi merkezinin (`Kullanici.merkez_id`) yer aldığı çalışmaları görür;
-  gönüllü, veri, ziyaret ve belge listeleri de kendi merkeziyle sınırlıdır. Hasta havuzu, CSV yükleme ve
+  gönüllü, veri, güvenlik, ziyaret ve belge listeleri de kendi merkeziyle sınırlıdır. Hasta havuzu, CSV yükleme ve
   HBYS eşitleme yalnızca kendi merkezleri için açıktır (`merkez_erisimi`).
 - Proje yöneticisi, CRA, veri yöneticisi, biyoistatistikçi ve farmakovijilans (atanabilir roller) herhangi bir
   çalışmada ekip ataması yapıldıysa yalnızca atandıkları çalışmaları görür (`calisma_filtresi`). Sihirbazla çalışma

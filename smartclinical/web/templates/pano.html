@@ -96,7 +96,7 @@
       {% if uyarilar %}
       <table class="sikisik"><tr><th>Seviye</th><th>Çalışma / merkez</th><th>Mesaj</th><th>Tarih</th></tr>
         {% for u in uyarilar %}<tr><td><span class="rozet {{ 'kirmizi' if u.seviye == 'aksiyon' else 'sari' }}">{{ u.kri_kod }}</span></td>
-          <td><a href="/calismalar/{{ u.calisma_id }}/rbm">{{ u.calisma.kod }}</a>{% if u.calisma_merkez %} · {{ u.calisma_merkez.merkez.sehir }}{% endif %}</td>
+          <td>{% if sekme_gorunur(kullanici, 'rbm') %}<a href="/calismalar/{{ u.calisma_id }}/rbm">{{ u.calisma.kod }}</a>{% else %}<a href="/calismalar/{{ u.calisma_id }}">{{ u.calisma.kod }}</a>{% endif %}{% if u.calisma_merkez %} · {{ u.calisma_merkez.merkez.sehir }}{% endif %}</td>
           <td><small>{{ u.mesaj }}</small></td><td><small>{{ u.olusturma|tarih }}</small></td></tr>{% endfor %}
       </table>
       {% else %}<p class="kucuk">Açık uyarı yok.</p>{% endif %}
@@ -120,11 +120,11 @@
     <div class="kart">
       <h2>Bana atanan ziyaretler <small style="font-weight:400;color:var(--gri-500)">{{ sayilar.bana_atanan }}</small></h2>
       {% if bana_atanan %}
-      <ul class="liste-sade">{% for z in bana_atanan %}<li><a href="/calismalar/{{ z.calisma_merkez.calisma_id }}/izlem">{{ z.calisma_merkez.calisma.kod }} · {{ z.calisma_merkez.merkez.sehir }}</a> <span class="rozet">{{ z.tip }}</span><br><small>{{ z.planlanan|tarih }}</small></li>{% endfor %}</ul>
+      <ul class="liste-sade">{% for z in bana_atanan %}<li><a href="/calismalar/{{ z.calisma_merkez.calisma_id }}{{ '/izlem' if sekme_gorunur(kullanici, 'izlem') }}">{{ z.calisma_merkez.calisma.kod }} · {{ z.calisma_merkez.merkez.sehir }}</a> <span class="rozet">{{ z.tip }}</span><br><small>{{ z.planlanan|tarih }}</small></li>{% endfor %}</ul>
       {% else %}<p class="kucuk">Size atanmış planlı ziyaret yok.</p>{% endif %}
       <h2 style="margin-top:12px">Çalışmalarımdaki diğer ziyaretler <small style="font-weight:400;color:var(--gri-500)">{{ sayilar.ziyaret - sayilar.bana_atanan }}</small></h2>
       {% if merkez_ziyaretleri %}
-      <ul class="liste-sade">{% for z in merkez_ziyaretleri %}<li><a href="/calismalar/{{ z.calisma_merkez.calisma_id }}/izlem">{{ z.calisma_merkez.calisma.kod }} · {{ z.calisma_merkez.merkez.sehir }}</a> <span class="rozet">{{ z.tip }}</span><br><small>{{ z.planlanan|tarih }}{% if z.cra %} · {{ z.cra.ad_soyad }}{% else %} · atanmadı{% endif %}</small></li>{% endfor %}</ul>
+      <ul class="liste-sade">{% for z in merkez_ziyaretleri %}<li><a href="/calismalar/{{ z.calisma_merkez.calisma_id }}{{ '/izlem' if sekme_gorunur(kullanici, 'izlem') }}">{{ z.calisma_merkez.calisma.kod }} · {{ z.calisma_merkez.merkez.sehir }}</a> <span class="rozet">{{ z.tip }}</span><br><small>{{ z.planlanan|tarih }}{% if z.cra %} · {{ z.cra.ad_soyad }}{% else %} · atanmadı{% endif %}</small></li>{% endfor %}</ul>
       {% else %}<p class="kucuk">Başka planlı ziyaret yok.</p>{% endif %}
     </div>
     <div class="kart">
@@ -184,7 +184,7 @@
     <ul class="liste-sade">
       {% for u in uyarilar %}
       <li><span class="rozet {{ 'kirmizi' if u.seviye == 'aksiyon' else 'sari' }}">{{ u.kri_kod }}</span>
-        <a href="/calismalar/{{ u.calisma_id }}/rbm">{{ u.calisma.kod }}{% if u.calisma_merkez %} · {{ u.calisma_merkez.merkez.sehir }}{% endif %}</a><br>
+        <a href="/calismalar/{{ u.calisma_id }}{{ '/rbm' if sekme_gorunur(kullanici, 'rbm') }}">{{ u.calisma.kod }}{% if u.calisma_merkez %} · {{ u.calisma_merkez.merkez.sehir }}{% endif %}</a><br>
         <small>{{ u.mesaj }}</small></li>
       {% endfor %}
     </ul>

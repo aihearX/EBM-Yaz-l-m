@@ -144,6 +144,7 @@ def gorunur_sekmeler(k: Kullanici, c: Calisma, o: dict) -> list[dict]:
 
 
 sablonlar.env.globals["sekmeler"] = gorunur_sekmeler
+sablonlar.env.globals["sekme_gorunur"] = sekme_gorunur
 
 # TITCK basvurusu gerektiren calisma turleri; gozlemsel/akademik/kayit calismalarinda yalnizca etik kurul
 TITCK_GEREKEN = {CalismaTuru.ILAC, CalismaTuru.BIYOBENZER, CalismaTuru.TIBBI_CIHAZ, CalismaTuru.IVD,
@@ -248,6 +249,15 @@ def kontrol_listesi(db: Session, c: Calisma) -> dict[CalismaDurumu, list[dict]]:
     return liste
 
 
+# kontrol listesi baglantilarinin sekme anahtari; alt yollar ust sekmeye baglanir
+_ALT_YOL_SEKMESI = {"randomizasyon": "tasarim", "veri/imza": "veri", "veri/kilit": "veri"}
+
+
+def _url_sekmesi(url: str, c: Calisma) -> str:
+    kalan = url.removeprefix(f"/calismalar/{c.id}").strip("/")
+    return _ALT_YOL_SEKMESI.get(kalan, kalan.split("/")[0] if kalan else "ozet")
+
+
 def _ozet(db: Session, c: Calisma) -> dict:
     g = c.gonulluler
     kayitli = [x for x in g if x.durum in KAYITLI_DURUMLAR]
@@ -348,6 +358,10 @@ def detay(request: Request, c: Calisma = Depends(calisma_getir), k: Kullanici = 
             egri.append({"t": t.strftime("%m/%y"), "plan": plan, "gercek": gercek})
             gun += 30
     kontrol = kontrol_listesi(db, c).get(c.durum, [])
+    # kullanicinin goremeyecegi sekmeye 'tamamla' baglantisi verilmez (madde listede kalir)
+    for madde in kontrol:
+        if not sekme_gorunur(k, _url_sekmesi(madde["url"], c), db, c):
+            madde["url"] = None
     # sponsor salt okunur ozet gorur; islem gecmisi gosterilmez
     son_denetim = []
     if k.rol != Rol.SPONSOR:
@@ -608,7 +622,9 @@ def veri(request: Request, c: Calisma = Depends(calisma_getir), k: Kullanici = D
 @router.get("/{calisma_id}/guvenlik")
 def guvenlik(request: Request, c: Calisma = Depends(calisma_getir), k: Kullanici = Depends(oturumlu),
              db: Session = Depends(get_db)):
-    olaylar = [a for g in c.gonulluler for a in g.advers_olaylar]
+    # merkez rolleri yalnizca kendi merkezinin gonullulerini gorur
+    cm_ids = {cm.id for cm in _gorunur_cm(k, c)}
+    olaylar = [a for g in c.gonulluler if g.calisma_merkez_id in cm_ids for a in g.advers_olaylar]
     olaylar.sort(key=lambda a: a.baslangic, reverse=True)
     soc = {}
     for a in olaylar:

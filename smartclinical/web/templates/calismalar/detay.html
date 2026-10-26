@@ -41,7 +41,7 @@
       <h2>Aşama kontrol listesi – {{ c.durum_etiket }}</h2>
       <ul class="liste-sade">
         {% for m in kontrol %}
-        <li>{% if m.tamam %}<span class="rozet yesil" style="min-width:52px;text-align:center">tamam</span> {{ m.etiket }}{% else %}<span class="rozet sari" style="min-width:52px;text-align:center">eksik</span> {{ m.etiket }} · <a href="{{ m.url }}">tamamla</a>{% endif %}</li>
+        <li>{% if m.tamam %}<span class="rozet yesil" style="min-width:52px;text-align:center">tamam</span> {{ m.etiket }}{% else %}<span class="rozet sari" style="min-width:52px;text-align:center">eksik</span> {{ m.etiket }}{% if m.url %} · <a href="{{ m.url }}">tamamla</a>{% endif %}{% endif %}</li>
         {% else %}<li class="kucuk">Bu aşama için kontrol maddesi yok.</li>{% endfor %}
       </ul>
       <small>Maddeler çalışma verisinden hesaplanır; aşama kararı proje yöneticisinindir.</small>

@@ -1,6 +1,6 @@
 # Model kartı: ebm-klinik-tr
 
-Sürüm: 0.2 (kavram kanıtı) · Son güncelleme: 21.10.2026 · Sorumlu: EBM Yazılım ve Veri Bilimi Ekibi
+Durum: kavram kanıtı · Sorumlu: EBM Yazılım ve Veri Bilimi Ekibi
 
 ## Özet
 
@@ -95,10 +95,8 @@ kuraldır.
 - Model yalnızca hastane ağı içinde çalışır; dış ağa istek göndermez.
 - Tüm çağrılar kullanıcı, zaman, görev ve süre ile denetim izine yazılır.
 
-## Sürüm geçmişi
+## Gelişim aşamaları
 
-| Sürüm | Tarih | Not |
-|---|---|---|
-| 0.1 | 2026-05 | Sentetik talimat setiyle ilk LoRA denemesi; yalnızca iç değerlendirme |
-| 0.2 | 2026-10 | TR-KlinikBench 0.3 ile taban çizgisi; koruma katmanı ve kalıp tabanlı metin değerlendirmesi üretimde |
-| 1.0 (plan) | Faz 2 sonu | Gerçek derlemle sürekli ön eğitim, nicemlenmiş hastane içi sürüm, gerçek set değerlendirmesi |
+- Sentetik talimat setiyle ilk LoRA denemesi; yalnızca iç değerlendirme.
+- TR-KlinikBench ile taban çizgisi; koruma katmanı ve kalıp tabanlı metin değerlendirmesi kural tabanlı modda etkin.
+- Planlanan: gerçek derlemle sürekli ön eğitim, nicemlenmiş hastane içi model, gerçek set değerlendirmesi (Faz 2 sonu).

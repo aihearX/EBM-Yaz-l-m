@@ -70,6 +70,7 @@ def istemci():
         kul("koordinator", Rol.KOORDINATOR, merkez_id=m1.id),
         kul("sponsor", Rol.SPONSOR, kurum=" s1 "),  # bosluk ve kucuk harf: normalize edilir
         kul("sponsor_bos", Rol.SPONSOR),
+        kul("sponsor_tr", Rol.SPONSOR, kurum="Anadolu Biyofarma A.Ş."),  # Turkce buyuk harf: SQLite lower() kucultmez
         kul("denetci", Rol.DENETCI),
     ])
     db.commit()
@@ -201,6 +202,28 @@ def test_sponsor_kurum_filtresi_ve_sekmeler(istemci):
     r = istemci.get("/")
     assert "S1-001" not in r.text and "Henüz size atanmış çalışma yok" in r.text
     assert istemci.get(f"/calismalar/{c.id}").status_code == 403
+
+
+def test_sponsor_kurum_filtresi_turkce_karakter(istemci):
+    """Kurum adinda Turkce buyuk harf (S, I, G, U, O, C noktali/sapkali) olan sponsor kendi calismasini gorur."""
+    _giris(istemci, "admin")
+    r = istemci.post("/calismalar/yeni", data={
+        "kod": "AB-001", "baslik": "Test", "kisa_ad": "AB-001", "tur": "ilac", "faz": "II",
+        "sponsor": "Anadolu Biyofarma A.Ş.", "terapotik_alan": "Onkoloji", "hedef_hasta": "20", "hedef_merkez": "1"},
+        follow_redirects=False)
+    assert r.status_code == 303
+    _giris(istemci, "sponsor_tr")
+    for yol in ("/", "/calismalar"):
+        r = istemci.get(yol)
+        assert r.status_code == 200, yol
+        assert "AB-001" in r.text and "Henüz size atanmış çalışma yok" not in r.text, yol
+        assert "S1-001" not in r.text and "DG-001" not in r.text, yol
+    assert istemci.get(f"/calismalar/{_calisma('AB-001').id}").status_code == 200
+    assert istemci.get(f"/calismalar/{_calisma('S1-001').id}").status_code == 403
+    # s1 kurumlu sponsor Turkce karakterli kurumun calismasini gormez
+    _giris(istemci, "sponsor")
+    r = istemci.get("/calismalar")
+    assert "S1-001" in r.text and "AB-001" not in r.text
 
 
 def test_sponsor_rotasi_kaldirildi(istemci):

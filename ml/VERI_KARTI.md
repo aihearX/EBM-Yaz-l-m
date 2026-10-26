@@ -1,6 +1,6 @@
 # Veri kartı: Türkçe klinik araştırma derlemi ve TR-KlinikBench
 
-Sürüm: 0.3 · Son güncelleme: 21.10.2026 · Veri sorumlusu (EBM içi): Veri Yönetimi Birimi
+Veri sorumlusu (EBM içi): Veri Yönetimi Birimi
 
 ## Kapsam
 
