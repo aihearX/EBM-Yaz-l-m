@@ -13,6 +13,7 @@ from ..db import get_db
 from ..models import Calisma, CalismaMerkez, Gonullu, Kullanici, Rol
 from ..models._ortak import simdi
 from ..models.ekip import CalismaUyesi
+from .kurulum import ayar_getir
 
 ITERASYON = 200_000
 MAKS_HATALI_GIRIS = 5
@@ -286,12 +287,19 @@ def calisma_filtresi(db: Session, k: Kullanici, sorgu):
     return sorgu.where(false())
 
 
+def cro_arastirmacisi(db: Session | None, k: Kullanici) -> bool:
+    """CRO modunda arastirmaci: tasarim, merkez secimi ve etik/TITCK basvurulari CRO'nun isidir."""
+    return getattr(k, "rol", None) == Rol.ARASTIRMACI and db is not None and ayar_getir(db).mod == "cro"
+
+
 def calisma_duzenleyebilir(db: Session, k: Kullanici, c: Calisma) -> bool:
-    """Tasarim ve duzenleme: yonetici/PY her zaman; arastirmaci yalnizca kendi kurdugu ya da
-    bas arastirmacisi kendi merkezinden olan calismada."""
+    """Tasarim ve duzenleme: yonetici/PY her zaman; arastirmaci yalnizca tekil/universite modunda, kendi
+    kurdugu ya da bas arastirmacisi kendi merkezinden olan calismada."""
     if k.rol in (Rol.YONETICI, Rol.PROJE_YONETICISI):
         return True
     if k.rol != Rol.ARASTIRMACI:
+        return False
+    if cro_arastirmacisi(db, k):
         return False
     if c.olusturan_id and c.olusturan_id == k.id:
         return True

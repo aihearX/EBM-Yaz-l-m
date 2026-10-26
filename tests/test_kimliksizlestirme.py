@@ -115,7 +115,7 @@ def test_ozet_rapor():
     assert ozet_rapor(kimliksizlestir("Hemoglobin 11.2 g/dL.")) == "Kimlik verisi tespit edilmedi."
 
 
-# -- P4: harf durumundan bagimsiz sozluk eslesmesi ------------------------------------
+# -- harf durumundan bagimsiz sozluk eslesmesi ------------------------------------
 
 
 @pytest.mark.parametrize("metin", [

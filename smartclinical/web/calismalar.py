@@ -37,6 +37,7 @@ from ..services.yetki import (
     MERKEZ_ROLLERI,
     calisma_duzenleyebilir,
     calisma_filtresi,
+    cro_arastirmacisi,
     gerekli,
     izinli,
     kisit_aktif,
@@ -81,10 +82,19 @@ _SEKMELER = [(anahtar, etiket, yol, grup) for grup, liste in SEKME_GRUPLARI for 
 SEKME_ETIKET = {anahtar: etiket for anahtar, etiket, _, _ in _SEKMELER}
 
 
+# CRO modunda calismayi tasarlayan, merkezleri ve etik/TITCK basvurularini yuruten CRO'dur (docs/roller.md '○')
+CRO_ARASTIRMACI_KAPALI = ("tasarim", "merkezler", "basvurular")
+
+
 def sekme_gorunur(k: Kullanici, anahtar: str, db: Session | None = None, c: Calisma | None = None) -> bool:
-    """Rol x sekme kurali. 'tasarim' calisma bazlidir (calisma_duzenleyebilir); db ve c verilmezse rol dusunulur."""
+    """Rol x sekme kurali. 'tasarim' calisma bazlidir (calisma_duzenleyebilir); CRO_ARASTIRMACI_KAPALI kurulum
+    moduna baglidir. db ve c verilmezse yalnizca rol dusunulur."""
     rol = k.rol
     sponsor = rol == Rol.SPONSOR
+    if db is None and c is not None:
+        db = object_session(c)
+    if anahtar in CRO_ARASTIRMACI_KAPALI and cro_arastirmacisi(db, k):
+        return False
     if anahtar in ("ozet", "protokol", "merkezler", "guvenlik"):
         return True
     if anahtar == "tasarim":
@@ -490,6 +500,7 @@ def kriter_sil(request: Request, kriter_id: int, c: Calisma = Depends(calisma_ge
 @router.get("/{calisma_id}/merkezler")
 def merkezler(request: Request, c: Calisma = Depends(calisma_getir), k: Kullanici = Depends(oturumlu),
               db: Session = Depends(get_db)):
+    sekme_kontrol(k, "merkezler", db, c)
     tum_merkezler = db.execute(select(Merkez).order_by(Merkez.ad)).scalars().all()
     mevcut = {m.merkez_id for m in c.merkezler}
     adaylar = [m for m in tum_merkezler if m.id not in mevcut]
@@ -530,7 +541,7 @@ def merkez_durum(request: Request, cm_id: int, c: Calisma = Depends(calisma_geti
 @router.get("/{calisma_id}/basvurular")
 def basvurular(request: Request, c: Calisma = Depends(calisma_getir), k: Kullanici = Depends(oturumlu),
                db: Session = Depends(get_db)):
-    sekme_kontrol(k, "basvurular")
+    sekme_kontrol(k, "basvurular", db, c)
     return goster(request, "calismalar/basvurular.html", c=c, o=_ozet(db, c), sekme="basvurular",
                   kurumlar=KURUMLAR, tipler=BASVURU_TIPLERI, duzenleyebilir=calisma_duzenleyebilir(db, k, c))
 

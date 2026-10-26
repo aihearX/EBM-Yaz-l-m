@@ -63,7 +63,7 @@ URS-001 ────────────────────────
 - **Gereksinimler** URS-001'de tanımlanır, kritiklik atanır.
 - **Risk analizi** RA-001'de FMEA ile yapılır; yüksek riskli fonksiyonlar için olumsuz senaryo testi uygulanır.
 - **Tedarikçi değerlendirmesi**: EBM kendi geliştiricisi olduğundan yazılım yaşam döngüsü prosedürü ve kod inceleme kayıtları dayanak alınır.
-- **Otomatik testler**: `python -m pytest` ve `ruff` her değişiklikte çalışır; TM-001'deki her satır bir test ya da rotaya bağlıdır ve `tests/test_P3.py::test_izlenebilirlik_matrisi_kodla_eslesir` belgeyle kodu karşılaştırır.
+- **Otomatik testler**: `python -m pytest` ve `ruff` her değişiklikte çalışır; TM-001'deki her satır bir test ya da rotaya bağlıdır ve `tests/test_isletim.py::test_izlenebilirlik_matrisi_kodla_eslesir` belgeyle kodu karşılaştırır.
 - **Kalifikasyon**: IQ (kurulum), OQ (fonksiyonel, URS izlenebilir), PQ (gerçek operasyon verisiyle, gölge mod).
 
 ## 5. Roller ve sorumluluklar

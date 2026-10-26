@@ -173,7 +173,7 @@ def test_json_sema_ic_ice():
     assert not korumalar.json_sema(None, sema)
 
 
-# -- P4: dis URL'de kural moduna dusme, istem ozeti, sozluk adi korumasi ------------------
+# -- dis URL'de kural moduna dusme, istem ozeti, sozluk adi korumasi ------------------
 
 def _ayar(**ek):
     v = {"bdm_saglayici": "vllm", "bdm_url": "http://bdm.example.com", "bdm_model": "m", "bdm_zaman_asimi_sn": 1}

@@ -1,6 +1,7 @@
 """Kurulum modu ve moda bagli varsayilanlar.
 
-Mod yalnizca menuyu, varsayilanlari ve sihirbazi sadelestirir; yetki kurallarina dokunmaz.
+Mod menuyu, varsayilanlari ve sihirbazi sadelestirir. Yetkide tek etkisi: CRO modunda arastirmaci
+calisma tasarimi, merkezler ve etik/TITCK basvurularini yurutmez (yetki.cro_arastirmacisi).
 Form ve vizit kodlari services/ecrf.py sozlesmesine (STANDART_FORMLAR, VIZIT_SABLONLARI) dayanir.
 """
 import re

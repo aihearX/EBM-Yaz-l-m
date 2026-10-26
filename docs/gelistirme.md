@@ -14,7 +14,7 @@
 - Paylaşılan dosyalar (`web/__init__.py`, `models/__init__.py`, `base.html`, `demo_veri.py`) küçük ve eklemeli
   değiştirilir; yeni modül kendi dosyasında yazılır ve router olarak kaydedilir.
 - Belgeler (`docs/validasyon/*`, `docs/api.md`, `deploy/KURULUM.md`) koddaki rota, betik ve test adlarına
-  işaret eder; `tests/test_P3.py::test_izlenebilirlik_matrisi_kodla_eslesir` olmayan referansı ve sürüm/tarih
+  işaret eder; `tests/test_isletim.py::test_izlenebilirlik_matrisi_kodla_eslesir` olmayan referansı ve sürüm/tarih
   damgasını yakalar. Belgelere sürüm numarası, tarih ve araç referansı yazılmaz.
 - Yapay zekâ bileşenlerinde değişiklik: `ml/degerlendirme/degerlendir.py` ile altın standart üzerinde referans
   metrikler alınır ve değişiklik açıklamasına eklenir.

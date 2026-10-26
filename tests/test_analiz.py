@@ -249,7 +249,7 @@ def test_sponsor_ve_cra_403(istemci):
     assert istemci.get(f"/calismalar/{cid}/analiz").status_code == 200
 
 
-# -- P4: vizitler arasi degisim, Tablo 1, merkez siniri -----------------------------
+# -- vizitler arasi degisim, Tablo 1, merkez siniri -----------------------------
 
 def test_vizitler_arasi_degisim_eslestirilmis_test(istemci):
     db, c = _calisma()

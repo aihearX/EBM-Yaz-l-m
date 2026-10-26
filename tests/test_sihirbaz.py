@@ -242,7 +242,7 @@ def test_tekil_modda_tek_merkez_karti_ve_ayarlar(istemci):
     _mod_ayarla("tekil")
 
 
-# --- P1: taslak kaliciligi, rol kapisi, ekip secimi, aktif merkez ----------------
+# --- taslak kaliciligi, rol kapisi, ekip secimi, aktif merkez ----------------
 
 def _kullanici_ekle(adi, rol, merkez_id=None):
     db = _db()

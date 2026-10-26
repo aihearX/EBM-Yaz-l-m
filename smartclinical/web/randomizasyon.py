@@ -1,5 +1,5 @@
 """Dahili randomizasyon: ayar, e-imzali liste uretimi ve kol sutunu gizli ozet."""
-from fastapi import APIRouter, Depends, Form, Request
+from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
@@ -9,11 +9,18 @@ from ..models._ortak import simdi
 from ..models.randomizasyon import STRATA_ETIKET, RandomizasyonAyari
 from ..services import denetim
 from ..services import randomizasyon as rnd
-from ..services.yetki import gerekli, parola_dogrula
+from ..services.yetki import cro_arastirmacisi, gerekli, parola_dogrula
 from ._ortak import bilgi, calisma_getir, ip
 from .sablon import goster
 
 router = APIRouter(prefix="/calismalar/{calisma_id}/randomizasyon")
+
+
+def randomizasyoncu(k: Kullanici = Depends(gerekli("calisma.duzenle")), db: Session = Depends(get_db)) -> Kullanici:
+    # randomizasyon tasarimin parcasi; CRO modunda arastirmaciya kapali (calismalar.CRO_ARASTIRMACI_KAPALI)
+    if cro_arastirmacisi(db, k):
+        raise HTTPException(403, "CRO modunda randomizasyonu proje ekibi yönetir")
+    return k
 
 
 def _sayfa(request: Request, db: Session, c: Calisma, k: Kullanici):
@@ -25,13 +32,13 @@ def _sayfa(request: Request, db: Session, c: Calisma, k: Kullanici):
 
 
 @router.get("")
-def goruntule(request: Request, c: Calisma = Depends(calisma_getir), k: Kullanici = Depends(gerekli("calisma.duzenle")),
+def goruntule(request: Request, c: Calisma = Depends(calisma_getir), k: Kullanici = Depends(randomizasyoncu),
               db: Session = Depends(get_db)):
     return _sayfa(request, db, c, k)
 
 
 @router.post("/uret")
-def uret(request: Request, c: Calisma = Depends(calisma_getir), k: Kullanici = Depends(gerekli("calisma.duzenle")),
+def uret(request: Request, c: Calisma = Depends(calisma_getir), k: Kullanici = Depends(randomizasyoncu),
          db: Session = Depends(get_db), blok_boyutu: int = Form(4), strata: str = Form("yok"),
          kayit_sayisi: str = Form(""), parola: str = Form("")):
     yol = f"/calismalar/{c.id}/randomizasyon"

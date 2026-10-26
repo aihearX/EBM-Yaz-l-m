@@ -2,6 +2,8 @@
 {% block baslik %}{{ c.kod }} · Risk bazlı izlem{% endblock %}
 {% block yol %}<a href="/calismalar">Çalışmalar</a> › <a href="/calismalar/{{ c.id }}">{{ c.kod }}</a> › Risk Bazlı İzlem{% endblock %}
 {% block icerik %}
+{# birimli deger: '%38,0', '7,0 gün' (rbm.gostergeler.deger_metni ile ayni kural) #}
+{% macro birimli(d, b) %}{% if d is none or not b %}{{ d|sayi(1) }}{% elif b == '%' %}%{{ d|sayi(1) }}{% else %}{{ d|sayi(1) }} {{ b }}{% endif %}{% endmacro %}
 {% include "calismalar/_baslik.html" %}
 {% set SEVIYE = {'uyari': 'Uyarı', 'aksiyon': 'Aksiyon'} %}
 {% set UYARI_DURUM = {'acik': 'Açık', 'inceleniyor': 'İnceleniyor', 'kapandi': 'Kapandı', 'yanlis_alarm': 'Yanlış alarm'} %}
@@ -23,7 +25,7 @@
   <h2>Merkez × KRI ısı haritası</h2>
   <div style="overflow-x:auto">
   <table class="sikisik isi-tablo">
-    <tr><th class="sabit sabit-1">Merkez</th><th class="sabit sabit-2">Önerilen izlem</th><th class="sag" title="Ağırlıklı bileşik risk puanı (0–100)">Risk puanı</th>{% for kr in kriler %}<th class="kri" title="{{ kr.kod }} · {{ kr.aciklama or '' }} Uyarı eşiği {{ kr.esik_uyari|sayi(1) }}{{ kr.birim or '' }}, aksiyon eşiği {{ kr.esik_aksiyon|sayi(1) }}{{ kr.birim or '' }}.">{{ kr.ad }}</th>{% endfor %}</tr>
+    <tr><th class="sabit sabit-1">Merkez</th><th class="sabit sabit-2">Önerilen izlem</th><th class="sag" title="Ağırlıklı bileşik risk puanı (0–100)">Risk puanı</th>{% for kr in kriler %}<th class="kri" title="{{ kr.kod }} · {{ kr.aciklama or '' }} Uyarı eşiği {{ birimli(kr.esik_uyari, kr.birim) }}, aksiyon eşiği {{ birimli(kr.esik_aksiyon, kr.birim) }}.">{{ kr.ad }}</th>{% endfor %}</tr>
     {% for cm in merkezler %}
     {% set d = degerler.get(cm.id, {}) %}
     <tr>
@@ -31,7 +33,7 @@
       <td class="sabit sabit-2">{{ oneriler[cm.id] }}</td>
       <td class="sayi">{% if cm.risk_puani is not none %}<span class="isi {{ 'aksiyon' if cm.risk_puani >= 60 else ('uyari' if cm.risk_puani >= 35 else 'normal') }}">{{ cm.risk_puani|round|int }}</span>{% else %}<span class="isi yok" title="Henüz hesaplanmadı">—</span>{% endif %}</td>
       {% for kr in kriler %}{% set v = d.get(kr.kod) %}
-      <td class="sayi">{% if v is none %}<span class="isi yok" title="Veri yok">—</span>{% else %}<span class="isi {{ seviye(kr, v) }}" title="{{ kr.ad }}: {{ v|sayi(1) }}{{ (' ' ~ kr.birim) if kr.birim and kr.birim != '%' else (kr.birim or '') }}">{{ v|sayi(1) }}</span>{% endif %}</td>{% endfor %}
+      <td class="sayi">{% if v is none %}<span class="isi yok" title="Veri yok">—</span>{% else %}<span class="isi {{ seviye(kr, v) }}" title="{{ kr.ad }}: {{ birimli(v, kr.birim) }}">{{ v|sayi(1) }}</span>{% endif %}</td>{% endfor %}
     </tr>
     {% else %}<tr><td colspan="{{ kriler|length + 3 }}" class="kucuk">Bu çalışmada henüz merkez yok; göstergeler merkez eklendikten sonra hesaplanır.
       {% if izinli(kullanici, 'merkez.yonet') %}<a href="/calismalar/{{ c.id }}/merkezler">Merkez ekle</a>{% endif %}</td></tr>{% endfor %}
@@ -63,13 +65,13 @@
     <div class="kart">
       <h2>Kalite tolerans limitleri (QTL)</h2>
       <table class="sikisik"><tr><th>Parametre</th><th class="sag">Mevcut</th><th class="sag">Limit</th><th></th></tr>
-        {% for q in qtller %}<tr><td>{{ q.parametre }}<br><small>{{ q.gerekce }}</small></td><td class="sayi">{{ q.mevcut_deger|sayi(1) }}{{ q.birim or '' }}</td><td class="sayi">{{ q.limit|sayi(1) }}{{ q.birim or '' }}</td><td>{% if q.mevcut_deger is none %}—{% elif q.asildi %}<span class="rozet kirmizi">aşıldı</span>{% elif q.ikincil_limit and q.mevcut_deger > q.ikincil_limit %}<span class="rozet sari">yaklaşıyor</span>{% else %}<span class="rozet yesil">uygun</span>{% endif %}</td></tr>{% else %}<tr><td colspan="4" class="kucuk">QTL tanımı yok.</td></tr>{% endfor %}
+        {% for q in qtller %}<tr><td>{{ q.parametre }}<br><small>{{ q.gerekce }}</small></td><td class="sayi">{{ birimli(q.mevcut_deger, q.birim) }}</td><td class="sayi">{{ birimli(q.limit, q.birim) }}</td><td>{% if q.mevcut_deger is none %}—{% elif q.asildi %}<span class="rozet kirmizi">aşıldı</span>{% elif q.ikincil_limit and q.mevcut_deger > q.ikincil_limit %}<span class="rozet sari">yaklaşıyor</span>{% else %}<span class="rozet yesil">uygun</span>{% endif %}</td></tr>{% else %}<tr><td colspan="4" class="kucuk">QTL tanımı yok.</td></tr>{% endfor %}
       </table>
     </div>
     <div class="kart">
       <h2>Gösterge tanımları</h2>
       <table class="sikisik"><tr><th>Gösterge</th><th class="sag">Uyarı</th><th class="sag">Aksiyon</th></tr>
-        {% for kr in kriler %}<tr><td>{{ kr.ad }} <code style="font-size:10.5px;color:var(--gri-500)">{{ kr.kod }}</code><br><small>{{ kr.aciklama }}</small></td><td class="sayi">{{ kr.esik_uyari|sayi(1) }}{{ kr.birim or '' }}</td><td class="sayi">{{ kr.esik_aksiyon|sayi(1) }}{{ kr.birim or '' }}</td></tr>{% endfor %}
+        {% for kr in kriler %}<tr><td>{{ kr.ad }} <code style="font-size:10.5px;color:var(--gri-500)">{{ kr.kod }}</code><br><small>{{ kr.aciklama }}</small></td><td class="sayi">{{ birimli(kr.esik_uyari, kr.birim) }}</td><td class="sayi">{{ birimli(kr.esik_aksiyon, kr.birim) }}</td></tr>{% endfor %}
       </table>
     </div>
     <div class="not">Uyarılar hem sabit eşiklerden hem de merkezler arası istatistiksel sapmadan (medyan/MAD tabanlı dayanıklı z-skoru) üretilir. Her uyarının "neden tetiklendi" açıklaması, CRA'nın kararı için gerekli bağlamı içerir; uyarılar otomatik aksiyon almaz.</div>

@@ -1,4 +1,4 @@
-"""P3 paketi: rota baglama yardimcisi, API belgeleri oturum kosulu, /saglik anonim yaniti, gece isleri,
+"""Rota baglama yardimcisi, API belgeleri oturum kosulu, /saglik anonim yaniti, gece isleri,
 hasta saklama betigi ve dokumantasyon izlenebilirligi (TM-001 satirlari kodla eslesir)."""
 import os
 import re
@@ -89,8 +89,8 @@ def istemci():
     rotalari_bagla()
     sifirla()
     db = oturum_fabrikasi()()
-    m1 = Merkez(kod="P3-M1", ad="Test Üniversitesi", sehir="Ankara", kurum_tipi="universite")
-    m2 = Merkez(kod="P3-M2", ad="Boş Merkez", sehir="İzmir", kurum_tipi="sehir")
+    m1 = Merkez(kod="TST-M1", ad="Test Üniversitesi", sehir="Ankara", kurum_tipi="universite")
+    m2 = Merkez(kod="TST-M2", ad="Boş Merkez", sehir="İzmir", kurum_tipi="sehir")
     db.add_all([m1, m2])
     db.flush()
     db.add_all([
@@ -98,9 +98,9 @@ def istemci():
         Kullanici(kullanici_adi="pi", ad_soyad="Araştırmacı", eposta="p@t.local", parola_hash=yetki.parola_hashle(PAROLA),
                   rol=Rol.ARASTIRMACI, merkez_id=m1.id),
     ])
-    c = Calisma(kod="P3-GECE", baslik="Gece işleri", kisa_ad="Gece", tur=CalismaTuru.ILAC, sponsor="S", terapotik_alan="Onkoloji",
+    c = Calisma(kod="TST-GECE", baslik="Gece işleri", kisa_ad="Gece", tur=CalismaTuru.ILAC, sponsor="S", terapotik_alan="Onkoloji",
                 hedef_hasta=10, durum=CalismaDurumu.KAYIT, baslangic=date.today() - timedelta(days=120))
-    kapali = Calisma(kod="P3-ARSIV", baslik="Kapalı", kisa_ad="Kapalı", tur=CalismaTuru.ILAC, sponsor="S", terapotik_alan="Onkoloji",
+    kapali = Calisma(kod="TST-ARSIV", baslik="Kapalı", kisa_ad="Kapalı", tur=CalismaTuru.ILAC, sponsor="S", terapotik_alan="Onkoloji",
                      hedef_hasta=10, durum=CalismaDurumu.ARSIV)
     db.add_all([c, kapali])
     db.flush()
@@ -162,10 +162,10 @@ def test_gece_isleri_aktif_calismalar(istemci):
     db = oturum_fabrikasi()()
     sonuclar = gece_isleri.calistir(db)
     kodlar = {s["calisma"] for s in sonuclar}
-    assert "P3-GECE" in kodlar and "P3-ARSIV" not in kodlar
-    s = next(x for x in sonuclar if x["calisma"] == "P3-GECE")
+    assert "TST-GECE" in kodlar and "TST-ARSIV" not in kodlar
+    s = next(x for x in sonuclar if x["calisma"] == "TST-GECE")
     assert s["sae_bekleyen"] == 1 and s["sae_gecikmis"] == 1 and s["tahmin_merkez"] == 1
-    cm = db.execute(select(CalismaMerkez).join(Calisma).where(Calisma.kod == "P3-GECE")).scalar_one()
+    cm = db.execute(select(CalismaMerkez).join(Calisma).where(Calisma.kod == "TST-GECE")).scalar_one()
     assert cm.tahmini_kazanim is not None and cm.risk_puani is not None
     kayit = db.execute(select(DenetimKaydi).where(DenetimKaydi.islem == "zamanlanmis")).scalars().all()
     assert kayit and kayit[-1].yeni["is_"] == "gece_isleri"

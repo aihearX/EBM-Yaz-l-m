@@ -327,7 +327,7 @@ def test_protokol_taslak_onaysiz_yazmaz_ve_uygulanir(istemci):
     db.close()
 
 
-# -- P4: yardim metnindeki kaliplar, standart formlar, toplam puan -----------------
+# -- yardim metnindeki kaliplar, standart formlar, toplam puan -----------------
 
 YARDIM_PARCASI = """Dahil Etme Kriterleri
 1. 18 yaş ve üzeri

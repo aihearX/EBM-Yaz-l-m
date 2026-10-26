@@ -229,7 +229,7 @@ def test_calisma_tahmin_guncelle_bos_db():
         assert 0 <= sonuc[0].gecikme_riski <= 1
 
 
-# -- P4: Turkce aciklamalar ve Monte Carlo araligi ---------------------------------
+# -- Turkce aciklamalar ve Monte Carlo araligi ---------------------------------
 
 def test_aciklamalar_turkce_ve_aralik_monte_carlo():
     rng = np.random.default_rng(5)

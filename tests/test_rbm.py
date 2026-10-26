@@ -328,7 +328,7 @@ def test_cusum():
     assert not cusum([0.0] * 20, 0.5, 4.0)[1]
 
 
-# -- P4: Turkce metinler, kacirilan vizit (durum), kapali sapmalar ---------------------
+# -- Turkce metinler, kacirilan vizit (durum), kapali sapmalar ---------------------
 
 _ASCII_TUZAK = ("esik", "ustunde", "altinda", "gonullu", "yuksek", "dusuk", "gun ", "sure", "karsilastirma", "dagilim",
                 "siklik", "sapmasi", "agirlik", "medyani", "degeri", "calisma", "oncul", "gecmis")
@@ -370,7 +370,7 @@ def test_anomali_sonsuz_z_metni():
 def test_kacirilan_vizit_durum_ve_kapali_sapma(veri):
     db, c, cmler = veri
     g = cmler[0].gonulluler[0]
-    # gelecekte planli ama 'kacirildi' isaretlenmis vizit de sayilir (P2 durum alani)
+    # gelecekte planli ama 'kacirildi' isaretlenmis vizit de sayilir (durum alani)
     db.add(Vizit(gonullu_id=g.id, ad="V2", sira=2, planlanan=BUGUN + timedelta(days=10), durum="kacirildi"))
     db.flush()
     assert rbm.HESAPLAYICILAR["kacirilan_vizit"](db, cmler[0]) == pytest.approx(14.3, abs=0.1)

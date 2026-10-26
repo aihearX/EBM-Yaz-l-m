@@ -9,7 +9,7 @@
 
 URS → FRS → kod (rota, betik, modül) → otomatik test → kalifikasyon senaryosu izlenebilirliği.
 Kritiklik: GK (GCP-kritik) / İK (iş-kritik) / D (destekleyici). Her satırdaki test ve rota
-referansı depoda bulunur; `tests/test_P3.py::test_izlenebilirlik_matrisi_kodla_eslesir` bu
+referansı depoda bulunur; `tests/test_isletim.py::test_izlenebilirlik_matrisi_kodla_eslesir` bu
 belgeyi her sürümde kodla karşılaştırır (olmayan test, betik ya da rota referansı testi düşürür).
 "Kalifikasyon" sütunu OQ-001 / IQ-001 / PQ-001 senaryo numarasıdır; sonuçlar ilgili raporda tutulur.
 
@@ -35,7 +35,7 @@ belgeyi her sürümde kodla karşılaştırır (olmayan test, betik ya da rota r
 | URS-MZ-04 | İK | FRS-10 | `smartclinical/services/merkez_zekasi/aktivasyon.py` | `tests/test_merkez_zekasi.py::test_gecikme_fit_ve_auc`, `tests/test_merkez_zekasi.py::test_gecikme_modeli_oncul` | PQ-M8 |
 | URS-MZ-05 | İK | FRS-11 | `smartclinical/services/merkez_zekasi/siralama.py` | `tests/test_merkez_zekasi.py::test_merkez_sirala`, `tests/test_merkez_zekasi.py::test_merkez_sirala_agirlik_ezme` | – |
 | URS-MZ-06 | D | FRS-12 | `smartclinical/services/merkez_zekasi/kazanim.py` (`calisma_kazanim_projeksiyonu`) | `tests/test_merkez_zekasi.py::test_projeksiyon_monte_carlo` | – |
-| URS-MZ-07 | İK | FRS-73 | `smartclinical/scripts/gece_isleri.py` | `tests/test_P3.py::test_gece_isleri_aktif_calismalar` | IQ-11 |
+| URS-MZ-07 | İK | FRS-73 | `smartclinical/scripts/gece_isleri.py` | `tests/test_isletim.py::test_gece_isleri_aktif_calismalar` | IQ-11 |
 
 ## 3. Etik kurul ve TİTCK başvuruları
 
@@ -65,7 +65,7 @@ belgeyi her sürümde kodla karşılaştırır (olmayan test, betik ya da rota r
 |---|---|---|---|---|---|
 | URS-GV-01 | GK | FRS-23 | `POST /gonulluler/{gid}/advers-olay`, `smartclinical/models/guvenlik.py` | `tests/test_gonullu.py::test_ae_duzenleme_denetim_izi`, `tests/test_analiz.py::test_advers_olay_ozeti` | OQ-12 |
 | URS-GV-02 | GK | FRS-24 | `smartclinical/models/guvenlik.py` (`susar`) | `tests/test_rbm.py::test_kri_hesapla_sorunlu_merkez` | OQ-13 |
-| URS-GV-03 | GK | FRS-25 | `smartclinical/models/guvenlik.py` (`bildirim_suresi_gun`), `smartclinical/scripts/gece_isleri.py` | `tests/test_P3.py::test_gece_isleri_aktif_calismalar`, `tests/test_rbm.py::test_kri_hesapla_sorunlu_merkez` | OQ-12 |
+| URS-GV-03 | GK | FRS-25 | `smartclinical/models/guvenlik.py` (`bildirim_suresi_gun`), `smartclinical/scripts/gece_isleri.py` | `tests/test_isletim.py::test_gece_isleri_aktif_calismalar`, `tests/test_rbm.py::test_kri_hesapla_sorunlu_merkez` | OQ-12 |
 | URS-GV-04 | GK | FRS-26 | `POST /gonulluler/{gid}/advers-olay/{aid}/bildirim`, `smartclinical/services/rbm/gostergeler.py` | `tests/test_rbm.py::test_kri_hesapla_sorunlu_merkez` | OQ-15 |
 
 ## 6. Risk bazlı izlem
@@ -107,7 +107,7 @@ belgeyi her sürümde kodla karşılaştırır (olmayan test, betik ya da rota r
 | URS-KM-02 | GK | FRS-48 | `smartclinical/api/hastalar.py`, `POST /merkezler/{mid}/hasta-yukle` | `tests/test_web.py::test_csv_hasta_yukleme` | OQ-27 |
 | URS-KM-03 | İK | FRS-49 | `smartclinical/services/kimliksizlestirme/__init__.py` (`metni_dogrula`) | `tests/test_kimliksizlestirme.py::test_dogrulama_ikinci_gecis`, `tests/test_kimliksizlestirme.py::test_ozet_rapor` | OQ-28 |
 | URS-KM-04 | GK | FRS-50 | `smartclinical/services/fhir/__init__.py`, `smartclinical/scripts/yeniden_anahtarla.py` | `tests/test_fhir.py::test_kimlik_alanlari_asla_tasinmaz`, `tests/test_fhir.py::test_takma_kayit_no_deterministik_ve_merkeze_bagli`, `tests/test_web.py::test_takma_ad_hmac_ve_yeniden_anahtarla` | OQ-30 |
-| URS-KM-05 | GK | FRS-76 | `smartclinical/scripts/hasta_saklama.py` | `tests/test_P3.py::test_hasta_saklama` | OQ-35 |
+| URS-KM-05 | GK | FRS-76 | `smartclinical/scripts/hasta_saklama.py` | `tests/test_isletim.py::test_hasta_saklama` | OQ-35 |
 
 ## 9. TMF, denetim izi, e-imza, yetki
 
@@ -119,12 +119,12 @@ belgeyi her sürümde kodla karşılaştırır (olmayan test, betik ya da rota r
 | URS-Dİ-01 | GK | FRS-20, FRS-53 | `smartclinical/services/denetim.py` | `tests/test_denetim.py::test_zincir_gecerli`, `tests/test_gonullu.py::test_ae_duzenleme_denetim_izi` | OQ-05, OQ-06 |
 | URS-Dİ-02 | GK | FRS-53 | `deploy/postgres/yetkiler.sql` | – (veritabanı düzeyi) | IQ-9, OQ-07 |
 | URS-Dİ-03 | GK | FRS-53 | `smartclinical/scripts/denetim_dogrula.py`, `smartclinical/models/denetim.py` (`DenetimZincir`) | `tests/test_denetim.py::test_zincir_bozulma_tespiti`, `tests/test_denetim.py::test_eszamanli_kayit_zinciri_bozmaz`, `tests/test_denetim.py::test_anahtar_degisince_dogrulama_basarisiz`, `tests/test_denetim.py::test_hash_hmac_anahtara_bagli` | OQ-07 |
-| URS-Dİ-04 | GK | FRS-54 | `GET /yonetim/denetim`, `GET /calismalar/{calisma_id}/denetim` | `tests/test_P1.py::test_denetim_izi_filtre_ve_csv`, `tests/test_web.py::test_rol_kisiti` | OQ-32 |
+| URS-Dİ-04 | GK | FRS-54 | `GET /yonetim/denetim`, `GET /calismalar/{calisma_id}/denetim` | `tests/test_erisim.py::test_denetim_izi_filtre_ve_csv`, `tests/test_web.py::test_rol_kisiti` | OQ-32 |
 | URS-Eİ-01 | GK | FRS-55 | `smartclinical/services/denetim.py` (`imzala`) | `tests/test_denetim.py::test_eimza`, `tests/test_izlem.py::test_ziyaret_raporu_ve_py_onayi` | OQ-08 |
 | URS-Eİ-02 | GK | FRS-55 | `POST /calismalar/{calisma_id}/belgeler/{belge_id}/onayla`, `POST /gonulluler/{gid}/form-kaydi/{fk_id}/kilitle` | `tests/test_izlem.py::test_ziyaret_raporu_ve_py_onayi`, `tests/test_randomizasyon.py::test_eimza_olmadan_liste_uretilmez` | OQ-08 |
 | URS-Eİ-03 | GK | FRS-55 | `smartclinical/web/veri_islem.py` (`imza_durumu`) | `tests/test_izlem.py::test_imzadan_sonra_degisen_kayit_yenilenmeli`, `tests/test_denetim.py::test_eimza_icerik_ozeti_anahtardan_bagimsiz` | OQ-09 |
 | URS-YT-01 | GK | FRS-56 | `smartclinical/services/yetki.py` (`IZINLER`) | `tests/test_roller.py::test_rol_rota_matrisi`, `tests/test_roller.py::test_matris_dokumanla_uyumlu`, `tests/test_ekip.py::test_izin_haritasi` | OQ-02, OQ-03 |
-| URS-YT-02 | GK | FRS-56 | `smartclinical/services/yetki.py` (`calisma_erisimi`, `gonullu_erisimi`) | `tests/test_P1.py::test_arastirmaci_baska_merkezin_hastasina_erisemez`, `tests/test_roller.py::test_merkez_rolleri_kendi_merkezini_gorur`, `tests/test_roller.py::test_sponsor_kurum_filtresi_ve_sekmeler`, `tests/test_izlem.py::test_merkez_rolu_yalnizca_kendi_merkezini_gorur` | OQ-02, OQ-03 |
+| URS-YT-02 | GK | FRS-56 | `smartclinical/services/yetki.py` (`calisma_erisimi`, `gonullu_erisimi`) | `tests/test_erisim.py::test_arastirmaci_baska_merkezin_hastasina_erisemez`, `tests/test_roller.py::test_merkez_rolleri_kendi_merkezini_gorur`, `tests/test_roller.py::test_sponsor_kurum_filtresi_ve_sekmeler`, `tests/test_izlem.py::test_merkez_rolu_yalnizca_kendi_merkezini_gorur` | OQ-02, OQ-03 |
 | URS-YT-03 | GK | FRS-57 | `smartclinical/services/yetki.py`, `smartclinical/web/hesap.py` | `tests/test_web.py::test_hatali_giris_ve_sureli_kilit`, `tests/test_web.py::test_parola_degistir_ve_gecmis`, `tests/test_web.py::test_ilk_giriste_parola_degisimi_zorunlu`, `tests/test_web.py::test_ip_basina_deneme_siniri` | OQ-04 |
 | URS-YT-04 | GK | FRS-58 | `POST /yonetim/kullanicilar/{kid}/durum` | `tests/test_web.py::test_rol_kisiti` | OQ-35 |
 | URS-YT-05 | İK | FRS-77 | `POST /calismalar/{calisma_id}/ekip/ekle`, `smartclinical/services/yetki.py` (`kisit_aktif`) | `tests/test_ekip.py::test_ilk_atama_kisiti_baslatir`, `tests/test_ekip.py::test_kendini_cikaramaz_ve_cikarma_denetimi` | OQ-02 |
@@ -137,13 +137,13 @@ belgeyi her sürümde kodla karşılaştırır (olmayan test, betik ya da rota r
 | URS-ENT-02 | D | FRS-61 | `GET /api/v1/fhir/ResearchStudy/{cid}`, `GET /api/v1/fhir/ResearchSubject/{gid}` | `tests/test_fhir.py::test_research_study_ve_subject` | – |
 | URS-ENT-03 | D | FRS-62 | `smartclinical/services/fhir/omop.py`, `smartclinical/scripts/omop_aktar.py` | `tests/test_fhir.py::test_omop_disa_aktar` | OQ-36 |
 | URS-ENT-04 | İK | FRS-63 | `POST /merkezler/{mid}/hasta-yukle` | `tests/test_web.py::test_csv_hasta_yukleme` | OQ-30 |
-| URS-ENT-05 | D | FRS-64 | `POST /yonetim/api-anahtarlari`, `GET /api/belgeler` | `tests/test_web.py::test_api_anahtari_ve_sponsor`, `tests/test_P3.py::test_api_belgeleri_oturum_ister` | OQ-37 |
+| URS-ENT-05 | D | FRS-64 | `POST /yonetim/api-anahtarlari`, `GET /api/belgeler` | `tests/test_web.py::test_api_anahtari_ve_sponsor`, `tests/test_isletim.py::test_api_belgeleri_oturum_ister` | OQ-37 |
 | URS-ENT-06 | İK | FRS-78 | `GET /calismalar/{calisma_id}/veri/sorgular.csv`, `GET /calismalar/{calisma_id}/gonulluler.csv`, `GET /calismalar/{calisma_id}/izlem/ziyaretler.csv`, `GET /calismalar/{calisma_id}/izlem/sapmalar.csv` | `tests/test_izlem.py::test_sorgu_toplu_kapatma_ve_csv` | OQ-32 |
 | URS-SİS-01 | İK | FRS-65 | `deploy/docker-compose.yml`, `deploy/systemd/smartclinical.service` | – | IQ-1..3 |
 | URS-SİS-02 | GK | FRS-66 | `deploy/yedekleme.sh` | – | IQ-7 |
 | URS-SİS-03 | GK | FRS-67 | `deploy/nginx/smartclinical.conf` | `tests/test_web.py::test_guvenlik_basliklari` | IQ-5, IQ-6 |
 | URS-SİS-04 | GK | FRS-70 | `smartclinical/models/_ortak.py` (`simdi`) | `tests/test_gonullu.py::test_acik_gun_negatif_degil` | OQ-38 |
-| URS-SİS-05 | GK | FRS-71 | `smartclinical/main.py` (güvenlik başlıkları, oturumlu API belgeleri), `smartclinical/api/sistem.py` | `tests/test_web.py::test_guvenlik_basliklari`, `tests/test_P3.py::test_saglik_anonim_surum_vermez`, `tests/test_P3.py::test_api_belgeleri_oturum_ister` | IQ-14 |
+| URS-SİS-05 | GK | FRS-71 | `smartclinical/main.py` (güvenlik başlıkları, oturumlu API belgeleri), `smartclinical/api/sistem.py` | `tests/test_web.py::test_guvenlik_basliklari`, `tests/test_isletim.py::test_saglik_anonim_surum_vermez`, `tests/test_isletim.py::test_api_belgeleri_oturum_ister` | IQ-14 |
 | URS-SİS-06 | İK | FRS-79 | `GET /calismalar/{calisma_id}/analiz`, `GET /calismalar/{calisma_id}/analiz/tablo1.csv` | `tests/test_analiz.py::test_sayfalar_ve_csv`, `tests/test_analiz.py::test_sponsor_ve_cra_403` | OQ-36 |
 
 ## 11. Kapsam dışı bırakılan eski gereksinimler

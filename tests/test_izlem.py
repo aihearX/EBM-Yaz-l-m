@@ -37,7 +37,7 @@ from smartclinical.services import yetki
 from smartclinical.web import veri_islem
 from smartclinical.web.belgeler import dosya_kontrol
 from smartclinical.web.calismalar import kontrol_listesi
-from tests.test_P3 import rotalari_bagla
+from tests.test_isletim import rotalari_bagla
 
 PAROLA = "Test1234!xyz"
 

@@ -1,4 +1,4 @@
-"""P1: erisim denetimi birimleri, merkez siniri (API ve CSV), denetim izi filtre/CSV, sponsor kurum zorunlulugu."""
+"""Erisim denetimi birimleri, merkez siniri (API ve CSV), denetim izi filtre/CSV, sponsor kurum zorunlulugu."""
 import os
 from datetime import date
 from types import SimpleNamespace

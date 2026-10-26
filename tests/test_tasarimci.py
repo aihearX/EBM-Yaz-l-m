@@ -1,4 +1,4 @@
-"""P4: eCRF tasarimcisi, protokol belgesinden taslak, kriter sayfasi cumleleri, analiz varsayilanlari (tek kollu),
+"""eCRF tasarimcisi, protokol belgesinden taslak, kriter sayfasi cumleleri, analiz varsayilanlari (tek kollu),
 merkez siniri, metin kalitesi (RBM / merkez zekasi), ayarlar ve hata sayfasi, arac yetkisi."""
 import io
 import os
@@ -59,8 +59,8 @@ Değerlendirmeler
 def istemci():
     sifirla()
     db = oturum_fabrikasi()()
-    m1 = Merkez(kod="P4-01", ad="Birinci Hastane", sehir="Ankara", kurum_tipi="universite")
-    m2 = Merkez(kod="P4-02", ad="İkinci Hastane", sehir="İzmir", kurum_tipi="sehir")
+    m1 = Merkez(kod="TST-01", ad="Birinci Hastane", sehir="Ankara", kurum_tipi="universite")
+    m2 = Merkez(kod="TST-02", ad="İkinci Hastane", sehir="İzmir", kurum_tipi="sehir")
     db.add_all([m1, m2])
     db.flush()
 
@@ -70,7 +70,7 @@ def istemci():
 
     db.add_all([kul("admin", Rol.YONETICI), kul("ar", Rol.ARASTIRMACI, merkez_id=m1.id), kul("cra", Rol.CRA),
                 kul("py", Rol.PROJE_YONETICISI)])
-    c = Calisma(kod="P4-001", baslik="P4 testi", kisa_ad="P4", tur=CalismaTuru.ILAC, sponsor="S", terapotik_alan="Onkoloji",
+    c = Calisma(kod="TST-001", baslik="Tasarimci testi", kisa_ad="TST", tur=CalismaTuru.ILAC, sponsor="S", terapotik_alan="Onkoloji",
                 hedef_hasta=10, baslangic=date(2024, 1, 1), planlanan_bitis=date(2025, 1, 1))
     db.add(c)
     db.flush()
@@ -123,7 +123,7 @@ def _giris(cl, kadi):
 
 def _cid() -> int:
     db = oturum_fabrikasi()()
-    cid = db.execute(select(Calisma.id).where(Calisma.kod == "P4-001")).scalar_one()
+    cid = db.execute(select(Calisma.id).where(Calisma.kod == "TST-001")).scalar_one()
     db.close()
     return cid
 
